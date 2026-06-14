@@ -1,0 +1,2101 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>혚쾌 포타 검색기</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0b0d10;
+      --panel: #12161d;
+      --panel-2: #171d26;
+      --text: #eef2f7;
+      --muted: #98a2b3;
+      --soft: #c9d2df;
+      --line: #273140;
+      --line-2: #354254;
+      --accent: #60a5fa;
+      --accent-2: #34d399;
+      --danger: #fb7185;
+      --warn: #fbbf24;
+      --radius: 8px;
+      --shadow: 0 16px 40px rgba(0, 0, 0, .28);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Pretendard, Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    a { color: inherit; }
+    button, input, select, textarea { font: inherit; }
+
+    .shell {
+      width: min(1280px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 24px 0 56px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      padding: 4px 0 20px;
+    }
+
+    .brand {
+      display: grid;
+      gap: 6px;
+    }
+
+    .eyebrow {
+      margin: 0;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 30px;
+      line-height: 1.1;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .button {
+      min-height: 38px;
+      border: 1px solid var(--line-2);
+      border-radius: 7px;
+      padding: 0 12px;
+      background: var(--panel-2);
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    .button:hover { border-color: var(--accent); }
+    .button.primary { background: var(--accent); border-color: var(--accent); color: #06111f; font-weight: 800; }
+    .button.danger { color: var(--danger); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 300px minmax(0, 1fr);
+      gap: 16px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+    }
+
+    .filters {
+      position: sticky;
+      top: 16px;
+      padding: 14px;
+    }
+
+    .search {
+      display: grid;
+      gap: 8px;
+    }
+
+    .label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line-2);
+      border-radius: 7px;
+      background: #0e1218;
+      color: var(--text);
+      padding: 10px 11px;
+      outline: none;
+    }
+
+    textarea { min-height: 82px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+
+    .filter-group {
+      display: grid;
+      gap: 8px;
+      margin-top: 16px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      border: 1px solid var(--line-2);
+      border-radius: 999px;
+      padding: 5px 8px;
+      background: transparent;
+      color: var(--soft);
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .chip.active {
+      background: rgba(96, 165, 250, .16);
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .content {
+      display: grid;
+      gap: 12px;
+    }
+
+    .stats {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 14px;
+      color: var(--muted);
+    }
+
+    .stats strong { color: var(--text); }
+
+    .post-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .post-card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      padding: 14px;
+    }
+
+    .post-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .title {
+      color: var(--text);
+      text-decoration: none;
+      font-size: 18px;
+      font-weight: 850;
+      line-height: 1.35;
+    }
+
+    .title:hover { color: var(--accent); }
+
+    .meta {
+      margin: 7px 0 0;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .summary {
+      margin: 10px 0 0;
+      color: var(--soft);
+      line-height: 1.58;
+    }
+
+    .badges, .tag-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .badges { justify-content: flex-end; min-width: 86px; }
+    .tag-row { margin-top: 11px; }
+
+    .badge, .tag {
+      display: inline-flex;
+      align-items: center;
+      min-height: 23px;
+      border-radius: 999px;
+      padding: 3px 8px;
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .badge { background: #1f2937; color: var(--soft); }
+    .badge.age { background: rgba(251, 113, 133, .16); color: #fecdd3; }
+    .badge.price { background: rgba(251, 191, 36, .16); color: #fde68a; }
+    .tag { background: #172033; color: #dbeafe; }
+    .tag.suggested { background: #1a2a22; color: #bbf7d0; }
+
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .link-button {
+      color: var(--accent);
+      font-size: 13px;
+      font-weight: 800;
+      text-decoration: none;
+    }
+
+    .empty, .status {
+      padding: 28px 14px;
+      border: 1px dashed var(--line-2);
+      border-radius: var(--radius);
+      color: var(--muted);
+      text-align: center;
+    }
+
+    .admin {
+      display: none;
+      margin-top: 16px;
+      padding: 14px;
+    }
+
+    body.admin-on .admin { display: block; }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .admin-grid .wide { grid-column: 1 / -1; }
+    .admin-note { color: var(--muted); font-size: 13px; line-height: 1.55; }
+
+    @media (max-width: 860px) {
+      .layout { grid-template-columns: 1fr; }
+      .filters { position: static; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+      .top-actions { justify-content: flex-start; }
+    }
+
+    @media (max-width: 560px) {
+      .shell { width: min(100% - 20px, 1280px); padding-top: 16px; }
+      .admin-grid { grid-template-columns: 1fr; }
+      .post-head { display: grid; }
+      .badges { justify-content: flex-start; }
+    }
+  </style>
+  <style>
+    /* Mobile-first redesign */
+    :root {
+      --bg: #07080b;
+      --panel: #10131a;
+      --panel-2: #151a23;
+      --text: #f5f7fb;
+      --muted: #8e99aa;
+      --soft: #cbd5e1;
+      --line: #242b38;
+      --line-2: #323b4d;
+      --accent: #8bd3ff;
+      --accent-2: #a7f3d0;
+      --danger: #ff8aa1;
+      --warn: #ffe08a;
+      --shadow: none;
+    }
+
+    body {
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(96, 165, 250, .16), transparent 34%),
+        linear-gradient(180deg, #0b0f17 0%, #07080b 44%, #050609 100%);
+    }
+
+    .shell {
+      width: min(100%, 520px);
+      min-height: 100vh;
+      padding: 14px 12px 36px;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 12px;
+      margin: 0 -12px;
+      padding: 12px 12px 14px;
+      background: rgba(7, 8, 11, .86);
+      border-bottom: 1px solid rgba(255, 255, 255, .06);
+      backdrop-filter: blur(16px);
+    }
+
+    .brand {
+      gap: 4px;
+    }
+
+    .eyebrow {
+      color: var(--accent-2);
+      font-size: 11px;
+      letter-spacing: .12em;
+    }
+
+    h1 {
+      font-size: 23px;
+      letter-spacing: .01em;
+    }
+
+    .top-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .button {
+      min-height: 40px;
+      border-color: rgba(255, 255, 255, .1);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .055);
+      color: var(--soft);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .button.primary {
+      background: linear-gradient(135deg, #8bd3ff, #a7f3d0);
+      color: #061018;
+    }
+
+    .button.danger {
+      background: rgba(251, 113, 133, .1);
+      color: #fecdd3;
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+
+    .panel,
+    .post-card {
+      border-color: rgba(255, 255, 255, .08);
+      background: rgba(16, 19, 26, .88);
+      box-shadow: none;
+      backdrop-filter: blur(10px);
+    }
+
+    .filters {
+      position: static;
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .search {
+      position: relative;
+    }
+
+    .label {
+      color: #a9b4c5;
+      font-size: 11px;
+      letter-spacing: .04em;
+    }
+
+    input,
+    select,
+    textarea {
+      border-color: rgba(255, 255, 255, .09);
+      border-radius: 12px;
+      background: rgba(4, 7, 12, .88);
+      color: var(--text);
+      font-size: 15px;
+    }
+
+    .search input {
+      min-height: 48px;
+      padding-left: 14px;
+      font-size: 16px;
+    }
+
+    .filter-group {
+      gap: 7px;
+      margin-top: 14px;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 7px;
+      margin: 0 -12px;
+      padding: 0 12px 2px;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .chips::-webkit-scrollbar {
+      display: none;
+    }
+
+    .chip {
+      flex: 0 0 auto;
+      border-color: rgba(255, 255, 255, .1);
+      background: rgba(255, 255, 255, .045);
+      color: #d7deea;
+      padding: 7px 10px;
+      font-size: 12px;
+    }
+
+    .chip.active {
+      background: rgba(139, 211, 255, .18);
+      border-color: rgba(139, 211, 255, .74);
+      color: #eef9ff;
+    }
+
+    .content {
+      gap: 10px;
+    }
+
+    .stats {
+      position: sticky;
+      top: 106px;
+      z-index: 10;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: rgba(12, 15, 21, .8);
+      backdrop-filter: blur(14px);
+    }
+
+    .post-list {
+      gap: 9px;
+    }
+
+    .post-card {
+      padding: 13px;
+      border-radius: 16px;
+    }
+
+    .post-head {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 9px;
+    }
+
+    .title {
+      display: block;
+      font-size: 16px;
+      line-height: 1.42;
+    }
+
+    .meta {
+      margin-top: 5px;
+      font-size: 12px;
+    }
+
+    .summary {
+      margin-top: 9px;
+      color: #cbd5e1;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .badges {
+      justify-content: flex-start;
+      min-width: 0;
+      order: -1;
+    }
+
+    .badge,
+    .tag {
+      min-height: 22px;
+      padding: 3px 7px;
+      font-size: 11px;
+    }
+
+    .badge {
+      background: rgba(255, 255, 255, .075);
+      color: #dbe4f0;
+    }
+
+    .badge.age {
+      background: rgba(255, 138, 161, .14);
+      color: #ffd1da;
+    }
+
+    .badge.price {
+      background: rgba(255, 224, 138, .12);
+      color: #ffe9a8;
+    }
+
+    .tag-row {
+      gap: 5px;
+      margin-top: 10px;
+    }
+
+    .tag {
+      background: rgba(139, 211, 255, .11);
+      color: #d8f1ff;
+    }
+
+    .tag.suggested {
+      background: rgba(167, 243, 208, .11);
+      color: #d9ffee;
+    }
+
+    .card-actions {
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 11px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(255, 255, 255, .06);
+    }
+
+    .link-button {
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    .edit-button {
+      min-height: 32px;
+      padding: 0 10px;
+      font-size: 12px;
+    }
+
+    .admin {
+      margin: 8px 0 12px;
+      padding: 12px;
+      border-radius: 16px;
+    }
+
+    .admin-grid {
+      grid-template-columns: 1fr;
+      gap: 9px;
+    }
+
+    .admin-grid .wide {
+      grid-column: auto;
+    }
+
+    .admin-note {
+      margin-top: 0;
+      font-size: 12px;
+    }
+
+    .status,
+    .empty {
+      border-color: rgba(255, 255, 255, .09);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, .03);
+      font-size: 13px;
+    }
+
+    @media (min-width: 861px) {
+      .layout {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: stretch;
+        flex-direction: initial;
+      }
+    }
+  </style>
+  <style>
+    /* Reference-style compact mobile skin */
+    :root {
+      --bg: #0f0f10;
+      --panel: #111112;
+      --panel-2: #1a1a1d;
+      --text: #f7f7f8;
+      --muted: #626872;
+      --soft: #d4d8df;
+      --line: #292a2e;
+      --line-2: #3a3b40;
+      --accent: #ffffff;
+      --accent-2: #9ca3af;
+      --danger: #ff6363;
+      --warn: #e7c566;
+    }
+
+    body {
+      background: #0f0f10;
+    }
+
+    .shell {
+      width: min(100%, 650px);
+      padding: 28px 28px 28px;
+    }
+
+    .topbar {
+      position: static;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      margin: 0;
+      padding: 4px 0 18px;
+      background: transparent;
+      border: 0;
+      backdrop-filter: none;
+    }
+
+    .brand {
+      display: flex;
+      align-items: start;
+      justify-content: space-between;
+      gap: 14px;
+      grid-column: 1 / -1;
+    }
+
+    h1 {
+      font-size: 30px;
+      font-weight: 650;
+      letter-spacing: -.04em;
+      text-shadow: none;
+    }
+
+    .eyebrow {
+      margin-top: 4px;
+      color: #5c626b;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0;
+      text-transform: none;
+    }
+
+    .top-actions {
+      display: flex;
+      justify-content: flex-end;
+      grid-column: 1 / -1;
+      width: 100%;
+      gap: 8px;
+    }
+
+    .top-actions .icon-button {
+      width: auto;
+      justify-self: auto;
+      padding: 0 12px;
+      border-radius: 10px;
+      font-size: 12px;
+    }
+
+    .lock-button {
+      flex: 0 0 auto;
+      min-width: 42px;
+      min-height: 34px;
+      border-radius: 12px;
+      padding: 0 10px;
+      white-space: nowrap;
+      color: transparent;
+      font-size: 0;
+    }
+
+    .lock-button::before {
+      content: none;
+    }
+
+    .lock-button::after {
+      content: none;
+    }
+
+    .lock-button svg {
+      width: 18px;
+      height: 18px;
+      display: block;
+      stroke: #d8dbe0;
+      stroke-width: 1.8;
+      fill: none;
+    }
+
+    .layout {
+      gap: 12px;
+    }
+
+    .filters {
+      border-radius: 11px;
+      background: #111112;
+      border-color: #282a2f;
+      overflow: hidden;
+      padding: 0;
+    }
+
+    .search {
+      display: block;
+      padding: 0;
+      position: relative;
+    }
+
+    .search::before {
+      content: "⌕";
+      position: absolute;
+      left: 13px;
+      top: 50%;
+      z-index: 1;
+      transform: translateY(-50%);
+      color: #555b64;
+      font-size: 17px;
+    }
+
+    .search input {
+      min-height: 36px;
+      border: 1px solid #34363c;
+      border-radius: 8px;
+      background: #1b1b1e;
+      padding: 0 36px;
+      color: #e8e9ec;
+      font-size: 13px;
+    }
+
+    .filter-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      width: 100%;
+      border: 0;
+      padding: 12px 14px;
+      border-top: 1px solid #24262b;
+      background: transparent;
+      color: #d8dbe0;
+      font-size: 13px;
+      cursor: pointer;
+    }
+
+    .filter-title span {
+      color: #4d535c;
+      font-size: 11px;
+    }
+
+    .filters.collapsed #filterBody {
+      display: none;
+    }
+
+    #filterMount {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .filter-group {
+      grid-column: 1 / -1;
+    }
+
+    .filter-group[data-group="가격"],
+    .filter-group[data-group="성인"] {
+      grid-column: auto;
+    }
+
+    .filter-group {
+      margin: 0;
+      padding: 11px 14px;
+      border-top: 1px solid #24262b;
+      gap: 9px;
+    }
+
+    .filter-group:has(#sortSelect) {
+      display: none;
+    }
+
+    .label {
+      color: #555b64;
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0;
+    }
+
+    .chips {
+      flex-wrap: wrap;
+      margin: 0;
+      padding: 0;
+      gap: 6px;
+      overflow: visible;
+    }
+
+    .chip {
+      min-height: 25px;
+      border-color: #34363c;
+      border-radius: 999px;
+      background: #111316;
+      color: #b8bec8;
+      padding: 4px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .chip.active {
+      background: #f4f4f5;
+      border-color: #f4f4f5;
+      color: #111;
+    }
+
+    .chip.is-hidden {
+      display: none;
+    }
+
+    .filter-group.is-hidden {
+      display: none;
+    }
+
+    .content {
+      gap: 9px;
+    }
+
+    .stats {
+      display: flex;
+      border: 0;
+      background: transparent;
+      padding: 5px 0 2px;
+      color: #555b64;
+      font-size: 12px;
+      backdrop-filter: none;
+    }
+
+    .list-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 5px 0 2px;
+      color: #555b64;
+      font-size: 12px;
+    }
+
+    .sort-pills {
+      display: flex;
+      gap: 6px;
+    }
+
+    .sort-pill {
+      border: 1px solid #34363c;
+      border-radius: 7px;
+      background: transparent;
+      color: #777f8b;
+      min-height: 27px;
+      padding: 0 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .sort-pill.active {
+      background: #191a1d;
+      color: #f4f4f5;
+      border-color: #52545b;
+    }
+
+    .stats strong {
+      color: #737b86;
+      font-size: 12px;
+    }
+
+    .status {
+      display: none;
+    }
+
+    .post-list {
+      gap: 8px;
+    }
+
+    .post-card {
+      position: relative;
+      border-color: #24262b;
+      border-radius: 11px;
+      background: #101011;
+      padding: 16px 18px 15px;
+    }
+
+    .post-card::after {
+      content: "↗";
+      position: absolute;
+      right: 17px;
+      top: 14px;
+      color: #515761;
+      font-size: 17px;
+    }
+
+    .post-head {
+      display: grid;
+      gap: 8px;
+    }
+
+    .badges {
+      order: -1;
+      justify-content: flex-start;
+      min-width: 0;
+    }
+
+    .badge {
+      min-height: 22px;
+      border: 1px solid #33363c;
+      background: transparent;
+      color: #7d8591;
+      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .badge.category {
+      background: rgba(239, 68, 68, .13);
+      border-color: rgba(239, 68, 68, .42);
+      color: #f87171;
+    }
+
+    .badge.age,
+    .badge.price {
+      background: transparent;
+      color: #7d8591;
+    }
+
+    .badge.age {
+      background: rgba(34, 197, 94, .16);
+      border-color: rgba(34, 197, 94, .42);
+      color: #4ade80;
+    }
+
+    .badge.price {
+      background: rgba(59, 130, 246, .15);
+      border-color: rgba(59, 130, 246, .42);
+      color: #60a5fa;
+    }
+
+    .title {
+      max-width: calc(100% - 30px);
+      color: #fff;
+      font-size: 16px;
+      font-weight: 900;
+      line-height: 1.35;
+    }
+
+    .meta {
+      margin-top: 9px;
+      color: #656c77;
+      font-size: 12px;
+    }
+
+    .summary {
+      display: none;
+    }
+
+    .tag-row {
+      gap: 5px;
+      margin-top: 12px;
+    }
+
+    .tag {
+      min-height: 20px;
+      border-radius: 6px;
+      background: #181b20;
+      color: #7d8591;
+      padding: 2px 7px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .tag.suggested {
+      background: #142019;
+      color: #86b99b;
+    }
+
+    .tag.spoiler {
+      background: rgba(239, 68, 68, .22);
+      border: 1px solid rgba(239, 68, 68, .42);
+      color: #fca5a5;
+    }
+
+    .ending-reveal {
+      min-height: 22px;
+      border: 1px solid #34363c;
+      border-radius: 6px;
+      background: transparent;
+      color: #8b949e;
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .card-actions {
+      justify-content: space-between;
+      margin-top: 14px;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .open-link {
+      display: none;
+    }
+
+    .edit-button {
+      display: none;
+      min-height: 26px;
+      border: 0;
+      background: transparent;
+      color: #636b76;
+      padding: 0;
+    }
+
+    .admin {
+      border-radius: 11px;
+      background: #111112;
+      border-color: #282a2f;
+    }
+
+    @media (max-width: 560px) {
+      .shell {
+        width: 100%;
+        padding: 28px 28px 26px;
+      }
+    }
+  </style>
+  <style>
+    .home-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      border-bottom: 1px solid rgba(255, 70, 70, .24);
+      background: #251112;
+      color: #ff4d4d;
+      font-size: 12px;
+      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .top-actions {
+      justify-content: flex-end;
+    }
+
+    .top-actions .icon-button {
+      width: 38px;
+      min-width: 38px;
+      padding: 0;
+      font-size: 17px;
+    }
+
+    .label,
+    .filter-title,
+    .filter-title strong,
+    .chip,
+    .sort-pill {
+      font-weight: 400;
+    }
+
+    .post-card .card-actions {
+      display: none;
+    }
+
+    .admin-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 12px;
+    }
+
+    .admin-head strong {
+      font-weight: 500;
+    }
+
+    .admin-note {
+      margin: 5px 0 0;
+      font-weight: 400;
+    }
+
+    .admin-search {
+      margin: 0 0 10px;
+      position: relative;
+    }
+
+    .admin-search::before {
+      content: "⌕";
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #555b64;
+      font-size: 15px;
+      pointer-events: none;
+    }
+
+    .admin-search input {
+      min-height: 36px;
+      border-radius: 9px;
+      padding-left: 34px;
+      font-size: 12px;
+    }
+
+    .admin-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .admin-item {
+      width: 100%;
+      border: 1px solid #292b30;
+      border-radius: 10px;
+      background: #151619;
+      color: #e8e9ec;
+      padding: 10px 11px;
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .admin-item-title {
+      display: block;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .admin-item-meta {
+      display: block;
+      margin-top: 4px;
+      color: #6e7682;
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .admin-editor {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      margin: 8px 0 12px;
+    }
+
+    .random-result {
+      position: fixed;
+      inset: 0;
+      z-index: 90;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, .64);
+    }
+
+    .random-result[hidden] {
+      display: none;
+    }
+
+    .admin-editor[hidden] {
+      display: none;
+    }
+
+    .admin-editor-card {
+      width: 100%;
+      max-width: 100%;
+      min-width: 0;
+      overflow: hidden;
+      position: relative;
+      border: 1px solid #24262b;
+      border-radius: 12px;
+      background: #101011;
+      padding: 14px;
+      color: #f7f7f8;
+    }
+
+    .random-result-card {
+      width: min(calc(100vw - 32px), 450px);
+      max-height: min(86vh, 760px);
+      overflow: auto;
+      position: relative;
+      border: 1px solid #24262b;
+      border-radius: 12px;
+      background: #101011;
+      padding: 18px;
+      color: #f7f7f8;
+    }
+
+    .admin-editor .admin-grid {
+      grid-template-columns: 1fr;
+      gap: 9px;
+    }
+
+    .admin-editor .admin-grid .wide {
+      grid-column: auto;
+    }
+
+    .admin-editor .top-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .admin-editor-head,
+    .random-result-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .admin-editor-head h2,
+    .random-result-head h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 650;
+    }
+
+    .admin-editor-close,
+    .random-result-close {
+      border: 0;
+      background: transparent;
+      color: #7a818c;
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .random-dock {
+      position: fixed;
+      right: max(18px, calc((100vw - 650px) / 2 + 18px));
+      bottom: 20px;
+      z-index: 70;
+      display: grid;
+      justify-items: end;
+      gap: 8px;
+    }
+
+    .random-toggle,
+    .random-panel button {
+      border: 1px solid #4a352b;
+      border-radius: 999px;
+      background: #171412;
+      color: #f0e8df;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .32);
+      cursor: pointer;
+    }
+
+    .random-toggle {
+      min-height: 42px;
+      padding: 0 17px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .random-panel {
+      display: grid;
+      gap: 7px;
+      justify-items: end;
+    }
+
+    .random-panel[hidden] {
+      display: none;
+    }
+
+    .random-panel button {
+      min-height: 36px;
+      padding: 0 14px;
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .random-panel button:hover,
+    .random-toggle:hover {
+      border-color: #83614f;
+      background: #211a17;
+    }
+
+    .random-result-meta {
+      margin: 0 0 10px;
+      color: #7f8794;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .random-result-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+      margin: 14px 0 16px;
+    }
+
+    .random-result-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    .random-result-actions .wide {
+      grid-column: 1 / -1;
+    }
+
+    @media (max-width: 560px) {
+      .home-link {
+        min-height: 40px;
+      }
+
+      .admin-head {
+        display: grid;
+      }
+
+      .random-dock {
+        right: 18px;
+        bottom: 18px;
+      }
+    }
+
+    html,
+    body {
+      background: #0f0f10;
+    }
+
+    .shell {
+      width: min(100%, 650px);
+      margin: 0 auto;
+    }
+
+    .home-link {
+      width: min(100%, 650px);
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+  <a class="home-link" href="https://hq-record.vercel.app/" target="_blank" rel="noreferrer">⌂ 메인 홈페이지로 이동</a>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand">
+        <h1>혚쾌 포타 검색기</h1>
+        <button class="button lock-button" id="adminToggle" type="button" aria-label="관리자 모드">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
+            <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <section class="admin panel" id="adminPanel">
+      <div class="admin-head">
+        <div>
+          <strong>관리자 모드</strong>
+          <p class="admin-note">신규 글은 버튼 아래에, 기존 글은 목록 바로 아래에 편집창이 열립니다.</p>
+        </div>
+        <button class="button primary" id="newPostButton" type="button">+ 신규 글 추가</button>
+      </div>
+      <label class="admin-search">
+        <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 · 링크 검색">
+      </label>
+      <div class="admin-list" id="adminList"></div>
+      <div class="admin-editor" id="adminEditor" hidden>
+        <section class="admin-editor-card">
+          <div class="admin-editor-head">
+            <h2 id="adminEditorTitle">글 수정</h2>
+            <button class="admin-editor-close" id="clearForm" type="button" aria-label="닫기">×</button>
+          </div>
+          <form id="adminForm" class="admin-grid">
+            <input type="hidden" name="_rowNumber">
+            <label><span class="label">제목</span><input name="제목" required></label>
+            <label><span class="label">작가</span><input name="작가"></label>
+            <label class="wide"><span class="label">링크</span><input name="링크" type="url"></label>
+            <label><span class="label">날짜</span><input name="날짜" type="date"></label>
+            <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
+            <label><span class="label">유료</span><select name="유료"><option value="X">무료</option><option value="O">유료</option></select></label>
+            <label><span class="label">성인</span><select name="성인"><option value="X">전연령</option><option value="O">성인</option></select></label>
+            <label><span class="label">장르</span><input name="장르" placeholder="현대물, 피폐물"></label>
+            <label><span class="label">키워드</span><input name="키워드" placeholder="재회, 오해"></label>
+            <label><span class="label">공</span><input name="공" placeholder="다정공"></label>
+            <label><span class="label">수</span><input name="수" placeholder="상처수"></label>
+            <label><span class="label">스포일러</span><input name="엔딩" placeholder="해피엔딩"></label>
+            <div class="wide top-actions">
+              <button class="button primary" type="submit">저장</button>
+              <button class="button danger" id="deletePost" type="button">삭제</button>
+            </div>
+          </form>
+        </section>
+      </div>
+    </section>
+
+    <section class="layout">
+      <aside class="filters panel">
+        <label class="search">
+          <input id="searchInput" type="search" placeholder="제목 · 작가명 · 내용 검색">
+        </label>
+        <button class="filter-title" id="filterToggle" type="button"><strong>필터</strong><span id="filterCaret">접기</span></button>
+        <div id="filterBody">
+          <select id="sortSelect" hidden>
+            <option value="date-desc">최신순</option>
+            <option value="title-asc">제목순</option>
+            <option value="author-asc">작가명순</option>
+          </select>
+          <div id="filterMount"></div>
+        </div>
+      </aside>
+
+      <section class="content">
+        <div class="list-toolbar">
+          <span id="totalCount">글 목록</span>
+          <div class="sort-pills" id="sortButtons">
+            <button class="sort-pill active" type="button" data-sort="date-desc">최신순</button>
+            <button class="sort-pill" type="button" data-sort="title-asc">제목순</button>
+            <button class="sort-pill" type="button" data-sort="author-asc">작가명순</button>
+          </div>
+        </div>
+        <span id="visibleCount" hidden>0</span>
+        <div id="status" class="status">구글 시트 데이터를 불러오는 중입니다.</div>
+        <div id="postList" class="post-list"></div>
+      </section>
+    </section>
+  </main>
+
+  <div class="random-dock">
+    <button class="random-toggle" id="randomToggle" type="button">랜덤 추천</button>
+    <div class="random-panel" id="randomPanel" hidden>
+      <button type="button" id="randomCurrent">현재 조건에서 추천</button>
+      <button type="button" id="randomAll">전체에서 추천</button>
+    </div>
+  </div>
+
+  <div class="random-result" id="randomResult" hidden>
+    <section class="random-result-card" role="dialog" aria-modal="true" aria-labelledby="randomResultTitle">
+      <div class="random-result-head">
+        <h2 id="randomResultTitle">랜덤 추천</h2>
+        <button class="random-result-close" id="randomClose" type="button" aria-label="닫기">×</button>
+      </div>
+      <p class="random-result-meta" id="randomResultMeta"></p>
+      <div class="random-result-tags" id="randomResultTags"></div>
+      <div class="random-result-actions">
+        <button class="button" id="randomReroll" type="button">다시 추천</button>
+        <button class="button primary" id="randomOpen" type="button">작품 열기</button>
+        <button class="button wide" id="randomCancel" type="button">닫기</button>
+      </div>
+    </section>
+  </div>
+
+  <template id="postTemplate">
+    <article class="post-card">
+      <div class="post-head">
+        <div>
+          <a class="title" target="_blank" rel="noreferrer"></a>
+          <p class="meta"></p>
+        </div>
+        <div class="badges"></div>
+      </div>
+      <p class="summary"></p>
+      <div class="tag-row"></div>
+      <div class="card-actions">
+        <button class="button edit-button" type="button">수정</button>
+      </div>
+    </article>
+  </template>
+
+  <script>
+    const CONFIG = {
+      SHEET_ID: "1b6yTNcZqA2QE7pbvki35iFkwgsK-O-6htPH7FaJeEmQ",
+      GID: "0",
+      ADMIN_API_URL: "https://script.google.com/macros/s/AKfycbzsGDaJBOujU0PxWNhPrPq0b43KuRGVmv-xERLYrupZ49aRntJr8JvgloIfCx55PVRA/exec"
+    };
+    const ADMIN_PASSWORD = "hqpota1028";
+
+    const TAG_GROUPS = {
+      "카테고리": ["글", "그림", "기타"],
+      "가격": ["무료", "유료"],
+      "성인": ["전연령", "성인"],
+      "장르": ["현대물", "학원물", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
+      "키워드": ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스"],
+      "공": ["집착공", "다정공", "무심공", "능글공", "까칠공", "연하공", "대형견공", "계략공", "후회공", "절륜공", "재벌공", "연예인공", "상처공", "순정공", "강공", "짝사랑공", "헤테로공"],
+      "수": ["단정수", "능력수", "무심수", "다정수", "연상수", "연하수", "까칠수", "강수", "순진수", "상처수", "굴림수", "떡대수", "임신수", "잔망수", "후회수", "능글수", "짝사랑수"],
+      "스포일러": ["해피엔딩", "새드엔딩", "오픈엔딩", "사망"]
+    };
+
+    const SAMPLE_POSTS = [
+      {
+        "_rowNumber": "sample-1",
+        "제목": "샘플 포스트",
+        "작가": "관리자",
+        "날짜": "2026-06-14",
+        "링크": "https://www.postype.com/",
+        "유료": "X",
+        "성인": "X",
+        "카테고리": "글",
+        "장르": "현대물, 일상물",
+        "키워드": "재회, 잔잔물",
+        "공": "다정공",
+        "수": "상처수",
+        "엔딩": "오픈엔딩",
+        "요약": "구글 시트 연결 전 UI 확인용 샘플입니다."
+      }
+    ];
+
+    const state = {
+      posts: [],
+      active: {},
+      query: "",
+      adminQuery: "",
+      sort: "date-desc",
+      randomScope: "current",
+      randomPost: null
+    };
+
+    const $ = (selector) => document.querySelector(selector);
+    const els = {
+      list: $("#postList"),
+      status: $("#status"),
+      template: $("#postTemplate"),
+      filterMount: $("#filterMount"),
+      search: $("#searchInput"),
+      sort: $("#sortSelect"),
+      sortButtons: $("#sortButtons"),
+      filterToggle: $("#filterToggle"),
+      filterBody: $("#filterBody"),
+      filterCaret: $("#filterCaret"),
+      visible: $("#visibleCount"),
+      total: $("#totalCount"),
+      adminToggle: $("#adminToggle"),
+      adminSearch: $("#adminSearchInput"),
+      adminList: $("#adminList"),
+      adminEditor: $("#adminEditor"),
+      adminEditorTitle: $("#adminEditorTitle"),
+      adminForm: $("#adminForm"),
+      newPost: $("#newPostButton"),
+      clearForm: $("#clearForm"),
+      deletePost: $("#deletePost"),
+      randomToggle: $("#randomToggle"),
+      randomPanel: $("#randomPanel"),
+      randomCurrent: $("#randomCurrent"),
+      randomAll: $("#randomAll"),
+      randomResult: $("#randomResult"),
+      randomResultTitle: $("#randomResultTitle"),
+      randomResultMeta: $("#randomResultMeta"),
+      randomResultTags: $("#randomResultTags"),
+      randomReroll: $("#randomReroll"),
+      randomOpen: $("#randomOpen"),
+      randomClose: $("#randomClose"),
+      randomCancel: $("#randomCancel")
+    };
+
+    function normalize(value) {
+      return String(value ?? "").trim();
+    }
+
+    function splitTags(value) {
+      return normalize(value).split(/[,，、/|·\n]/).map((item) => item.trim()).filter(Boolean);
+    }
+
+    function truthyMark(value) {
+      return ["O", "TRUE", "true", "1", "성인", "유료"].includes(normalize(value));
+    }
+
+    function priceLabel(post) {
+      return truthyMark(post["유료"]) ? "유료" : "무료";
+    }
+
+    function ageLabel(post) {
+      return truthyMark(post["성인"]) ? "성인" : "전연령";
+    }
+
+    function postCategory(post) {
+      return normalize(post["카테고리"]) || "글";
+    }
+
+    function tagsFor(post, group) {
+      if (group === "카테고리") return [postCategory(post)];
+      if (group === "성인") return [ageLabel(post)];
+      if (group === "가격") return [priceLabel(post)];
+      if (group === "스포일러") return splitTags(post["엔딩"]);
+      return splitTags(post[group]);
+    }
+
+    function allSearchText(post) {
+      return [
+        post["제목"], post["작가"], post["요약"], post["미리보기"], post["본문추출"],
+        post["장르"], post["키워드"], post["공"], post["수"], post["엔딩"],
+        post["AI제안장르"], post["AI제안키워드"], post["AI제안공"], post["AI제안수"], post["AI제안엔딩"]
+      ].map(normalize).join(" ").toLowerCase();
+    }
+
+    function gvizUrl() {
+      const tqx = encodeURIComponent(`out:json;responseHandler:__sheetCallback`);
+      return `https://docs.google.com/spreadsheets/d/${CONFIG.SHEET_ID}/gviz/tq?gid=${CONFIG.GID}&headers=1&tqx=${tqx}`;
+    }
+
+    function loadSheet() {
+      return new Promise((resolve, reject) => {
+        const callbackName = `__sheetCallback_${Date.now()}`;
+        const script = document.createElement("script");
+        window[callbackName] = (payload) => {
+          delete window[callbackName];
+          script.remove();
+          resolve(parseGviz(payload));
+        };
+        script.onerror = () => {
+          delete window[callbackName];
+          script.remove();
+          reject(new Error("구글 시트를 불러오지 못했습니다. 공유 권한이나 시트 공개 상태를 확인해 주세요."));
+        };
+        script.src = gvizUrl().replace("__sheetCallback", callbackName);
+        document.head.appendChild(script);
+      });
+    }
+
+    function parseGviz(payload) {
+      const cols = payload.table.cols.map((col, index) => normalize(col.label) || `col_${index}`);
+      return payload.table.rows.map((row, rowIndex) => {
+        const item = { _rowNumber: String(rowIndex + 2), _source: "sheet" };
+        cols.forEach((key, index) => {
+          const cell = row.c[index];
+          item[key] = cell ? normalize(cell.f ?? cell.v) : "";
+        });
+        return normalize(item["제목"]) || normalize(item["링크"]) ? item : null;
+      }).filter(Boolean);
+    }
+
+    function localPosts() {
+      try {
+        return JSON.parse(localStorage.getItem("hq-postype-local-posts") || "[]");
+      } catch {
+        return [];
+      }
+    }
+
+    function saveLocalPosts(posts) {
+      localStorage.setItem("hq-postype-local-posts", JSON.stringify(posts));
+    }
+
+    function mergeSheetAndLocal(sheetPosts) {
+      const locals = localPosts();
+      const sheetLinks = new Set(sheetPosts.map((post) => normalize(post["링크"])).filter(Boolean));
+      const deleted = new Set(locals.filter((post) => post._deleted).map((post) => post._rowNumber));
+      const overrides = new Map(locals.filter((post) => !post._deleted && !String(post._rowNumber).startsWith("local-")).map((post) => [post._rowNumber, post]));
+      const localOnly = locals.filter((post) => {
+        if (post._deleted || !String(post._rowNumber).startsWith("local-")) return false;
+        const link = normalize(post["링크"]);
+        return !link || !sheetLinks.has(link);
+      });
+      const mergedSheet = sheetPosts
+        .filter((post) => !deleted.has(post._rowNumber))
+        .map((post) => overrides.get(post._rowNumber) || post);
+      return [...localOnly, ...mergedSheet];
+    }
+
+    async function loadData() {
+      els.status.textContent = "구글 시트 데이터를 불러오는 중입니다.";
+      try {
+        const sheetPosts = await loadSheet();
+        state.posts = mergeSheetAndLocal(sheetPosts);
+        els.status.textContent = `구글 시트 ${sheetPosts.length.toLocaleString("ko-KR")}개를 불러왔습니다.`;
+      } catch (error) {
+        state.posts = mergeSheetAndLocal(SAMPLE_POSTS);
+        els.status.textContent = `${error.message} 지금은 샘플/로컬 데이터로 표시합니다.`;
+      }
+      buildFilters();
+      render();
+    }
+
+    function buildFilters() {
+      els.filterMount.innerHTML = "";
+      Object.entries(TAG_GROUPS).forEach(([group, options]) => {
+        const box = document.createElement("div");
+        box.className = "filter-group";
+        box.dataset.group = group;
+        const label = document.createElement("span");
+        label.className = "label";
+        label.textContent = group;
+        const chips = document.createElement("div");
+        chips.className = "chips";
+        options.forEach((option) => {
+          const button = document.createElement("button");
+          button.className = "chip";
+          button.type = "button";
+          button.textContent = option;
+          button.dataset.group = group;
+          button.dataset.option = option;
+          button.addEventListener("click", () => {
+            state.active[group] ||= new Set();
+            state.active[group].has(option) ? state.active[group].delete(option) : state.active[group].add(option);
+            button.classList.toggle("active");
+            render();
+          });
+          chips.appendChild(button);
+        });
+        box.append(label, chips);
+        els.filterMount.appendChild(box);
+      });
+    }
+
+    function filteredPosts() {
+      const query = normalize(state.query).toLowerCase();
+      return state.posts.filter((post) => matchesPost(post, state.active, query)).sort((a, b) => {
+        if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
+        if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
+        return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+      });
+    }
+
+    function matchesPost(post, activeGroups = state.active, query = normalize(state.query).toLowerCase()) {
+      if (query && !allSearchText(post).includes(query)) return false;
+      return Object.entries(activeGroups).every(([group, selected]) => {
+        if (!selected || !selected.size) return true;
+        const tags = tagsFor(post, group);
+        return [...selected].every((tag) => tags.includes(tag));
+      });
+    }
+
+    function cloneActiveGroups() {
+      return Object.fromEntries(
+        Object.entries(state.active).map(([group, selected]) => [group, new Set(selected)])
+      );
+    }
+
+    function hasMatchesWithOption(group, option) {
+      const active = cloneActiveGroups();
+      active[group] ||= new Set();
+      active[group].add(option);
+      const query = normalize(state.query).toLowerCase();
+      return state.posts.some((post) => matchesPost(post, active, query));
+    }
+
+    function updateFilterVisibility() {
+      document.querySelectorAll(".filter-group").forEach((groupEl) => {
+        const group = groupEl.dataset.group;
+        let visibleCount = 0;
+        groupEl.querySelectorAll(".chip").forEach((chip) => {
+          const option = chip.dataset.option;
+          const isActive = state.active[group] && state.active[group].has(option);
+          const canMatch = isActive || hasMatchesWithOption(group, option);
+          chip.classList.toggle("is-hidden", !canMatch);
+          if (canMatch) visibleCount += 1;
+        });
+        groupEl.classList.toggle("is-hidden", visibleCount === 0);
+      });
+    }
+
+    function renderAdminList() {
+      els.adminList.innerHTML = "";
+      const query = normalize(state.adminQuery).toLowerCase();
+      const posts = state.posts
+        .filter((post) => !query || allSearchText(post).includes(query) || normalize(post["링크"]).toLowerCase().includes(query))
+        .slice()
+        .sort((a, b) => {
+          return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+        });
+      if (!state.posts.length) {
+        els.adminList.innerHTML = `<div class="empty">아직 불러온 글이 없습니다.</div>`;
+        return;
+      }
+      if (!posts.length) {
+        els.adminList.innerHTML = `<div class="empty">관리자 검색 결과가 없습니다.</div>`;
+        return;
+      }
+      posts.forEach((post) => {
+        const button = document.createElement("button");
+        button.className = "admin-item";
+        button.type = "button";
+        button.innerHTML = `
+          <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
+          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
+        `;
+        button.addEventListener("click", () => fillAdminForm(post, button));
+        els.adminList.appendChild(button);
+      });
+    }
+
+    function escapeHtml(value) {
+      return normalize(value).replace(/[&<>"']/g, (char) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#039;"
+      }[char]));
+    }
+
+    function render() {
+      const posts = filteredPosts();
+      els.visible.textContent = posts.length.toLocaleString("ko-KR");
+      els.total.textContent = "글 목록";
+      els.list.innerHTML = "";
+      if (!posts.length) {
+        els.list.innerHTML = `<div class="empty">조건에 맞는 글이 없습니다.</div>`;
+        updateFilterVisibility();
+        renderAdminList();
+        return;
+      }
+      posts.forEach((post) => els.list.appendChild(renderPost(post)));
+      updateFilterVisibility();
+      renderAdminList();
+    }
+
+    function renderPost(post) {
+      const node = els.template.content.firstElementChild.cloneNode(true);
+      const title = node.querySelector(".title");
+      const meta = node.querySelector(".meta");
+      const badges = node.querySelector(".badges");
+      const tagRow = node.querySelector(".tag-row");
+      const edit = node.querySelector(".edit-button");
+
+      title.textContent = normalize(post["제목"]) || "제목 없음";
+      title.href = normalize(post["링크"]) || "#";
+      meta.textContent = [post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ");
+
+      badges.appendChild(makeBadge(postCategory(post), "category"));
+      badges.appendChild(makeBadge(ageLabel(post), "age"));
+      badges.appendChild(makeBadge(priceLabel(post), "price"));
+
+      ["장르", "키워드", "공", "수"].forEach((group) => {
+        splitTags(post[group]).forEach((tag) => tagRow.appendChild(makeTag(tag)));
+      });
+      renderEndingTags(post, tagRow);
+      edit.addEventListener("click", () => fillAdminForm(post));
+      return node;
+    }
+
+    function renderEndingTags(post, tagRow) {
+      const endings = splitTags(post["엔딩"]);
+      const visible = endings.filter((tag) => tag === "해피엔딩");
+      const hidden = endings.filter((tag) => tag && tag !== "해피엔딩");
+      visible.forEach((tag) => tagRow.appendChild(makeTag(tag, false, "spoiler")));
+      if (!hidden.length) return;
+
+      const button = document.createElement("button");
+      button.className = "ending-reveal";
+      button.type = "button";
+      button.textContent = "스포일러 보기";
+      button.addEventListener("click", () => {
+        button.remove();
+        hidden.forEach((tag) => tagRow.appendChild(makeTag(tag, false, "spoiler")));
+      });
+      tagRow.appendChild(button);
+    }
+
+    function makeBadge(text, type = "") {
+      const el = document.createElement("span");
+      el.className = `badge ${type}`;
+      el.textContent = text;
+      return el;
+    }
+
+    function makeTag(text, suggested = false, extraClass = "") {
+      const el = document.createElement("span");
+      el.className = `tag${suggested ? " suggested" : ""}${extraClass ? ` ${extraClass}` : ""}`;
+      el.textContent = suggested ? `제안: ${text}` : text;
+      return el;
+    }
+
+    function placeAdminEditor(anchor) {
+      if (anchor) {
+        anchor.insertAdjacentElement("afterend", els.adminEditor);
+      }
+    }
+
+    function fillAdminForm(post, anchor) {
+      document.body.classList.add("admin-on");
+      placeAdminEditor(anchor);
+      els.adminEditorTitle.textContent = "글 수정";
+      els.deletePost.hidden = false;
+      els.adminEditor.hidden = false;
+      [...els.adminForm.elements].forEach((field) => {
+        if (!field.name) return;
+        field.value = post[field.name] || "";
+      });
+      els.adminForm.elements["_rowNumber"].value = post._rowNumber || "";
+    }
+
+    function openNewPostForm() {
+      document.body.classList.add("admin-on");
+      placeAdminEditor(document.querySelector(".admin-head"));
+      els.adminForm.reset();
+      els.adminEditorTitle.textContent = "신규 글 추가";
+      els.deletePost.hidden = true;
+      els.adminForm.elements["_rowNumber"].value = "";
+      els.adminEditor.hidden = false;
+    }
+
+    function closeAdminEditor() {
+      els.adminForm.reset();
+      els.adminEditor.hidden = true;
+    }
+
+    function toggleAdminMode() {
+      if (document.body.classList.contains("admin-on")) {
+        document.body.classList.remove("admin-on");
+        closeAdminEditor();
+        return;
+      }
+      const password = window.prompt("관리자 비밀번호를 입력해 주세요.");
+      if (password !== ADMIN_PASSWORD) {
+        if (password !== null) alert("비밀번호가 맞지 않습니다.");
+        return;
+      }
+      document.body.classList.add("admin-on");
+      renderAdminList();
+    }
+
+    function formData() {
+      const data = {};
+      new FormData(els.adminForm).forEach((value, key) => data[key] = normalize(value));
+      data._source = data._rowNumber ? "local-edit" : "local";
+      data._rowNumber ||= `local-${Date.now()}`;
+      return data;
+    }
+
+    async function sendAdminAction(action, payload) {
+      if (!CONFIG.ADMIN_API_URL) return { ok: false, localOnly: true };
+      await fetch(CONFIG.ADMIN_API_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, payload })
+      });
+      return { ok: true, opaque: true };
+    }
+
+    async function savePost(event) {
+      event.preventDefault();
+      const data = formData();
+      const action = data._rowNumber && !data._rowNumber.startsWith("local-") ? "update" : "create";
+      upsertLocal(data);
+      state.posts = mergeSheetAndLocal(state.posts);
+      render();
+      closeAdminEditor();
+      els.status.textContent = "저장 내용을 화면에 반영했습니다. 구글 시트에도 전송 중입니다.";
+      try {
+        await sendAdminAction(action, data);
+        await loadData();
+      } catch (error) {
+        els.status.textContent = `화면에는 저장했지만 구글 시트 전송은 실패했습니다: ${error.message}`;
+      }
+    }
+
+    function upsertLocal(data) {
+      const posts = localPosts();
+      const index = posts.findIndex((post) => post._rowNumber === data._rowNumber);
+      data._deleted = false;
+      index >= 0 ? posts.splice(index, 1, data) : posts.unshift(data);
+      saveLocalPosts(posts);
+    }
+
+    async function deleteCurrentPost() {
+      const rowNumber = normalize(els.adminForm.elements["_rowNumber"].value);
+      if (!rowNumber) return;
+      if (rowNumber.startsWith("local-")) {
+        saveLocalPosts(localPosts().filter((post) => post._rowNumber !== rowNumber));
+      } else {
+        const posts = localPosts().filter((post) => post._rowNumber !== rowNumber);
+        posts.unshift({ _rowNumber: rowNumber, _deleted: true });
+        saveLocalPosts(posts);
+      }
+      state.posts = mergeSheetAndLocal(state.posts.filter((post) => post._rowNumber !== rowNumber));
+      closeAdminEditor();
+      render();
+      els.status.textContent = "삭제 내용을 화면에 반영했습니다. 구글 시트에도 전송 중입니다.";
+      try {
+        await sendAdminAction("delete", { _rowNumber: rowNumber });
+        await loadData();
+      } catch (error) {
+        els.status.textContent = `화면에는 삭제했지만 구글 시트 전송은 실패했습니다: ${error.message}`;
+      }
+    }
+
+    function recommendRandomPost(scope = "current") {
+      state.randomScope = scope;
+      const current = filteredPosts();
+      const pool = scope === "all" ? state.posts : current.length ? current : state.posts;
+      if (!pool.length) {
+        alert("추천할 글을 아직 불러오지 못했습니다.");
+        return;
+      }
+      const post = pool[Math.floor(Math.random() * pool.length)];
+      showRandomPost(post);
+    }
+
+    function toggleRandomPanel() {
+      els.randomPanel.hidden = !els.randomPanel.hidden;
+    }
+
+    function showRandomPost(post) {
+      state.randomPost = post;
+      els.randomResultTitle.textContent = normalize(post["제목"]) || "제목 없음";
+      els.randomResultMeta.textContent = [post["날짜"], post["작가"], postCategory(post), ageLabel(post), priceLabel(post)]
+        .map(normalize)
+        .filter(Boolean)
+        .join(" · ");
+      els.randomResultTags.innerHTML = "";
+      ["장르", "키워드", "공", "수"].forEach((group) => {
+        splitTags(post[group]).slice(0, 10).forEach((tag) => els.randomResultTags.appendChild(makeTag(tag)));
+      });
+      renderEndingTags(post, els.randomResultTags);
+      els.randomOpen.disabled = !normalize(post["링크"]);
+      els.randomResult.hidden = false;
+    }
+
+    function closeRandomResult() {
+      els.randomResult.hidden = true;
+    }
+
+    function openRandomPost() {
+      const link = normalize(state.randomPost && state.randomPost["링크"]);
+      if (!link) {
+        alert("추천된 글에 링크가 없습니다. 다시 추천을 눌러 주세요.");
+        return;
+      }
+      window.open(link, "_blank", "noopener");
+    }
+
+    els.search.addEventListener("input", (event) => {
+      state.query = event.target.value;
+      render();
+    });
+    els.sort.addEventListener("input", (event) => {
+      state.sort = event.target.value;
+      render();
+    });
+    els.sortButtons.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-sort]");
+      if (!button) return;
+      state.sort = button.dataset.sort;
+      els.sort.value = state.sort;
+      [...els.sortButtons.querySelectorAll(".sort-pill")].forEach((item) => {
+        item.classList.toggle("active", item === button);
+      });
+      render();
+    });
+    els.filterToggle.addEventListener("click", () => {
+      const filters = document.querySelector(".filters");
+      filters.classList.toggle("collapsed");
+      els.filterCaret.textContent = filters.classList.contains("collapsed") ? "펼치기" : "접기";
+    });
+    els.adminSearch.addEventListener("input", (event) => {
+      state.adminQuery = event.target.value;
+      renderAdminList();
+    });
+    els.adminToggle.addEventListener("click", toggleAdminMode);
+    els.newPost.addEventListener("click", openNewPostForm);
+    els.clearForm.addEventListener("click", closeAdminEditor);
+    els.deletePost.addEventListener("click", deleteCurrentPost);
+    els.adminForm.addEventListener("submit", savePost);
+    els.adminEditor.addEventListener("click", (event) => {
+      if (event.target === els.adminEditor) closeAdminEditor();
+    });
+    els.randomToggle.addEventListener("click", toggleRandomPanel);
+    els.randomCurrent.addEventListener("click", () => {
+      els.randomPanel.hidden = true;
+      recommendRandomPost("current");
+    });
+    els.randomAll.addEventListener("click", () => {
+      els.randomPanel.hidden = true;
+      recommendRandomPost("all");
+    });
+    els.randomReroll.addEventListener("click", () => recommendRandomPost(state.randomScope));
+    els.randomOpen.addEventListener("click", openRandomPost);
+    els.randomClose.addEventListener("click", closeRandomResult);
+    els.randomCancel.addEventListener("click", closeRandomResult);
+    els.randomResult.addEventListener("click", (event) => {
+      if (event.target === els.randomResult) closeRandomResult();
+    });
+
+    loadData();
+  </script>
+</body>
+</html>
