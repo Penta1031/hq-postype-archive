@@ -1169,6 +1169,28 @@
       max-width: 100%;
     }
 
+    .admin-tools {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      margin-bottom: 9px;
+    }
+
+    .admin-tools select {
+      min-width: 0;
+      min-height: 34px;
+      padding: 0 9px;
+      border-radius: 8px;
+      color: #aeb5bf;
+      font-size: 11px;
+    }
+
+    .admin-list-count {
+      margin: 0 0 8px;
+      color: #6e7682;
+      font-size: 11px;
+    }
+
     .admin-list {
       display: grid;
       gap: 7px;
@@ -1518,6 +1540,10 @@
         display: grid;
       }
 
+      .admin-tools {
+        grid-template-columns: 1fr;
+      }
+
       .random-dock {
         right: 18px;
         bottom: 18px;
@@ -1566,6 +1592,30 @@
       <label class="admin-search">
         <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
       </label>
+      <div class="admin-tools" aria-label="관리자 목록 필터">
+        <select id="adminCategoryFilter">
+          <option value="">전체 카테고리</option>
+          <option value="글">글</option>
+          <option value="그림">그림</option>
+          <option value="기타">기타</option>
+        </select>
+        <select id="adminPriceFilter">
+          <option value="">무료·유료 전체</option>
+          <option value="무료">무료</option>
+          <option value="유료">유료</option>
+        </select>
+        <select id="adminAgeFilter">
+          <option value="">연령 전체</option>
+          <option value="전연령">전연령</option>
+          <option value="성인">성인</option>
+        </select>
+        <select id="adminSortSelect">
+          <option value="date-desc">최신순</option>
+          <option value="title-asc">제목순</option>
+          <option value="author-asc">작가명순</option>
+        </select>
+      </div>
+      <p class="admin-list-count" id="adminListCount">전체 0개</p>
       <div class="admin-list" id="adminList"></div>
       <div class="admin-editor" id="adminEditor" hidden>
         <section class="admin-editor-card">
@@ -1575,6 +1625,7 @@
           </div>
           <form id="adminForm" class="admin-grid">
             <input type="hidden" name="_rowNumber">
+            <input type="hidden" name="_supabaseId">
             <label><span class="label">제목</span><input name="제목" required></label>
             <label><span class="label">작가</span><input name="작가"></label>
             <label class="wide"><span class="label">링크</span><input name="링크" type="url"></label>
@@ -1681,7 +1732,6 @@
       ADMIN_API_URL: ""
     };
     Object.assign(CONFIG, window.POSTYPE_CONFIG || {});
-    const ADMIN_PASSWORD = "hqpota1028";
 
     const TAG_GROUPS = {
       "카테고리": ["글", "그림", "기타"],
@@ -1724,6 +1774,12 @@
       active: {},
       query: "",
       adminQuery: "",
+      adminCategory: "",
+      adminPrice: "",
+      adminAge: "",
+      adminSort: "date-desc",
+      adminPassword: "",
+      editingPost: null,
       sort: "date-desc",
       randomScope: "current",
       randomPost: null,
@@ -1746,6 +1802,11 @@
       total: $("#totalCount"),
       adminToggle: $("#adminToggle"),
       adminSearch: $("#adminSearchInput"),
+      adminCategory: $("#adminCategoryFilter"),
+      adminPrice: $("#adminPriceFilter"),
+      adminAge: $("#adminAgeFilter"),
+      adminSort: $("#adminSortSelect"),
+      adminListCount: $("#adminListCount"),
       adminList: $("#adminList"),
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
@@ -2230,16 +2291,28 @@
       const query = normalize(state.adminQuery).toLowerCase();
       const posts = state.posts
         .filter((post) => !query || searchText(post).includes(query))
+        .filter((post) => !state.adminCategory || postCategory(post) === state.adminCategory)
+        .filter((post) => !state.adminPrice || priceLabel(post) === state.adminPrice)
+        .filter((post) => !state.adminAge || ageLabel(post) === state.adminAge)
         .slice()
         .sort((a, b) => {
-          return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+          if (state.adminSort === "title-asc") {
+            return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
+          }
+          if (state.adminSort === "author-asc") {
+            return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
+          }
+          return (Date.parse(normalize(b["날짜"])) || 0) - (Date.parse(normalize(a["날짜"])) || 0);
         });
+
+      els.adminListCount.textContent = `검색 결과 ${posts.length.toLocaleString("ko-KR")}개 / 전체 ${state.posts.length.toLocaleString("ko-KR")}개`;
+
       if (!state.posts.length) {
         els.adminList.innerHTML = `<div class="empty">아직 불러온 글이 없습니다.</div>`;
         return;
       }
       if (!posts.length) {
-        els.adminList.innerHTML = `<div class="empty">관리자 검색 결과가 없습니다.</div>`;
+        els.adminList.innerHTML = `<div class="empty">관리자 검색·필터 결과가 없습니다.</div>`;
         return;
       }
       posts.forEach((post) => {
@@ -2248,7 +2321,9 @@
         button.type = "button";
         button.innerHTML = `
           <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
-          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
+          <span class="admin-item-meta">${escapeHtml([
+            post["날짜"], post["작가"], postCategory(post), ageLabel(post), priceLabel(post)
+          ].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
         button.addEventListener("click", () => fillAdminForm(post, button));
         els.adminList.appendChild(button);
@@ -2372,6 +2447,7 @@
     function fillAdminForm(post, anchor) {
       document.body.classList.add("admin-on");
       placeAdminEditor(anchor);
+      state.editingPost = post;
       els.adminEditorTitle.textContent = "글 수정";
       els.deletePost.hidden = false;
       els.adminEditor.hidden = false;
@@ -2380,19 +2456,23 @@
         field.value = post[field.name] || "";
       });
       els.adminForm.elements["_rowNumber"].value = post._rowNumber || "";
+      els.adminForm.elements["_supabaseId"].value = post._supabaseId || "";
     }
 
     function openNewPostForm() {
       document.body.classList.add("admin-on");
       placeAdminEditor(document.querySelector(".admin-head"));
+      state.editingPost = null;
       els.adminForm.reset();
       els.adminEditorTitle.textContent = "신규 글 추가";
       els.deletePost.hidden = true;
       els.adminForm.elements["_rowNumber"].value = "";
+      els.adminForm.elements["_supabaseId"].value = "";
       els.adminEditor.hidden = false;
     }
 
     function closeAdminEditor() {
+      state.editingPost = null;
       els.adminForm.reset();
       els.adminEditor.hidden = true;
     }
@@ -2400,14 +2480,17 @@
     function toggleAdminMode() {
       if (document.body.classList.contains("admin-on")) {
         document.body.classList.remove("admin-on");
+        state.adminPassword = "";
         closeAdminEditor();
         return;
       }
       const password = window.prompt("관리자 비밀번호를 입력해 주세요.");
-      if (password !== ADMIN_PASSWORD) {
-        if (password !== null) alert("비밀번호가 맞지 않습니다.");
+      if (password === null) return;
+      if (!normalize(password)) {
+        alert("관리자 비밀번호를 입력해 주세요.");
         return;
       }
+      state.adminPassword = password;
       document.body.classList.add("admin-on");
       renderAdminList();
     }
@@ -2415,83 +2498,115 @@
     function formData() {
       const data = {};
       new FormData(els.adminForm).forEach((value, key) => data[key] = normalize(value));
-      data._source = data._rowNumber ? "local-edit" : "local";
-      data._rowNumber ||= `local-${Date.now()}`;
-      return data;
+      const existing = state.editingPost ? { ...state.editingPost } : {};
+      const merged = { ...existing, ...data };
+      merged._source = merged._rowNumber ? "supabase-edit" : "supabase-new";
+      return merged;
     }
 
-    async function sendSupabaseAction(action, payload) {
-      const table = encodeURIComponent(CONFIG.SUPABASE_TABLE);
-      if (action === "create") {
-        return requestSupabase(table, {
-          method: "POST",
-          headers: supabaseHeaders(true),
-          body: JSON.stringify(postToSupabaseRow(payload, action))
-        });
-      }
-      const rowNumber = normalize(payload._rowNumber);
-      if (!rowNumber) throw new Error("수정할 행 번호가 없습니다.");
-      const filter = `source_row_number=eq.${encodeURIComponent(rowNumber)}`;
-      if (action === "update") {
-        return requestSupabase(`${table}?${filter}`, {
-          method: "PATCH",
-          headers: supabaseHeaders(true),
-          body: JSON.stringify(postToSupabaseRow(payload, action))
-        });
-      }
-      if (action === "delete") {
-        return requestSupabase(`${table}?${filter}`, {
-          method: "PATCH",
-          headers: supabaseHeaders(true),
-          body: JSON.stringify({ deleted_at: new Date().toISOString() })
-        });
-      }
-      throw new Error(`알 수 없는 작업입니다: ${action}`);
+    function rpcHeaders() {
+      return {
+        ...supabaseHeaders(true),
+        Prefer: "return=representation"
+      };
     }
 
-    async function sendAdminAction(action, payload) {
-      if (hasSupabaseConfig() && CONFIG.SUPABASE_WRITE_ENABLED) {
-        return sendSupabaseAction(action, payload);
+    async function callAdminRpc(action, payload) {
+      if (!hasSupabaseConfig()) {
+        throw new Error("Supabase URL 또는 ANON KEY가 설정되지 않았습니다.");
       }
-      if (!CONFIG.ADMIN_API_URL) return { ok: false, localOnly: true };
-      await fetch(CONFIG.ADMIN_API_URL, {
+      if (!CONFIG.SUPABASE_WRITE_ENABLED) {
+        throw new Error("config.js의 SUPABASE_WRITE_ENABLED가 false입니다.");
+      }
+      if (!normalize(state.adminPassword)) {
+        throw new Error("관리자 비밀번호가 없습니다. 관리자 모드에 다시 들어가 주세요.");
+      }
+
+      const response = await fetch(`${supabaseBaseUrl()}/rest/v1/rpc/admin_manage_post`, {
         method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "text/plain;charset=utf-8" },
-        body: JSON.stringify({ action, payload })
+        headers: rpcHeaders(),
+        body: JSON.stringify({
+          p_action: action,
+          p_password: state.adminPassword,
+          p_payload: payload
+        })
       });
-      return { ok: true, opaque: true };
+
+      const text = await response.text();
+      let result = null;
+      if (text) {
+        try {
+          result = JSON.parse(text);
+        } catch {
+          result = text;
+        }
+      }
+      if (!response.ok) {
+        const message = typeof result === "object" && result
+          ? result.message || result.details || result.hint || JSON.stringify(result)
+          : result || response.statusText;
+        throw new Error(`관리자 저장 요청 실패 (${response.status}): ${message}`);
+      }
+      return result;
+    }
+
+    function rpcPostPayload(post, action) {
+      const row = postToSupabaseRow(post, action === "insert" ? "create" : "update");
+      if (action === "update" || action === "delete") {
+        const id = normalize(post._supabaseId);
+        if (!id) throw new Error("수정할 Supabase ID가 없습니다. 데이터를 새로고침한 뒤 다시 시도해 주세요.");
+        row.id = /^\d+$/.test(id) ? Number(id) : id;
+      }
+      if (action === "delete") return { id: row.id };
+      return row;
     }
 
     async function savePost(event) {
-    event.preventDefault(); // 새로고침 방지
+      event.preventDefault();
+      const submitButton = els.adminForm.querySelector('button[type="submit"]');
+      const originalText = submitButton.textContent;
+      submitButton.disabled = true;
+      submitButton.textContent = "저장 중";
 
-    // 1. 여기서 비밀번호를 물어봅니다.
-    const adminPassword = prompt("관리자 비밀번호를 입력하세요:");
-    if (!adminPassword) return; // 취소 누르면 아무 일도 안 함
+      try {
+        const post = formData();
+        const action = normalize(post._supabaseId) ? "update" : "insert";
+        await callAdminRpc(action, rpcPostPayload(post, action));
+        await loadData();
+        closeAdminEditor();
+        alert(action === "insert" ? "신규 글을 저장했습니다." : "수정 내용을 저장했습니다.");
+      } catch (error) {
+        console.error(error);
+        alert(error.message || "저장에 실패했습니다.");
+      } finally {
+        submitButton.disabled = false;
+        submitButton.textContent = originalText;
+      }
+    }
 
-    // (주의: 이 부분에는 폼에서 가져온 데이터를 postData라는 변수에 담는 기존 코드가 있어야 해요!)
-    // 예: const postData = { title: els.title.value, author: els.author.value ... };
+    async function deleteCurrentPost() {
+      if (!state.editingPost || !normalize(state.editingPost._supabaseId)) {
+        alert("삭제할 Supabase 글을 선택해 주세요.");
+        return;
+      }
+      if (!confirm("정말 이 글을 삭제하시겠습니까?")) return;
 
-    const isEditing = state.editingId !== null;
-    if (isEditing) postData.id = state.editingId;
-
-    // 2. 비밀 통로(rpc)로 데이터 쏘기!
-    const { data, error } = await supabase.rpc('admin_manage_post', {
-      p_action: isEditing ? 'update' : 'insert',
-      p_password: adminPassword,
-      p_payload: postData
-    });
-
-  if (error) {
-    alert("저장에 실패했습니다. 비밀번호를 확인해주세요.");
-    console.error(error);
-  } else {
-    alert("성공적으로 저장되었습니다!");
-    closeAdminEditor(); // 창 닫기
-    // loadData(); // <- 리스트 새로고침하는 기존 함수 이름이 있다면 여기서 호출해주세요.
-  }
-}
+      els.deletePost.disabled = true;
+      const originalText = els.deletePost.textContent;
+      els.deletePost.textContent = "삭제 중";
+      try {
+        await callAdminRpc("delete", rpcPostPayload(state.editingPost, "delete"));
+        await loadData();
+        closeAdminEditor();
+        alert("글을 삭제했습니다.");
+      } catch (error) {
+        console.error(error);
+        alert(error.message || "삭제에 실패했습니다.");
+      } finally {
+        els.deletePost.disabled = false;
+        els.deletePost.textContent = originalText;
+      }
+    }
 
     function upsertLocal(data) {
       const posts = localPosts();
@@ -2501,29 +2616,6 @@
       saveLocalPosts(posts);
     }
 
-    async function deleteCurrentPost() {
-      if (!state.editingId) return;
-
-      const adminPassword = prompt("관리자 비밀번호를 입력하세요:");
-      if (!adminPassword) return;
-
-      if (!confirm("정말 이 글을 아카이브에서 삭제하시겠습니까?")) return;
-
-      const { data, error } = await supabase.rpc('admin_manage_post', {
-        p_action: 'delete',
-        p_password: adminPassword,
-        p_payload: { id: state.editingId }
-      });
-
-      if (error) {
-        alert("삭제에 실패했습니다. 비밀번호를 확인해주세요.");
-        console.error(error);
-      } else {
-        alert("완전히 삭제되었습니다.");
-        closeAdminEditor();
-        // loadData(); // 리스트 새로고침
-      }
-    }
 
     function recommendRandomPost(scope = "current") {
       state.randomScope = scope;
@@ -2595,6 +2687,22 @@
     });
     els.adminSearch.addEventListener("input", (event) => {
       state.adminQuery = event.target.value;
+      renderAdminList();
+    });
+    els.adminCategory.addEventListener("change", (event) => {
+      state.adminCategory = event.target.value;
+      renderAdminList();
+    });
+    els.adminPrice.addEventListener("change", (event) => {
+      state.adminPrice = event.target.value;
+      renderAdminList();
+    });
+    els.adminAge.addEventListener("change", (event) => {
+      state.adminAge = event.target.value;
+      renderAdminList();
+    });
+    els.adminSort.addEventListener("change", (event) => {
+      state.adminSort = event.target.value;
       renderAdminList();
     });
     els.adminToggle.addEventListener("click", toggleAdminMode);
