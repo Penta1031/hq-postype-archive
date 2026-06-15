@@ -2464,25 +2464,34 @@
     }
 
     async function savePost(event) {
-      event.preventDefault();
-      const data = formData();
-      const action = data._rowNumber && !data._rowNumber.startsWith("local-") ? "update" : "create";
-      upsertLocal(data);
-      state.posts = mergeSheetAndLocal(state.posts);
-      render();
-      closeAdminEditor();
-      els.status.textContent = "저장 내용을 화면에 반영했습니다. 원격 저장소에도 전송 중입니다.";
-      try {
-        const result = await sendAdminAction(action, data);
-        if (result && result.localOnly) {
-          els.status.textContent = "저장 내용을 이 브라우저에만 반영했습니다. Supabase 쓰기 설정은 아직 꺼져 있습니다.";
-          return;
-        }
-        await loadData();
-      } catch (error) {
-        els.status.textContent = `화면에는 저장했지만 원격 저장은 실패했습니다: ${error.message}`;
-      }
-    }
+    event.preventDefault(); // 새로고침 방지
+
+    // 1. 여기서 비밀번호를 물어봅니다.
+    const adminPassword = prompt("관리자 비밀번호를 입력하세요:");
+    if (!adminPassword) return; // 취소 누르면 아무 일도 안 함
+
+    // (주의: 이 부분에는 폼에서 가져온 데이터를 postData라는 변수에 담는 기존 코드가 있어야 해요!)
+    // 예: const postData = { title: els.title.value, author: els.author.value ... };
+
+    const isEditing = state.editingId !== null;
+    if (isEditing) postData.id = state.editingId;
+
+    // 2. 비밀 통로(rpc)로 데이터 쏘기!
+    const { data, error } = await supabase.rpc('admin_manage_post', {
+      p_action: isEditing ? 'update' : 'insert',
+      p_password: adminPassword,
+      p_payload: postData
+    });
+
+  if (error) {
+    alert("저장에 실패했습니다. 비밀번호를 확인해주세요.");
+    console.error(error);
+  } else {
+    alert("성공적으로 저장되었습니다!");
+    closeAdminEditor(); // 창 닫기
+    // loadData(); // <- 리스트 새로고침하는 기존 함수 이름이 있다면 여기서 호출해주세요.
+  }
+}
 
     function upsertLocal(data) {
       const posts = localPosts();
@@ -2493,28 +2502,26 @@
     }
 
     async function deleteCurrentPost() {
-      const rowNumber = normalize(els.adminForm.elements["_rowNumber"].value);
-      if (!rowNumber) return;
-      if (rowNumber.startsWith("local-")) {
-        saveLocalPosts(localPosts().filter((post) => post._rowNumber !== rowNumber));
+      if (!state.editingId) return;
+
+      const adminPassword = prompt("관리자 비밀번호를 입력하세요:");
+      if (!adminPassword) return;
+
+      if (!confirm("정말 이 글을 아카이브에서 삭제하시겠습니까?")) return;
+
+      const { data, error } = await supabase.rpc('admin_manage_post', {
+        p_action: 'delete',
+        p_password: adminPassword,
+        p_payload: { id: state.editingId }
+      });
+
+      if (error) {
+        alert("삭제에 실패했습니다. 비밀번호를 확인해주세요.");
+        console.error(error);
       } else {
-        const posts = localPosts().filter((post) => post._rowNumber !== rowNumber);
-        posts.unshift({ _rowNumber: rowNumber, _deleted: true });
-        saveLocalPosts(posts);
-      }
-      state.posts = mergeSheetAndLocal(state.posts.filter((post) => post._rowNumber !== rowNumber));
-      closeAdminEditor();
-      render();
-      els.status.textContent = "삭제 내용을 화면에 반영했습니다. 원격 저장소에도 전송 중입니다.";
-      try {
-        const result = await sendAdminAction("delete", { _rowNumber: rowNumber });
-        if (result && result.localOnly) {
-          els.status.textContent = "삭제 내용을 이 브라우저에만 반영했습니다. Supabase 쓰기 설정은 아직 꺼져 있습니다.";
-          return;
-        }
-        await loadData();
-      } catch (error) {
-        els.status.textContent = `화면에는 삭제했지만 원격 삭제는 실패했습니다: ${error.message}`;
+        alert("완전히 삭제되었습니다.");
+        closeAdminEditor();
+        // loadData(); // 리스트 새로고침
       }
     }
 
