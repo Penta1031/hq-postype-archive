@@ -1113,6 +1113,8 @@
     .admin-search {
       margin: 0 0 10px;
       position: relative;
+      max-width: 100%;
+      min-width: 0;
     }
 
     .admin-search::before {
@@ -1131,15 +1133,21 @@
       border-radius: 9px;
       padding-left: 34px;
       font-size: 12px;
+      max-width: 100%;
     }
 
     .admin-list {
       display: grid;
       gap: 7px;
+      max-width: 100%;
+      min-width: 0;
+      overflow-x: hidden;
     }
 
     .admin-item {
       width: 100%;
+      max-width: 100%;
+      min-width: 0;
       border: 1px solid #292b30;
       border-radius: 10px;
       background: #151619;
@@ -1151,19 +1159,25 @@
 
     .admin-item-title {
       display: block;
+      max-width: 100%;
       overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
       font-size: 13px;
       font-weight: 500;
     }
 
     .admin-item-meta {
       display: block;
+      max-width: 100%;
       margin-top: 4px;
       color: #6e7682;
       font-size: 11px;
       font-weight: 400;
+      white-space: normal;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
 
     .admin-editor {
@@ -1195,7 +1209,7 @@
       width: 100%;
       max-width: 100%;
       min-width: 0;
-      overflow: hidden;
+      overflow-x: hidden;
       position: relative;
       border: 1px solid #24262b;
       border-radius: 12px;
@@ -1848,7 +1862,17 @@
       });
       renderEndingTags(post, tagRow);
       edit.addEventListener("click", () => fillAdminForm(post));
+      node.addEventListener("click", (event) => {
+        if (event.target.closest("a, button")) return;
+        openPostLink(post);
+      });
       return node;
+    }
+
+    function openPostLink(post) {
+      const link = normalize(post["링크"]);
+      if (!link) return;
+      window.open(link, "_blank", "noopener");
     }
 
     function renderEndingTags(post, tagRow) {
