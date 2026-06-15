@@ -1344,6 +1344,112 @@
       grid-column: 1 / -1;
     }
 
+    body {
+      font-weight: 400;
+    }
+
+    h1 {
+      font-size: 23px;
+      font-weight: 500;
+      letter-spacing: 0;
+    }
+
+    .button,
+    .button.primary,
+    .home-link,
+    .filter-title,
+    .filter-title strong,
+    .chip,
+    .sort-pill,
+    .badge,
+    .tag,
+    .ending-reveal,
+    .random-toggle,
+    .random-panel button,
+    .admin-head strong,
+    .admin-item-title,
+    .admin-editor-head h2,
+    .random-result-head h2 {
+      font-weight: 400;
+    }
+
+    .button.primary {
+      color: #101114;
+    }
+
+    .post-card {
+      border-color: #2a2d33;
+      background: #121315;
+      box-shadow: none;
+      transition: border-color .16s ease, background .16s ease;
+    }
+
+    .post-card:hover {
+      border-color: #3a3f47;
+      background: #151619;
+    }
+
+    .post-card::after {
+      color: #424852;
+      font-size: 15px;
+    }
+
+    .title {
+      color: #eef0f3;
+      font-size: 15.5px;
+      font-weight: 400;
+      letter-spacing: 0;
+    }
+
+    .title:hover {
+      color: #b9d8ff;
+    }
+
+    .meta,
+    .admin-item-meta,
+    .random-result-meta {
+      color: #7b8490;
+      font-weight: 400;
+    }
+
+    .badge,
+    .badge.category,
+    .badge.age,
+    .badge.price,
+    .tag,
+    .tag.suggested,
+    .tag.spoiler {
+      border-color: #30343a;
+      background: #17191d;
+      color: #9aa3ad;
+    }
+
+    .ending-reveal {
+      border-color: #30343a;
+      background: transparent;
+      color: #9aa3ad;
+    }
+
+    .chip {
+      background: #131519;
+      color: #aeb5bf;
+    }
+
+    .chip.active,
+    .sort-pill.active {
+      background: #e6e8eb;
+      border-color: #e6e8eb;
+      color: #111316;
+    }
+
+    .admin-item,
+    .admin-editor-card,
+    .random-result-card,
+    .filters,
+    .admin {
+      box-shadow: none;
+    }
+
     @media (max-width: 560px) {
       .home-link {
         min-height: 40px;
@@ -1399,7 +1505,7 @@
         <button class="button primary" id="newPostButton" type="button">+ 신규 글 추가</button>
       </div>
       <label class="admin-search">
-        <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 · 링크 검색">
+        <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
       </label>
       <div class="admin-list" id="adminList"></div>
       <div class="admin-editor" id="adminEditor" hidden>
@@ -1434,7 +1540,7 @@
     <section class="layout">
       <aside class="filters panel">
         <label class="search">
-          <input id="searchInput" type="search" placeholder="제목 · 작가명 · 내용 검색">
+          <input id="searchInput" type="search" placeholder="제목 · 작가 검색">
         </label>
         <button class="filter-title" id="filterToggle" type="button"><strong>필터</strong><span id="filterCaret">접기</span></button>
         <div id="filterBody">
@@ -1621,11 +1727,9 @@
       return splitTags(post[group]);
     }
 
-    function allSearchText(post) {
+    function searchText(post) {
       return [
-        post["제목"], post["작가"], post["요약"], post["미리보기"], post["본문추출"],
-        post["장르"], post["키워드"], post["공"], post["수"], post["엔딩"],
-        post["AI제안장르"], post["AI제안키워드"], post["AI제안공"], post["AI제안수"], post["AI제안엔딩"]
+        post["제목"], post["작가"]
       ].map(normalize).join(" ").toLowerCase();
     }
 
@@ -1748,7 +1852,7 @@
     }
 
     function matchesPost(post, activeGroups = state.active, query = normalize(state.query).toLowerCase()) {
-      if (query && !allSearchText(post).includes(query)) return false;
+      if (query && !searchText(post).includes(query)) return false;
       return Object.entries(activeGroups).every(([group, selected]) => {
         if (!selected || !selected.size) return true;
         const tags = tagsFor(post, group);
@@ -1789,7 +1893,7 @@
       els.adminList.innerHTML = "";
       const query = normalize(state.adminQuery).toLowerCase();
       const posts = state.posts
-        .filter((post) => !query || allSearchText(post).includes(query) || normalize(post["링크"]).toLowerCase().includes(query))
+        .filter((post) => !query || searchText(post).includes(query))
         .slice()
         .sort((a, b) => {
           return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
