@@ -1191,6 +1191,36 @@
       font-size: 11px;
     }
 
+    .series-editor-group {
+      border: 1px solid #292b30;
+      border-radius: 10px;
+      background: #151619;
+      padding: 11px;
+    }
+
+    .series-editor-title {
+      margin: 0 0 9px;
+      color: #d8dbe0;
+      font-size: 12px;
+    }
+
+    .series-editor-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 9px;
+    }
+
+    .series-editor-help {
+      margin: 9px 0 0;
+      color: #6e7682;
+      font-size: 11px;
+      line-height: 1.45;
+    }
+
+    .series-editor-grid .wide {
+      grid-column: 1 / -1;
+    }
+
     .admin-list {
       display: grid;
       gap: 7px;
@@ -1544,6 +1574,10 @@
         grid-template-columns: 1fr;
       }
 
+      .series-editor-grid {
+        grid-template-columns: 1fr;
+      }
+
       .random-dock {
         right: 18px;
         bottom: 18px;
@@ -1609,6 +1643,12 @@
           <option value="전연령">전연령</option>
           <option value="성인">성인</option>
         </select>
+        <select id="adminSeriesFilter">
+          <option value="">시리즈 전체</option>
+          <option value="단편">단편</option>
+          <option value="연재중">연재중</option>
+          <option value="완결">완결</option>
+        </select>
         <select id="adminSortSelect">
           <option value="date-desc">최신순</option>
           <option value="title-asc">제목순</option>
@@ -1633,6 +1673,17 @@
             <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
             <label><span class="label">유료</span><select name="유료"><option value="X">무료</option><option value="O">유료</option></select></label>
             <label><span class="label">성인</span><select name="성인"><option value="X">전연령</option><option value="O">성인</option></select></label>
+            <div class="wide series-editor-group">
+              <p class="series-editor-title">시리즈 · 연재 설정</p>
+              <div class="series-editor-grid">
+                <label><span class="label">시리즈 여부</span><select name="시리즈"><option value="">단편</option><option value="Y">시리즈</option></select></label>
+                <label><span class="label">연재 상태</span><select name="연재상태"><option value="">상태 없음</option><option value="연재중">연재중</option><option value="완결">완결</option></select></label>
+                <label><span class="label">시리즈명</span><input name="시리즈명" placeholder="같은 시리즈는 이름을 동일하게 입력"></label>
+                <label><span class="label">회차</span><input name="시리즈회차" placeholder="예: 1, 2, 외전, 상"></label>
+                <label class="wide"><span class="label">상태 근거</span><input name="상태근거" placeholder="예: 직접 지정, 제목 완결 표기"></label>
+              </div>
+              <p class="series-editor-help">같은 시리즈명으로 묶인 글 중 가장 큰 회차 또는 등록 글 수가 목록의 최종 회차로 표시됩니다.</p>
+            </div>
             <label><span class="label">장르</span><input name="장르" placeholder="현대물, 피폐물"></label>
             <label><span class="label">키워드</span><input name="키워드" placeholder="재회, 오해"></label>
             <label><span class="label">공</span><input name="공" placeholder="다정공"></label>
@@ -1777,6 +1828,7 @@
       adminCategory: "",
       adminPrice: "",
       adminAge: "",
+      adminSeries: "",
       adminSort: "date-desc",
       adminPassword: "",
       editingPost: null,
@@ -1805,6 +1857,7 @@
       adminCategory: $("#adminCategoryFilter"),
       adminPrice: $("#adminPriceFilter"),
       adminAge: $("#adminAgeFilter"),
+      adminSeries: $("#adminSeriesFilter"),
       adminSort: $("#adminSortSelect"),
       adminListCount: $("#adminListCount"),
       adminList: $("#adminList"),
@@ -1951,9 +2004,9 @@
       const stats = state.seriesStats.get(post);
       const status = (stats && stats.status) || series.status;
       if (status !== "연재중") return status;
-      const current = stats && stats.current;
-      if (!current) return status;
-      return `${status} (${current}/n)`;
+      const finalCount = stats && stats.total;
+      if (!finalCount) return status;
+      return `${status} (${finalCount}/n)`;
     }
 
     function tagsFor(post, group) {
@@ -2286,6 +2339,13 @@
       });
     }
 
+    function adminSeriesLabel(post) {
+      const series = seriesInfo(post);
+      if (!series.isSeries) return "단편";
+      const stats = state.seriesStats.get(post);
+      return (stats && stats.status) || series.status || "연재중";
+    }
+
     function renderAdminList() {
       els.adminList.innerHTML = "";
       const query = normalize(state.adminQuery).toLowerCase();
@@ -2294,6 +2354,7 @@
         .filter((post) => !state.adminCategory || postCategory(post) === state.adminCategory)
         .filter((post) => !state.adminPrice || priceLabel(post) === state.adminPrice)
         .filter((post) => !state.adminAge || ageLabel(post) === state.adminAge)
+        .filter((post) => !state.adminSeries || adminSeriesLabel(post) === state.adminSeries)
         .slice()
         .sort((a, b) => {
           if (state.adminSort === "title-asc") {
@@ -2322,7 +2383,8 @@
         button.innerHTML = `
           <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
           <span class="admin-item-meta">${escapeHtml([
-            post["날짜"], post["작가"], postCategory(post), ageLabel(post), priceLabel(post)
+            post["날짜"], post["작가"], postCategory(post), ageLabel(post), priceLabel(post),
+            seriesInfo(post).isSeries ? seriesStatusText(post, seriesInfo(post)) : "단편"
           ].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
         button.addEventListener("click", () => fillAdminForm(post, button));
@@ -2455,6 +2517,14 @@
         if (!field.name) return;
         field.value = post[field.name] || "";
       });
+      const series = seriesInfo(post);
+      if (series.isSeries) {
+        els.adminForm.elements["시리즈"].value = "Y";
+        if (!normalize(els.adminForm.elements["시리즈명"].value)) els.adminForm.elements["시리즈명"].value = series.name || "";
+        if (!normalize(els.adminForm.elements["시리즈회차"].value)) els.adminForm.elements["시리즈회차"].value = series.volume || "";
+        if (!normalize(els.adminForm.elements["연재상태"].value)) els.adminForm.elements["연재상태"].value = series.status || "연재중";
+        if (!normalize(els.adminForm.elements["상태근거"].value)) els.adminForm.elements["상태근거"].value = series.reason || "";
+      }
       els.adminForm.elements["_rowNumber"].value = post._rowNumber || "";
       els.adminForm.elements["_supabaseId"].value = post._supabaseId || "";
     }
@@ -2495,9 +2565,46 @@
       renderAdminList();
     }
 
+    function handleSeriesModeChange() {
+      const isSeries = els.adminForm.elements["시리즈"].value === "Y";
+      const names = ["시리즈명", "시리즈회차", "연재상태", "상태근거"];
+      if (isSeries) {
+        if (!normalize(els.adminForm.elements["연재상태"].value)) {
+          els.adminForm.elements["연재상태"].value = "연재중";
+        }
+        return;
+      }
+      names.forEach((name) => {
+        els.adminForm.elements[name].value = "";
+      });
+    }
+
+    function markAsSeriesFromDetail() {
+      const names = ["시리즈명", "시리즈회차", "연재상태", "상태근거"];
+      const hasSeriesDetail = names.some((name) => normalize(els.adminForm.elements[name].value));
+      if (hasSeriesDetail) els.adminForm.elements["시리즈"].value = "Y";
+    }
+
+    function normalizeSeriesFormFields(data) {
+      const hasSeriesDetail = ["시리즈명", "시리즈회차", "연재상태", "상태근거"].some((name) => normalize(data[name]));
+      const isSeries = normalize(data["시리즈"]) === "Y" || hasSeriesDetail;
+      if (!isSeries) {
+        data["시리즈"] = "";
+        data["시리즈명"] = "";
+        data["시리즈회차"] = "";
+        data["연재상태"] = "";
+        data["상태근거"] = "";
+        return data;
+      }
+      data["시리즈"] = "Y";
+      data["연재상태"] ||= "연재중";
+      return data;
+    }
+
     function formData() {
       const data = {};
       new FormData(els.adminForm).forEach((value, key) => data[key] = normalize(value));
+      normalizeSeriesFormFields(data);
       const existing = state.editingPost ? { ...state.editingPost } : {};
       const merged = { ...existing, ...data };
       merged._source = merged._rowNumber ? "supabase-edit" : "supabase-new";
@@ -2616,7 +2723,6 @@
       saveLocalPosts(posts);
     }
 
-
     function recommendRandomPost(scope = "current") {
       state.randomScope = scope;
       const current = filteredPosts();
@@ -2701,6 +2807,10 @@
       state.adminAge = event.target.value;
       renderAdminList();
     });
+    els.adminSeries.addEventListener("change", (event) => {
+      state.adminSeries = event.target.value;
+      renderAdminList();
+    });
     els.adminSort.addEventListener("change", (event) => {
       state.adminSort = event.target.value;
       renderAdminList();
@@ -2709,6 +2819,11 @@
     els.newPost.addEventListener("click", openNewPostForm);
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
+    els.adminForm.elements["시리즈"].addEventListener("change", handleSeriesModeChange);
+    ["시리즈명", "시리즈회차", "연재상태", "상태근거"].forEach((name) => {
+      els.adminForm.elements[name].addEventListener("input", markAsSeriesFromDetail);
+      els.adminForm.elements[name].addEventListener("change", markAsSeriesFromDetail);
+    });
     els.adminForm.addEventListener("submit", savePost);
     els.adminEditor.addEventListener("click", (event) => {
       if (event.target === els.adminEditor) closeAdminEditor();
