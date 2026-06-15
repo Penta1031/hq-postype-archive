@@ -967,6 +967,39 @@
       color: #60a5fa;
     }
 
+    .badge.run-status {
+      background: rgba(245, 158, 11, .14);
+      border-color: rgba(245, 158, 11, .46);
+      color: #fbbf24;
+    }
+
+    .badge.run-status.complete {
+      background: rgba(148, 163, 184, .14);
+      border-color: rgba(148, 163, 184, .38);
+      color: #cbd5e1;
+    }
+
+    .series-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 7px 0 0;
+      color: #7d8591;
+      font-size: 12px;
+      line-height: 1.45;
+      overflow-wrap: anywhere;
+    }
+
+    .series-line::before {
+      content: "시리즈";
+      flex: 0 0 auto;
+      border: 1px solid #30343a;
+      border-radius: 999px;
+      padding: 1px 6px;
+      color: #9aa3ad;
+      font-size: 10px;
+    }
+
     .title {
       max-width: calc(100% - 30px);
       color: #fff;
@@ -1416,12 +1449,38 @@
     .badge.category,
     .badge.age,
     .badge.price,
+    .badge.run-status,
+    .badge.run-status.complete,
     .tag,
     .tag.suggested,
     .tag.spoiler {
       border-color: #30343a;
       background: #17191d;
       color: #9aa3ad;
+    }
+
+    .badge.run-status {
+      border-color: #d6a02b;
+      background: #f6c453;
+      color: #17120a;
+    }
+
+    .badge.run-status.complete {
+      border-color: #e8e9ec;
+      background: #f4f4f5;
+      color: #3a3d43;
+    }
+
+    .series-line {
+      color: #8a929d;
+      font-size: 12px;
+      font-weight: 400;
+    }
+
+    .series-line::before {
+      border-color: #30343a;
+      background: #16181c;
+      color: #8f98a4;
     }
 
     .ending-reveal {
@@ -1622,6 +1681,7 @@
       "카테고리": ["글", "그림", "기타"],
       "가격": ["무료", "유료"],
       "성인": ["전연령", "성인"],
+      "연재상태": ["완결", "연재중"],
       "장르": ["현대물", "학원물", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
       "키워드": ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스"],
       "공": ["집착공", "다정공", "무심공", "능글공", "까칠공", "연하공", "대형견공", "계략공", "후회공", "절륜공", "재벌공", "연예인공", "상처공", "순정공", "강공", "짝사랑공", "헤테로공"],
@@ -1643,6 +1703,11 @@
         "키워드": "재회, 잔잔물",
         "공": "다정공",
         "수": "상처수",
+        "시리즈": "Y",
+        "시리즈명": "샘플 포스트",
+        "시리즈회차": "1",
+        "연재상태": "연재중",
+        "상태근거": "샘플",
         "엔딩": "오픈엔딩",
         "요약": "구글 시트 연결 전 UI 확인용 샘플입니다."
       }
@@ -1655,7 +1720,8 @@
       adminQuery: "",
       sort: "date-desc",
       randomScope: "current",
-      randomPost: null
+      randomPost: null,
+      seriesStats: new Map()
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -1699,6 +1765,19 @@
       return String(value ?? "").trim();
     }
 
+    function normalizeSeriesKey(value) {
+      return normalize(value).replace(/[^\p{L}\p{N}]+/gu, "").toLowerCase();
+    }
+
+    function parseSeriesNumber(value) {
+      const text = normalize(value);
+      if (!text) return 0;
+      const numeric = text.match(/\d+/);
+      if (numeric) return Number(numeric[0]);
+      const ordinal = { "上": 1, "상": 1, "中": 2, "중": 2, "下": 3, "하": 3 };
+      return ordinal[text] || 0;
+    }
+
     function splitTags(value) {
       return normalize(value).split(/[,，、/|·\n]/).map((item) => item.trim()).filter(Boolean);
     }
@@ -1719,10 +1798,107 @@
       return normalize(post["카테고리"]) || "글";
     }
 
+    function titleSeriesInfo(title) {
+      const raw = normalize(title);
+      const cleaned = raw.replace(/^\[[^\]]+\]\s*/, "");
+      const hasCompleteMark = /(\(完\)|完結|완결|\bEND\b|\bFIN\b)/i.test(cleaned);
+      const patterns = [
+        { re: /\s*(\d+\s*(?:화|편|부)?\s*(?:\(完\)|完|완결)?)\s*$/, kind: "숫자회차" },
+        { re: /\s*([\(\[]\s*\d+\s*[\)\]]\s*(?:\(完\)|完|완결)?)\s*$/, kind: "숫자회차" },
+        { re: /\s*([上中下상중하])\s*(?:\(完\)|完|완결)?\s*$/, kind: "상중하" },
+        { re: /\s*((?:part|pt|chapter|chap|ch)\.?\s*\d+)\s*$/i, kind: "영문회차" },
+        { re: /\s*(외전|番外|번외)\s*$/, kind: "외전" }
+      ];
+
+      for (const { re, kind } of patterns) {
+        const match = cleaned.match(re);
+        if (!match) continue;
+        const base = cleaned.replace(re, "").replace(/\s*[-–—_:]+\s*$/, "").trim();
+        if (!base) return { isSeries: false };
+        const volume = normalize(match[1]);
+        const complete = hasCompleteMark || kind === "외전" || ["下", "하"].includes(volume);
+        return {
+          isSeries: true,
+          name: base,
+          volume,
+          status: complete ? "완결" : "연재중",
+          reason: complete ? (kind === "외전" ? "외전표기" : "완결표기") : kind
+        };
+      }
+      return { isSeries: false };
+    }
+
+    function seriesInfo(post) {
+      const explicitStatus = normalize(post["연재상태"]);
+      const explicitName = normalize(post["시리즈명"]);
+      const explicitVolume = normalize(post["시리즈회차"]);
+      const explicitSeries = normalize(post["시리즈"]).toUpperCase() === "Y";
+      const inferred = titleSeriesInfo(post["제목"]);
+      const isSeries = explicitSeries || explicitName || explicitVolume || inferred.isSeries;
+      if (!isSeries) return { isSeries: false };
+      const status = explicitStatus || inferred.status || "연재중";
+      return {
+        isSeries: true,
+        name: explicitName || inferred.name || "",
+        volume: explicitVolume || inferred.volume || "",
+        status,
+        reason: normalize(post["상태근거"]) || inferred.reason || ""
+      };
+    }
+
+    function compareSeriesPost(a, b) {
+      const av = parseSeriesNumber(a.series.volume);
+      const bv = parseSeriesNumber(b.series.volume);
+      if (av && bv && av !== bv) return av - bv;
+      const ad = Date.parse(normalize(a.post["날짜"])) || 0;
+      const bd = Date.parse(normalize(b.post["날짜"])) || 0;
+      if (ad !== bd) return ad - bd;
+      return normalize(a.post["제목"]).localeCompare(normalize(b.post["제목"]), "ko");
+    }
+
+    function updateSeriesStats() {
+      const groups = new Map();
+      state.posts.forEach((post) => {
+        const series = seriesInfo(post);
+        if (!series.isSeries) return;
+        const key = normalizeSeriesKey(series.name || normalize(post["제목"]));
+        if (!key) return;
+        if (!groups.has(key)) groups.set(key, []);
+        groups.get(key).push({ post, series });
+      });
+
+      state.seriesStats = new Map();
+      groups.forEach((items, key) => {
+        const sorted = items.slice().sort(compareSeriesPost);
+        const maxVolume = Math.max(...sorted.map((item) => parseSeriesNumber(item.series.volume)), 0);
+        const total = Math.max(maxVolume, sorted.length);
+        const status = sorted.some((item) => item.series.status === "완결") ? "완결" : "연재중";
+        sorted.forEach((item, index) => {
+          const current = parseSeriesNumber(item.series.volume) || index + 1;
+          state.seriesStats.set(item.post, { key, current, total, status });
+        });
+      });
+    }
+
+    function seriesStatusText(post, series) {
+      const stats = state.seriesStats.get(post);
+      const status = (stats && stats.status) || series.status;
+      if (status !== "연재중") return status;
+      const current = stats && stats.current;
+      if (!current) return status;
+      return `${status} (${current}/n)`;
+    }
+
     function tagsFor(post, group) {
       if (group === "카테고리") return [postCategory(post)];
       if (group === "성인") return [ageLabel(post)];
       if (group === "가격") return [priceLabel(post)];
+      if (group === "연재상태") {
+        const series = seriesInfo(post);
+        if (!series.isSeries) return [];
+        const stats = state.seriesStats.get(post);
+        return [(stats && stats.status) || series.status];
+      }
       if (group === "스포일러") return splitTags(post["엔딩"]);
       return splitTags(post[group]);
     }
@@ -1802,9 +1978,11 @@
       try {
         const sheetPosts = await loadSheet();
         state.posts = mergeSheetAndLocal(sheetPosts);
+        updateSeriesStats();
         els.status.textContent = `구글 시트 ${sheetPosts.length.toLocaleString("ko-KR")}개를 불러왔습니다.`;
       } catch (error) {
         state.posts = mergeSheetAndLocal(SAMPLE_POSTS);
+        updateSeriesStats();
         els.status.textContent = `${error.message} 지금은 샘플/로컬 데이터로 표시합니다.`;
       }
       buildFilters();
@@ -1930,6 +2108,7 @@
     }
 
     function render() {
+      updateSeriesStats();
       const posts = filteredPosts();
       els.visible.textContent = posts.length.toLocaleString("ko-KR");
       els.total.textContent = "글 목록";
@@ -1952,11 +2131,17 @@
       const badges = node.querySelector(".badges");
       const tagRow = node.querySelector(".tag-row");
       const edit = node.querySelector(".edit-button");
+      const series = seriesInfo(post);
 
       title.textContent = normalize(post["제목"]) || "제목 없음";
       title.href = normalize(post["링크"]) || "#";
       meta.textContent = [post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ");
 
+      if (series.isSeries) {
+        const statusText = seriesStatusText(post, series);
+        badges.appendChild(makeBadge(statusText, `run-status ${statusText.startsWith("완결") ? "complete" : "ongoing"}`));
+        renderSeriesLine(meta, series);
+      }
       badges.appendChild(makeBadge(postCategory(post), "category"));
       badges.appendChild(makeBadge(ageLabel(post), "age"));
       badges.appendChild(makeBadge(priceLabel(post), "price"));
@@ -1971,6 +2156,15 @@
         openPostLink(post);
       });
       return node;
+    }
+
+    function renderSeriesLine(meta, series) {
+      const parts = [series.name, series.volume].map(normalize).filter(Boolean);
+      if (!parts.length) return;
+      const line = document.createElement("p");
+      line.className = "series-line";
+      line.textContent = parts.join(" ");
+      meta.insertAdjacentElement("afterend", line);
     }
 
     function openPostLink(post) {
