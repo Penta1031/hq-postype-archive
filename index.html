@@ -1661,6 +1661,38 @@
       border: 1px solid #282a2f;
       border-radius: 10px;
       background: #111;
+      touch-action: none;
+      cursor: grab;
+      user-select: none;
+    }
+
+    #excerptCanvas.is-dragging {
+      cursor: grabbing;
+    }
+
+    .excerpt-image-help {
+      margin: -2px 0 0;
+      color: #737b86;
+      font-size: 11px;
+      line-height: 1.5;
+      text-align: center;
+    }
+
+    .excerpt-image-controls {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .badge.age.adult {
+      border-color: rgba(239, 68, 68, .58) !important;
+      background: rgba(239, 68, 68, .16) !important;
+      color: #ff6b6b !important;
+    }
+
+    .random-adult {
+      color: #ff6b6b;
     }
 
     .swatches {
@@ -1969,14 +2001,6 @@
     </section>
   </main>
 
-  <div class="bookmark-dock">
-    <button class="bookmark-toggle" id="bookmarkToggle" type="button" aria-label="북마크한 글 보기">
-      <svg viewBox="0 0 24 24" aria-hidden="true">
-        <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5v17l-6-3.5-6 3.5z"></path>
-      </svg>
-    </button>
-  </div>
-
   <div class="random-dock">
     <button class="random-toggle" id="randomToggle" type="button">랜덤 추천</button>
     <div class="random-panel" id="randomPanel" hidden>
@@ -2039,7 +2063,8 @@
       </div>
       <div class="excerpt-layout">
         <div class="excerpt-preview">
-          <canvas id="excerptCanvas" width="1080" height="1080"></canvas>
+          <canvas id="excerptCanvas" width="1080" height="1080" aria-label="배경 이미지 위치와 크기를 직접 조절하는 발췌 미리보기"></canvas>
+          <p class="excerpt-image-help">이미지를 끌어 위치를 조절하고, 마우스 휠 또는 두 손가락으로 확대·축소하세요.</p>
           <div class="random-result-actions">
             <button class="button primary" id="excerptDownload" type="button">이미지 저장</button>
             <button class="button" id="excerptShare" type="button">공유</button>
@@ -2067,11 +2092,9 @@
               <button class="swatch" type="button" data-text-color="black">검정색</button>
             </div>
           </div>
-          <label><span class="label">배경 이미지</span><input id="excerptImage" type="file" accept="image/*"></label>
-          <div class="modal-grid two">
-            <label><span class="label">이미지 크기 <span id="excerptImageScaleLabel">100</span>%</span><input id="excerptImageScale" type="range" min="60" max="180" value="100"></label>
-            <label><span class="label">좌우 위치</span><input id="excerptImageX" type="range" min="-100" max="100" value="0"></label>
-            <label><span class="label">상하 위치</span><input id="excerptImageY" type="range" min="-100" max="100" value="0"></label>
+          <div class="excerpt-image-controls">
+            <label style="flex: 1;"><span class="label">배경 이미지</span><input id="excerptImage" type="file" accept="image/*"></label>
+            <button class="button" id="excerptImageReset" type="button">위치 초기화</button>
           </div>
         </div>
       </div>
@@ -2185,6 +2208,9 @@
       excerptImageScale: 1,
       excerptImageX: 0,
       excerptImageY: 0,
+      excerptPointers: new Map(),
+      excerptPinch: null,
+      excerptDragPoint: null,
       adminPassword: "",
       seriesStats: new Map()
     };
@@ -2216,7 +2242,6 @@
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
       libraryToggle: $("#libraryToggle"),
-      bookmarkToggle: $("#bookmarkToggle"),
       libraryModal: $("#libraryModal"),
       libraryTitle: $("#libraryTitle"),
       libraryClose: $("#libraryClose"),
@@ -2238,10 +2263,7 @@
       excerptFontSize: $("#excerptFontSize"),
       excerptFontSizeLabel: $("#excerptFontSizeLabel"),
       excerptImage: $("#excerptImage"),
-      excerptImageScale: $("#excerptImageScale"),
-      excerptImageScaleLabel: $("#excerptImageScaleLabel"),
-      excerptImageX: $("#excerptImageX"),
-      excerptImageY: $("#excerptImageY"),
+      excerptImageReset: $("#excerptImageReset"),
       excerptDownload: $("#excerptDownload"),
       excerptShare: $("#excerptShare"),
       randomToggle: $("#randomToggle"),
@@ -2913,7 +2935,7 @@
         renderSeriesLine(meta, series);
       }
       badges.appendChild(makeBadge(postCategory(post), "category"));
-      badges.appendChild(makeBadge(ageLabel(post), "age"));
+      badges.appendChild(makeBadge(ageLabel(post), truthyMark(post["성인"]) ? "age adult" : "age"));
       badges.appendChild(makeBadge(priceLabel(post), "price"));
 
       ["장르", "키워드", "공", "수"].forEach((group) => {
@@ -2950,14 +2972,12 @@
     function openLibraryModal(view = "all") {
       state.libraryView = view;
       els.libraryTitle.textContent = view === "bookmarked" ? "북마크" : "내 서재";
-      els.bookmarkToggle.classList.toggle("active", view === "bookmarked");
       renderLibraryList();
       els.libraryModal.hidden = false;
     }
 
     function closeLibraryModal() {
       els.libraryModal.hidden = true;
-      els.bookmarkToggle.classList.remove("active");
     }
 
     function renderLibraryList() {
@@ -3082,18 +3102,21 @@
       drawExcerptCanvas();
     }
 
-    function updateExcerptImageTransform() {
-      state.excerptImageScale = (Number(els.excerptImageScale.value) || 100) / 100;
-      state.excerptImageX = Number(els.excerptImageX.value) || 0;
-      state.excerptImageY = Number(els.excerptImageY.value) || 0;
-      els.excerptImageScaleLabel.textContent = els.excerptImageScale.value;
+    function resetExcerptImageTransform() {
+      state.excerptImageScale = 1;
+      state.excerptImageX = 0;
+      state.excerptImageY = 0;
+      state.excerptPointers.clear();
+      state.excerptPinch = null;
+      state.excerptDragPoint = null;
+      els.excerptCanvas.classList.remove("is-dragging");
       drawExcerptCanvas();
     }
 
     function loadExcerptImage(file) {
       if (!file) {
         state.excerptImage = null;
-        drawExcerptCanvas();
+        resetExcerptImageTransform();
         return;
       }
       const reader = new FileReader();
@@ -3101,20 +3124,142 @@
         const image = new Image();
         image.onload = () => {
           state.excerptImage = image;
-          drawExcerptCanvas();
+          resetExcerptImageTransform();
         };
         image.src = reader.result;
       };
       reader.readAsDataURL(file);
     }
 
+    function excerptCoverMetrics(scale = state.excerptImageScale) {
+      const image = state.excerptImage;
+      const canvas = els.excerptCanvas;
+      if (!image || !canvas) return null;
+      const coverScale = Math.max(canvas.width / image.width, canvas.height / image.height);
+      const actualScale = coverScale * scale;
+      const drawWidth = image.width * actualScale;
+      const drawHeight = image.height * actualScale;
+      return {
+        drawWidth,
+        drawHeight,
+        x: (canvas.width - drawWidth) / 2 + state.excerptImageX,
+        y: (canvas.height - drawHeight) / 2 + state.excerptImageY
+      };
+    }
+
     function drawCoverImage(ctx, image, width, height) {
-      const scale = Math.max(width / image.width, height / image.height) * state.excerptImageScale;
-      const drawWidth = image.width * scale;
-      const drawHeight = image.height * scale;
-      const x = (width - drawWidth) / 2 + state.excerptImageX;
-      const y = (height - drawHeight) / 2 + state.excerptImageY;
-      ctx.drawImage(image, x, y, drawWidth, drawHeight);
+      const metrics = excerptCoverMetrics();
+      if (!metrics) return;
+      ctx.drawImage(image, metrics.x, metrics.y, metrics.drawWidth, metrics.drawHeight);
+    }
+
+    function excerptCanvasPoint(event) {
+      const rect = els.excerptCanvas.getBoundingClientRect();
+      return {
+        x: (event.clientX - rect.left) * (els.excerptCanvas.width / rect.width),
+        y: (event.clientY - rect.top) * (els.excerptCanvas.height / rect.height)
+      };
+    }
+
+    function clampExcerptScale(value) {
+      return Math.min(4, Math.max(.5, value));
+    }
+
+    function zoomExcerptImageAt(point, nextScale, anchor = null) {
+      if (!state.excerptImage) return;
+      const current = excerptCoverMetrics();
+      if (!current) return;
+      const fixedAnchor = anchor || {
+        u: (point.x - current.x) / current.drawWidth,
+        v: (point.y - current.y) / current.drawHeight
+      };
+      const scale = clampExcerptScale(nextScale);
+      const image = state.excerptImage;
+      const canvas = els.excerptCanvas;
+      const coverScale = Math.max(canvas.width / image.width, canvas.height / image.height);
+      const drawWidth = image.width * coverScale * scale;
+      const drawHeight = image.height * coverScale * scale;
+      state.excerptImageScale = scale;
+      state.excerptImageX = point.x - fixedAnchor.u * drawWidth - (canvas.width - drawWidth) / 2;
+      state.excerptImageY = point.y - fixedAnchor.v * drawHeight - (canvas.height - drawHeight) / 2;
+      drawExcerptCanvas();
+    }
+
+    function beginExcerptPinch() {
+      if (state.excerptPointers.size < 2 || !state.excerptImage) {
+        state.excerptPinch = null;
+        return;
+      }
+      const [a, b] = [...state.excerptPointers.values()];
+      const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+      const metrics = excerptCoverMetrics();
+      state.excerptPinch = {
+        distance: Math.hypot(a.x - b.x, a.y - b.y) || 1,
+        scale: state.excerptImageScale,
+        anchor: {
+          u: (center.x - metrics.x) / metrics.drawWidth,
+          v: (center.y - metrics.y) / metrics.drawHeight
+        }
+      };
+    }
+
+    function handleExcerptPointerDown(event) {
+      if (!state.excerptImage) return;
+      event.preventDefault();
+      els.excerptCanvas.setPointerCapture?.(event.pointerId);
+      const point = excerptCanvasPoint(event);
+      state.excerptPointers.set(event.pointerId, point);
+      els.excerptCanvas.classList.add("is-dragging");
+      if (state.excerptPointers.size === 1) {
+        state.excerptDragPoint = point;
+      } else {
+        beginExcerptPinch();
+      }
+    }
+
+    function handleExcerptPointerMove(event) {
+      if (!state.excerptPointers.has(event.pointerId) || !state.excerptImage) return;
+      event.preventDefault();
+      const point = excerptCanvasPoint(event);
+      state.excerptPointers.set(event.pointerId, point);
+
+      if (state.excerptPointers.size >= 2) {
+        if (!state.excerptPinch) beginExcerptPinch();
+        const [a, b] = [...state.excerptPointers.values()];
+        const center = { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 };
+        const distance = Math.hypot(a.x - b.x, a.y - b.y) || 1;
+        zoomExcerptImageAt(center, state.excerptPinch.scale * (distance / state.excerptPinch.distance), state.excerptPinch.anchor);
+        return;
+      }
+
+      if (state.excerptDragPoint) {
+        state.excerptImageX += point.x - state.excerptDragPoint.x;
+        state.excerptImageY += point.y - state.excerptDragPoint.y;
+        state.excerptDragPoint = point;
+        drawExcerptCanvas();
+      }
+    }
+
+    function handleExcerptPointerEnd(event) {
+      state.excerptPointers.delete(event.pointerId);
+      try { els.excerptCanvas.releasePointerCapture?.(event.pointerId); } catch (_) {}
+      state.excerptPinch = null;
+      if (state.excerptPointers.size === 1) {
+        state.excerptDragPoint = [...state.excerptPointers.values()][0];
+      } else {
+        state.excerptDragPoint = null;
+      }
+      if (!state.excerptPointers.size) {
+        els.excerptCanvas.classList.remove("is-dragging");
+      }
+    }
+
+    function handleExcerptWheel(event) {
+      if (!state.excerptImage) return;
+      event.preventDefault();
+      const point = excerptCanvasPoint(event);
+      const factor = Math.exp(-event.deltaY * .0015);
+      zoomExcerptImageAt(point, state.excerptImageScale * factor);
     }
 
     function wrapCanvasText(ctx, text, maxWidth) {
@@ -3170,8 +3315,12 @@
       ctx.textBaseline = "top";
       const margin = 82;
       const lineHeight = Math.round(fontSize * 1.65);
-      const quote = normalize(els.excerptText.value) || "발췌 텍스트를 입력해 주세요.";
-      const lines = wrapCanvasText(ctx, `“${quote}”`, width - margin * 2).slice(0, 9);
+      let quote = normalize(els.excerptText.value) || "발췌 텍스트를 입력해 주세요.";
+      const quotePairs = { '"': '"', "“": "”" };
+      if (quote.length >= 2 && quotePairs[quote[0]] === quote[quote.length - 1]) {
+        quote = quote.slice(1, -1).trim();
+      }
+      const lines = wrapCanvasText(ctx, quote, width - margin * 2).slice(0, 9);
       let y = 210;
       lines.forEach((line) => {
         ctx.fillText(line, margin, y);
@@ -3179,11 +3328,13 @@
       });
 
       ctx.fillStyle = subColor;
-      ctx.font = `30px ${fontFamily}`;
       const title = normalize(els.excerptWorkTitle.value) || "작품 이름";
       const author = normalize(els.excerptAuthor.value) || "작가";
-      ctx.fillText(title, margin, Math.max(y + 62, 760));
-      ctx.fillText(author, margin, Math.max(y + 110, 808));
+      const metaY = Math.max(y + 62, 748);
+      ctx.font = `600 44px ${fontFamily}`;
+      ctx.fillText(title, margin, metaY);
+      ctx.font = `32px ${fontFamily}`;
+      ctx.fillText(author, margin, metaY + 64);
 
       ctx.fillStyle = dark ? "rgba(244,244,245,.38)" : "rgba(32,33,36,.38)";
       ctx.font = `24px ${fontFamily}`;
@@ -3432,9 +3583,11 @@
     function showRandomPost(post) {
       state.randomPost = post;
       els.randomResultTitle.textContent = normalize(post["제목"]) || "제목 없음";
-      els.randomResultMeta.textContent = [post["날짜"], post["작가"], postCategory(post), ageLabel(post), priceLabel(post)]
+      const randomMetaParts = [post["날짜"], post["작가"], postCategory(post), ageLabel(post), priceLabel(post)]
         .map(normalize)
-        .filter(Boolean)
+        .filter(Boolean);
+      els.randomResultMeta.innerHTML = randomMetaParts
+        .map((value) => value === "성인" ? `<span class="random-adult">${escapeHtml(value)}</span>` : escapeHtml(value))
         .join(" · ");
       els.randomResultTags.innerHTML = "";
       ["장르", "키워드", "공", "수"].forEach((group) => {
@@ -3499,7 +3652,6 @@
       if (event.target === els.adminEditor) closeAdminEditor();
     });
     els.libraryToggle.addEventListener("click", () => openLibraryModal("all"));
-    els.bookmarkToggle.addEventListener("click", () => openLibraryModal("bookmarked"));
     els.libraryClose.addEventListener("click", closeLibraryModal);
     els.libraryModal.addEventListener("click", (event) => {
       if (event.target === els.libraryModal) closeLibraryModal();
@@ -3534,9 +3686,13 @@
       button.addEventListener("click", () => setExcerptTextColor(button.dataset.textColor));
     });
     els.excerptImage.addEventListener("change", (event) => loadExcerptImage(event.target.files[0]));
-    [els.excerptImageScale, els.excerptImageX, els.excerptImageY].forEach((input) => {
-      input.addEventListener("input", updateExcerptImageTransform);
-    });
+    els.excerptImageReset.addEventListener("click", resetExcerptImageTransform);
+    els.excerptCanvas.addEventListener("pointerdown", handleExcerptPointerDown);
+    els.excerptCanvas.addEventListener("pointermove", handleExcerptPointerMove);
+    els.excerptCanvas.addEventListener("pointerup", handleExcerptPointerEnd);
+    els.excerptCanvas.addEventListener("pointercancel", handleExcerptPointerEnd);
+    els.excerptCanvas.addEventListener("lostpointercapture", handleExcerptPointerEnd);
+    els.excerptCanvas.addEventListener("wheel", handleExcerptWheel, { passive: false });
     els.excerptDownload.addEventListener("click", downloadExcerptImage);
     els.excerptShare.addEventListener("click", () => {
       shareExcerptImage().catch(() => downloadExcerptImage());
