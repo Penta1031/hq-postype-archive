@@ -951,27 +951,30 @@
     }
 
     .contact-panel {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
       margin: -4px 0 12px;
-      padding: 12px 14px;
       border-color: #282a2f;
       background: #111112;
-      color: #d6d9dd;
-      font-size: 13px;
+      color: #8c96a3;
     }
 
-    .contact-panel strong {
+    .contact-panel summary {
+      cursor: pointer;
+      padding: 13px 14px;
+      color: #d6d9dd;
+      font-size: 13px;
       font-weight: 400;
+    }
+
+    .contact-body {
+      display: grid;
+      gap: 10px;
+      padding: 0 14px 14px;
     }
 
     .contact-links {
       display: flex;
       flex-wrap: wrap;
       gap: 7px;
-      justify-content: flex-end;
     }
 
     .contact-links a {
@@ -1559,25 +1562,9 @@
       color: #111316;
     }
 
-    .bookmark-dock {
-      position: fixed;
-      right: max(18px, calc((100vw - 650px) / 2 + 18px));
-      bottom: 72px;
-      z-index: 70;
-    }
-
-    .bookmark-toggle {
-      width: 42px;
-      height: 42px;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid #34363c;
-      border-radius: 999px;
-      background: #14161a;
-      color: #f4f4f5;
-      box-shadow: 0 10px 24px rgba(0, 0, 0, .32);
-      cursor: pointer;
+    .danger-action {
+      border-color: rgba(255, 99, 99, .34) !important;
+      color: #ff9a9a !important;
     }
 
     .modal {
@@ -1651,6 +1638,65 @@
       line-height: 1.55;
     }
 
+
+    .library-toolbar {
+      display: grid;
+      gap: 9px;
+      margin-bottom: 12px;
+    }
+
+    .library-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      min-width: 0;
+      padding: 4px;
+      border: 1px solid #292b30;
+      border-radius: 12px;
+      background: #151619;
+    }
+
+    .library-tab {
+      min-height: 34px;
+      border: 0;
+      border-radius: 9px;
+      background: transparent;
+      color: #8f98a4;
+      padding: 0 11px;
+      font-size: 12px;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    .library-tab.active {
+      background: #e6e8eb;
+      color: #111316;
+    }
+
+    .library-reset {
+      width: 100%;
+      min-height: 34px;
+      border: 1px solid rgba(255, 99, 99, .34);
+      border-radius: 10px;
+      background: rgba(255, 99, 99, .06);
+      color: #ff9a9a;
+      padding: 0 12px;
+      font-size: 12px;
+      font-weight: 400;
+      cursor: pointer;
+      text-align: center;
+    }
+
+    .library-reset:hover {
+      border-color: rgba(255, 99, 99, .72);
+      background: rgba(255, 99, 99, .11);
+      color: #ffd0d0;
+    }
+
+    .library-reset[hidden] {
+      display: none;
+    }
+
     .library-list {
       display: grid;
       gap: 8px;
@@ -1682,11 +1728,6 @@
       flex-wrap: wrap;
       gap: 6px;
       margin-top: 9px;
-    }
-
-    .danger-action {
-      border-color: rgba(255, 99, 99, .38);
-      color: #ff8f8f;
     }
 
     .excerpt-layout {
@@ -1911,22 +1952,9 @@
         bottom: 18px;
       }
 
-      .bookmark-dock {
-        right: 18px;
-        bottom: 72px;
-      }
-
       .excerpt-layout,
       .modal-grid.two {
         grid-template-columns: 1fr;
-      }
-
-      .contact-panel {
-        display: grid;
-      }
-
-      .contact-links {
-        justify-content: flex-start;
       }
     }
 
@@ -2022,13 +2050,15 @@
                 </div>
             </details>
 
-            <section class="contact-panel panel" aria-label="문의 창구">
-                <strong>문의 창구</strong>
-                <div class="contact-links">
-                    <a href="https://x.com/Penta_1031" target="_blank" rel="noreferrer">트위터 @Penta_1031</a>
-                    <a href="https://asked.kr/Penta_1031" target="_blank" rel="noreferrer">에스크</a>
+            <details class="contact-panel panel">
+                <summary>문의 창구</summary>
+                <div class="contact-body">
+                    <div class="contact-links">
+                        <a href="https://x.com/Penta_1031" target="_blank" rel="noreferrer">트위터 @Penta_1031</a>
+                        <a href="https://asked.kr/Penta_1031" target="_blank" rel="noreferrer">에스크</a>
+                    </div>
                 </div>
-            </section>
+            </details>
 
     <section class="layout">
       <aside class="filters panel">
@@ -2063,8 +2093,6 @@
       </section>
     </section>
   </main>
-
-
   <div class="random-dock">
     <button class="random-toggle" id="randomToggle" type="button">랜덤 추천</button>
     <div class="random-panel" id="randomPanel" hidden>
@@ -2101,7 +2129,7 @@
           <button class="library-tab active" type="button" data-library-view="history" role="tab" aria-selected="true">읽은 목록</button>
           <button class="library-tab" type="button" data-library-view="bookmarked" role="tab" aria-selected="false">북마크</button>
         </div>
-        <button class="library-reset" id="libraryReset" type="button">읽은 기록 초기화</button>
+        <button class="library-reset" id="libraryReset" type="button">읽은 목록 초기화</button>
       </div>
       <div class="library-list" id="libraryList"></div>
     </section>
@@ -2269,7 +2297,7 @@
       randomScope: "current",
       randomPost: null,
       library: loadLibrary(),
-      libraryView: "history",
+      libraryView: "all",
       notePost: null,
       excerptPost: null,
       excerptBackground: "dark",
@@ -2774,7 +2802,7 @@
     function updateLibraryEntry(post, patch = {}) {
       const entry = postLibraryEntry(post);
       Object.assign(entry, patch);
-      if (!entry.bookmarked && !normalize(entry.note) && !entry.openedAt) {
+      if (!entry.bookmarked && !normalize(entry.note) && !entry.openedAt && !entry.read) {
         delete state.library[postKey(post)];
       }
       saveLibrary();
@@ -2882,14 +2910,18 @@
 
     function filteredPosts() {
       const query = normalize(state.query).toLowerCase();
-      return state.posts
-        .filter((post) => matchesPost(post, state.active, query))
-        .filter((post) => state.sort !== "bookmarked" || Boolean((state.library[postKey(post)] || {}).bookmarked))
-        .sort((a, b) => {
-          if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
-          if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
-          return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
-        });
+      const posts = state.posts.filter((post) => matchesPost(post, state.active, query));
+      const sorted = posts.sort((a, b) => {
+        if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
+        if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
+        if (state.sort === "bookmarked") {
+          const ab = postLibraryEntry(a).bookmarked ? 1 : 0;
+          const bb = postLibraryEntry(b).bookmarked ? 1 : 0;
+          if (ab !== bb) return bb - ab;
+        }
+        return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+      });
+      return state.sort === "bookmarked" ? sorted.filter((post) => postLibraryEntry(post).bookmarked) : sorted;
     }
 
     function matchesPost(post, activeGroups = state.active, query = normalize(state.query).toLowerCase()) {
@@ -3020,7 +3052,7 @@
         const entry = postLibraryEntry(post);
         updateLibraryEntry(post, { bookmarked: !entry.bookmarked, updatedAt: new Date().toISOString() });
         renderLibraryButtons(post, bookmarkButton);
-        render();
+        renderLibraryList();
       });
       edit.addEventListener("click", () => fillAdminForm(post));
       node.addEventListener("click", (event) => {
@@ -3038,12 +3070,14 @@
 
     function setLibraryView(view) {
       state.libraryView = view === "bookmarked" ? "bookmarked" : "history";
-      els.libraryTabs.querySelectorAll("[data-library-view]").forEach((button) => {
-        const active = button.dataset.libraryView === state.libraryView;
-        button.classList.toggle("active", active);
-        button.setAttribute("aria-selected", String(active));
-      });
-      els.libraryReset.hidden = state.libraryView !== "history";
+      if (els.libraryTabs) {
+        els.libraryTabs.querySelectorAll("[data-library-view]").forEach((button) => {
+          const active = button.dataset.libraryView === state.libraryView;
+          button.classList.toggle("active", active);
+          button.setAttribute("aria-selected", String(active));
+        });
+      }
+      if (els.libraryReset) els.libraryReset.hidden = state.libraryView !== "history";
       renderLibraryList();
     }
 
@@ -3059,7 +3093,6 @@
 
     function renderLibraryList() {
       if (!els.libraryList) return;
-
       const allEntries = Object.entries(state.library);
       const historyEntries = allEntries.filter(([, entry]) => Boolean(entry.openedAt || entry.read));
       const bookmarkedEntries = allEntries.filter(([, entry]) => Boolean(entry.bookmarked));
@@ -3070,10 +3103,10 @@
           return bd - ad;
         });
 
-      const historyTab = els.libraryTabs.querySelector('[data-library-view="history"]');
-      const bookmarkTab = els.libraryTabs.querySelector('[data-library-view="bookmarked"]');
-      historyTab.textContent = `읽은 목록 ${historyEntries.length}`;
-      bookmarkTab.textContent = `북마크 ${bookmarkedEntries.length}`;
+      const historyTab = els.libraryTabs && els.libraryTabs.querySelector('[data-library-view="history"]');
+      const bookmarkTab = els.libraryTabs && els.libraryTabs.querySelector('[data-library-view="bookmarked"]');
+      if (historyTab) historyTab.textContent = `읽은 목록 ${historyEntries.length}`;
+      if (bookmarkTab) bookmarkTab.textContent = `북마크 ${bookmarkedEntries.length}`;
 
       els.libraryList.innerHTML = "";
       if (!entries.length) {
@@ -3133,7 +3166,6 @@
       if (!hasHistory) return;
       const confirmed = window.confirm("읽은 기록을 모두 초기화할까요? 북마크와 메모는 유지됩니다.");
       if (!confirmed) return;
-
       Object.keys(state.library).forEach((key) => {
         const entry = state.library[key];
         entry.openedAt = "";
