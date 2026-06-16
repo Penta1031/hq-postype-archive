@@ -950,22 +950,46 @@
       margin: 0;
     }
 
-    .guide-section {
-      display: grid;
-      gap: 3px;
-      padding-top: 8px;
-      border-top: 1px solid #24262b;
+    .contact-panel {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin: -4px 0 12px;
+      padding: 12px 14px;
+      border-color: #282a2f;
+      background: #111112;
+      color: #d6d9dd;
+      font-size: 13px;
     }
 
-    .guide-section:first-child {
-      padding-top: 0;
-      border-top: 0;
+    .contact-panel strong {
+      font-weight: 400;
     }
 
-    .guide-section strong {
-      color: #c8cdd5;
+    .contact-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      justify-content: flex-end;
+    }
+
+    .contact-links a {
+      min-height: 28px;
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid #30343a;
+      border-radius: 999px;
+      background: #17191d;
+      color: #cfd5de;
+      padding: 0 10px;
       font-size: 12px;
-      font-weight: 500;
+      text-decoration: none;
+    }
+
+    .contact-links a:hover {
+      border-color: #52545b;
+      color: #fff;
     }
 
     .post-list {
@@ -1627,54 +1651,6 @@
       line-height: 1.55;
     }
 
-    .library-toolbar {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      margin-bottom: 12px;
-    }
-
-    .library-tabs {
-      display: flex;
-      gap: 6px;
-      min-width: 0;
-    }
-
-    .library-tab,
-    .library-reset {
-      min-height: 32px;
-      border: 1px solid #30343a;
-      border-radius: 999px;
-      background: transparent;
-      color: #8f98a4;
-      padding: 0 11px;
-      font-size: 11px;
-      font-weight: 400;
-      cursor: pointer;
-    }
-
-    .library-tab.active {
-      border-color: #e6e8eb;
-      background: #e6e8eb;
-      color: #111316;
-    }
-
-    .library-reset {
-      flex: 0 0 auto;
-      border-color: rgba(255, 99, 99, .38);
-      color: #ff8f8f;
-    }
-
-    .library-reset:hover {
-      border-color: rgba(255, 99, 99, .72);
-      background: rgba(255, 99, 99, .08);
-    }
-
-    .library-reset[hidden] {
-      display: none;
-    }
-
     .library-list {
       display: grid;
       gap: 8px;
@@ -1706,6 +1682,11 @@
       flex-wrap: wrap;
       gap: 6px;
       margin-top: 9px;
+    }
+
+    .danger-action {
+      border-color: rgba(255, 99, 99, .38);
+      color: #ff8f8f;
     }
 
     .excerpt-layout {
@@ -1939,6 +1920,14 @@
       .modal-grid.two {
         grid-template-columns: 1fr;
       }
+
+      .contact-panel {
+        display: grid;
+      }
+
+      .contact-links {
+        justify-content: flex-start;
+      }
     }
 
     html,
@@ -2026,31 +2015,20 @@
             <details class="guide panel">
                 <summary>이용 가이드</summary>
                 <div class="guide-body">
-                    <div class="guide-section">
-                      <strong>검색기 안내 · 문의</strong>
-                      <p>혚쾌 포타 검색기는 혚쾌 좌우상대고정 기준으로 정리하고 있습니다.</p>
-                      <p>일부 분류 기능은 AI를 통해 자동화하고 있으며, 자료 정리 목적 외에는 절대 사용하지 않습니다.</p>
-                      <p>혹시 목록에서 글을 내리고 싶으시다면 관리자(@Penta_1031)에게 편하게 요청해주세요.</p>
-                      <p>오류나 문의사항은 디엠 혹은 에스크로 문의 부탁드립니다.</p>
-                    </div>
-                    <div class="guide-section">
-                      <strong>내 서재</strong>
-                      <p>작품 링크를 열면 내 서재의 읽은 목록에 자동으로 기록됩니다.</p>
-                      <p>읽은 기록 초기화 버튼을 눌러 기록만 비울 수 있으며, 북마크와 메모는 유지됩니다.</p>
-                    </div>
-                    <div class="guide-section">
-                      <strong>북마크</strong>
-                      <p>작품 카드의 북마크 아이콘을 누르면 북마크 탭에 저장됩니다.</p>
-                      <p>북마크 탭에서도 작품 열기, 메모 작성, 발췌 만들기 기능을 그대로 사용할 수 있습니다.</p>
-                    </div>
-                    <div class="guide-section">
-                      <strong>메모 · 발췌</strong>
-                      <p>메모와 서재 기록은 현재 브라우저에만 저장됩니다.</p>
-                      <p>배경 이미지는 드래그로 이동하고, 마우스 휠이나 두 손가락으로 확대·축소할 수 있습니다.</p>
-                      <p>발췌 텍스트는 최대 10줄, 150자 이내를 권장합니다.</p>
-                    </div>
+                    <p>혚쾌 포타 검색기는 혚쾌 좌우상대고정 기준으로 정리하고 있습니다.</p>
+                    <p>일부 분류 기능은 AI를 통해 자동화하고 있으며, 자료 정리 목적 외에는 절대 사용하지 않습니다.</p>
+                    <p>혹시 목록에서 글을 내리고 싶으시다면 관리자(@Penta_1031)에게 편하게 요청해주세요.</p>
+                    <p>오류나 문의사항은 디엠 혹은 에스크로 문의 부탁드립니다.</p>
                 </div>
             </details>
+
+            <section class="contact-panel panel" aria-label="문의 창구">
+                <strong>문의 창구</strong>
+                <div class="contact-links">
+                    <a href="https://x.com/Penta_1031" target="_blank" rel="noreferrer">트위터 @Penta_1031</a>
+                    <a href="https://asked.kr/Penta_1031" target="_blank" rel="noreferrer">에스크</a>
+                </div>
+            </section>
 
     <section class="layout">
       <aside class="filters panel">
@@ -2061,9 +2039,9 @@
         <div id="filterBody">
             <select id="sortSelect" hidden>
                 <option value="date-desc">최신순</option>
-                <option value="date-asc">과거순</option>
                 <option value="title-asc">제목순</option>
-                <option value="author-asc">작가명순</option>
+                <option value="author-asc">작가순</option>
+                <option value="bookmarked">북마크</option>
             </select>
           <div id="filterMount"></div>
         </div>
@@ -2074,9 +2052,9 @@
           <span id="totalCount">글 목록</span>
                 <div class="sort-pills" id="sortButtons">
                     <button class="sort-pill active" type="button" data-sort="date-desc">최신순</button>
-                    <button class="sort-pill" type="button" data-sort="date-asc">과거순</button>
                     <button class="sort-pill" type="button" data-sort="title-asc">제목순</button>
-                    <button class="sort-pill" type="button" data-sort="author-asc">작가명순</button>
+                    <button class="sort-pill" type="button" data-sort="author-asc">작가순</button>
+                    <button class="sort-pill" type="button" data-sort="bookmarked">북마크</button>
                 </div>
         </div>
         <span id="visibleCount" hidden>0</span>
@@ -2085,6 +2063,7 @@
       </section>
     </section>
   </main>
+
 
   <div class="random-dock">
     <button class="random-toggle" id="randomToggle" type="button">랜덤 추천</button>
@@ -2168,7 +2147,7 @@
           <label><span class="label">발췌 텍스트</span><textarea id="excerptText" placeholder="텍스트를 복붙해 주세요."></textarea></label>
           <div class="modal-grid two">
             <label><span class="label">글꼴</span><select id="excerptFont"><option value="Pretendard, system-ui, sans-serif">기본</option><option value="'Nanum Gothic', '나눔고딕', system-ui, sans-serif">나눔고딕</option><option value="'Nanum Myeongjo', '나눔명조', serif">나눔명조</option></select></label>
-            <label><span class="label">글자크기 <span id="excerptFontSizeLabel">56</span></span><input id="excerptFontSize" type="range" min="34" max="80" value="56"></label>
+            <label><span class="label">글자크기 <span id="excerptFontSizeLabel">38</span></span><input id="excerptFontSize" type="range" min="26" max="58" value="38"></label>
           </div>
           <div class="modal-grid">
             <span class="label">배경</span>
@@ -2754,22 +2733,7 @@
     function loadLibrary() {
       try {
         const data = JSON.parse(localStorage.getItem(LIBRARY_STORAGE_KEY) || "{}");
-        if (!data || typeof data !== "object") return {};
-
-        let migrated = false;
-        Object.values(data).forEach((entry) => {
-          if (!entry || typeof entry !== "object") return;
-          if (entry.read && !entry.openedAt) {
-            entry.openedAt = entry.updatedAt || entry.date || new Date().toISOString();
-            migrated = true;
-          }
-          if ("read" in entry) {
-            delete entry.read;
-            migrated = true;
-          }
-        });
-        if (migrated) localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(data));
-        return data;
+        return data && typeof data === "object" ? data : {};
       } catch {
         return {};
       }
@@ -2791,6 +2755,7 @@
         link: normalize(post["링크"]),
         date: normalize(post["날짜"]),
         note: "",
+        read: false,
         bookmarked: false,
         openedAt: ""
       };
@@ -2917,13 +2882,15 @@
 
     function filteredPosts() {
       const query = normalize(state.query).toLowerCase();
-            return state.posts.filter((post) => matchesPost(post, state.active, query)).sort((a, b) => {
-                if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
-                if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
-                if (state.sort === "date-asc") return Date.parse(normalize(a["날짜"])) - Date.parse(normalize(b["날짜"]));
-                return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
-            });
-        }
+      return state.posts
+        .filter((post) => matchesPost(post, state.active, query))
+        .filter((post) => state.sort !== "bookmarked" || Boolean((state.library[postKey(post)] || {}).bookmarked))
+        .sort((a, b) => {
+          if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
+          if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
+          return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+        });
+    }
 
     function matchesPost(post, activeGroups = state.active, query = normalize(state.query).toLowerCase()) {
       if (query && !searchText(post).includes(query)) return false;
@@ -3053,6 +3020,7 @@
         const entry = postLibraryEntry(post);
         updateLibraryEntry(post, { bookmarked: !entry.bookmarked, updatedAt: new Date().toISOString() });
         renderLibraryButtons(post, bookmarkButton);
+        render();
       });
       edit.addEventListener("click", () => fillAdminForm(post));
       node.addEventListener("click", (event) => {
@@ -3093,12 +3061,12 @@
       if (!els.libraryList) return;
 
       const allEntries = Object.entries(state.library);
-      const historyEntries = allEntries.filter(([, entry]) => Boolean(entry.openedAt));
+      const historyEntries = allEntries.filter(([, entry]) => Boolean(entry.openedAt || entry.read));
       const bookmarkedEntries = allEntries.filter(([, entry]) => Boolean(entry.bookmarked));
       const entries = (state.libraryView === "bookmarked" ? bookmarkedEntries : historyEntries)
         .sort(([, a], [, b]) => {
-          const ad = Date.parse(state.libraryView === "bookmarked" ? (a.updatedAt || a.openedAt || a.date) : (a.openedAt || a.date)) || 0;
-          const bd = Date.parse(state.libraryView === "bookmarked" ? (b.updatedAt || b.openedAt || b.date) : (b.openedAt || b.date)) || 0;
+          const ad = Date.parse(state.libraryView === "bookmarked" ? (a.updatedAt || a.openedAt || a.date) : (a.openedAt || a.updatedAt || a.date)) || 0;
+          const bd = Date.parse(state.libraryView === "bookmarked" ? (b.updatedAt || b.openedAt || b.date) : (b.openedAt || b.updatedAt || b.date)) || 0;
           return bd - ad;
         });
 
@@ -3127,6 +3095,7 @@
             <button class="library-action" type="button" data-action="open">열기</button>
             <button class="library-action" type="button" data-action="note">메모</button>
             <button class="library-action" type="button" data-action="excerpt">발췌</button>
+            ${state.libraryView === "bookmarked" ? '<button class="library-action danger-action" type="button" data-action="unbookmark">북마크 해제</button>' : ""}
           </div>
         `;
         item.querySelector('[data-action="open"]').addEventListener("click", () => {
@@ -3147,12 +3116,20 @@
           const post = findPostByLibraryKey(key) || libraryEntryToPost(entry, key);
           openExcerptModal(post);
         });
+        const unbookmark = item.querySelector('[data-action="unbookmark"]');
+        if (unbookmark) {
+          unbookmark.addEventListener("click", () => {
+            const post = findPostByLibraryKey(key) || libraryEntryToPost(entry, key);
+            updateLibraryEntry(post, { bookmarked: false, updatedAt: new Date().toISOString() });
+            render();
+          });
+        }
         els.libraryList.appendChild(item);
       });
     }
 
     function clearReadingHistory() {
-      const hasHistory = Object.values(state.library).some((entry) => entry && entry.openedAt);
+      const hasHistory = Object.values(state.library).some((entry) => entry && (entry.openedAt || entry.read));
       if (!hasHistory) return;
       const confirmed = window.confirm("읽은 기록을 모두 초기화할까요? 북마크와 메모는 유지됩니다.");
       if (!confirmed) return;
@@ -3160,6 +3137,7 @@
       Object.keys(state.library).forEach((key) => {
         const entry = state.library[key];
         entry.openedAt = "";
+        entry.read = false;
         if (!entry.bookmarked && !normalize(entry.note)) delete state.library[key];
       });
       saveLibrary();
@@ -3417,43 +3395,6 @@
       return lines.filter((line, index, all) => line || (index > 0 && index < all.length - 1));
     }
 
-    function fitSingleLineCanvasFont(ctx, text, maxWidth, preferredSize, minSize, fontFamily, weight = "400") {
-      let size = preferredSize;
-      while (size > minSize) {
-        ctx.font = `${weight} ${size}px ${fontFamily}`;
-        if (ctx.measureText(text).width <= maxWidth) break;
-        size -= 2;
-      }
-      return size;
-    }
-
-    function buildExcerptTextLayout(ctx, quote, maxWidth, preferredSize) {
-      const minSize = 34;
-      const maxGroupHeight = 840;
-      const metaBlockHeight = 122;
-      const quoteMetaGap = 88;
-      let size = preferredSize;
-      let lines = [];
-      let lineHeight = 0;
-
-      while (size >= minSize) {
-        ctx.font = `${size}px ${els.excerptFont.value}`;
-        lines = wrapCanvasText(ctx, quote, maxWidth).slice(0, 10);
-        lineHeight = Math.round(size * 1.55);
-        const groupHeight = lines.length * lineHeight + quoteMetaGap + metaBlockHeight;
-        if (groupHeight <= maxGroupHeight || size === minSize) break;
-        size -= 2;
-      }
-
-      const quoteHeight = lines.length * lineHeight;
-      const groupHeight = quoteHeight + quoteMetaGap + metaBlockHeight;
-      const centerY = 540;
-      const quoteY = Math.max(92, Math.min(430, Math.round(centerY - groupHeight / 2)));
-      const metaY = quoteY + quoteHeight + quoteMetaGap;
-
-      return { size, lines, lineHeight, quoteY, metaY };
-    }
-
     function drawExcerptCanvas() {
       const canvas = els.excerptCanvas;
       if (!canvas) return;
@@ -3463,9 +3404,9 @@
       const dark = state.excerptBackground === "dark";
       const baseBg = dark ? "#101114" : "#f7f5ef";
       const textColor = state.excerptTextColor === "black" ? "#202124" : "#f4f4f5";
-      const subColor = state.excerptTextColor === "black" ? "rgba(32,33,36,.78)" : "rgba(244,244,245,.84)";
+      const subColor = state.excerptTextColor === "black" ? "rgba(32,33,36,.72)" : "rgba(244,244,245,.78)";
       const fontFamily = els.excerptFont.value;
-      const preferredFontSize = Number(els.excerptFontSize.value) || 56;
+      const fontSize = Number(els.excerptFontSize.value) || 38;
 
       ctx.clearRect(0, 0, width, height);
       ctx.fillStyle = baseBg;
@@ -3474,40 +3415,38 @@
       if (state.excerptImage) {
         drawCoverImage(ctx, state.excerptImage, width, height);
         const gradient = ctx.createLinearGradient(0, 0, 0, height);
-        gradient.addColorStop(0, dark ? "rgba(0,0,0,.18)" : "rgba(255,255,255,.08)");
-        gradient.addColorStop(.55, dark ? "rgba(0,0,0,.30)" : "rgba(255,255,255,.34)");
-        gradient.addColorStop(1, dark ? "rgba(0,0,0,.62)" : "rgba(255,255,255,.66)");
+        gradient.addColorStop(0, dark ? "rgba(0,0,0,.20)" : "rgba(255,255,255,.12)");
+        gradient.addColorStop(.55, dark ? "rgba(0,0,0,.36)" : "rgba(255,255,255,.42)");
+        gradient.addColorStop(1, dark ? "rgba(0,0,0,.68)" : "rgba(255,255,255,.72)");
         ctx.fillStyle = gradient;
         ctx.fillRect(0, 0, width, height);
       }
 
+      ctx.fillStyle = textColor;
+      ctx.font = `${fontSize}px ${fontFamily}`;
       ctx.textBaseline = "top";
-      ctx.textAlign = "left";
-      const margin = 74;
+      const margin = 82;
+      const lineHeight = Math.round(fontSize * 1.65);
       let quote = normalize(els.excerptText.value) || "발췌 텍스트를 입력해 주세요.";
       const quotePairs = { '"': '"', "“": "”" };
       if (quote.length >= 2 && quotePairs[quote[0]] === quote[quote.length - 1]) {
         quote = quote.slice(1, -1).trim();
       }
-
-      const layout = buildExcerptTextLayout(ctx, quote, width - margin * 2, preferredFontSize);
-      ctx.fillStyle = textColor;
-      ctx.font = `${layout.size}px ${fontFamily}`;
-      let y = layout.quoteY;
-      layout.lines.forEach((line) => {
+      const lines = wrapCanvasText(ctx, quote, width - margin * 2).slice(0, 9);
+      let y = 210;
+      lines.forEach((line) => {
         ctx.fillText(line, margin, y);
-        y += layout.lineHeight;
+        y += lineHeight;
       });
 
       ctx.fillStyle = subColor;
       const title = normalize(els.excerptWorkTitle.value) || "작품 이름";
       const author = normalize(els.excerptAuthor.value) || "작가";
-      const titleSize = fitSingleLineCanvasFont(ctx, title, width - margin * 2, 52, 36, fontFamily, "600");
-      ctx.font = `600 ${titleSize}px ${fontFamily}`;
-      ctx.fillText(title, margin, layout.metaY);
-      const authorSize = fitSingleLineCanvasFont(ctx, author, width - margin * 2, 40, 30, fontFamily, "400");
-      ctx.font = `400 ${authorSize}px ${fontFamily}`;
-      ctx.fillText(author, margin, layout.metaY + 74);
+      const metaY = Math.max(y + 62, 748);
+      ctx.font = `600 44px ${fontFamily}`;
+      ctx.fillText(title, margin, metaY);
+      ctx.font = `32px ${fontFamily}`;
+      ctx.fillText(author, margin, metaY + 64);
 
       ctx.fillStyle = dark ? "rgba(244,244,245,.38)" : "rgba(32,33,36,.38)";
       ctx.font = `24px ${fontFamily}`;
