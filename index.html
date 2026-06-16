@@ -898,7 +898,40 @@
     }
 
     .status {
-      display: none;
+      display: block;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      color: #6d7480;
+      font-size: 12px;
+    }
+
+    .guide {
+      margin: 0 0 12px;
+      border-color: #282a2f;
+      background: #111112;
+      color: #8c96a3;
+    }
+
+    .guide summary {
+      cursor: pointer;
+      padding: 13px 14px;
+      color: #d6d9dd;
+      font-size: 13px;
+      font-weight: 400;
+    }
+
+    .guide-body {
+      display: grid;
+      gap: 8px;
+      padding: 0 14px 14px;
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .guide-body p {
+      margin: 0;
     }
 
     .post-list {
@@ -1167,58 +1200,6 @@
       padding-left: 34px;
       font-size: 12px;
       max-width: 100%;
-    }
-
-    .admin-tools {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 7px;
-      margin-bottom: 9px;
-    }
-
-    .admin-tools select {
-      min-width: 0;
-      min-height: 34px;
-      padding: 0 9px;
-      border-radius: 8px;
-      color: #aeb5bf;
-      font-size: 11px;
-    }
-
-    .admin-list-count {
-      margin: 0 0 8px;
-      color: #6e7682;
-      font-size: 11px;
-    }
-
-    .series-editor-group {
-      border: 1px solid #292b30;
-      border-radius: 10px;
-      background: #151619;
-      padding: 11px;
-    }
-
-    .series-editor-title {
-      margin: 0 0 9px;
-      color: #d8dbe0;
-      font-size: 12px;
-    }
-
-    .series-editor-grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 9px;
-    }
-
-    .series-editor-help {
-      margin: 9px 0 0;
-      color: #6e7682;
-      font-size: 11px;
-      line-height: 1.45;
-    }
-
-    .series-editor-grid .wide {
-      grid-column: 1 / -1;
     }
 
     .admin-list {
@@ -1570,14 +1551,6 @@
         display: grid;
       }
 
-      .admin-tools {
-        grid-template-columns: 1fr;
-      }
-
-      .series-editor-grid {
-        grid-template-columns: 1fr;
-      }
-
       .random-dock {
         right: 18px;
         bottom: 18px;
@@ -1626,36 +1599,6 @@
       <label class="admin-search">
         <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
       </label>
-      <div class="admin-tools" aria-label="관리자 목록 필터">
-        <select id="adminCategoryFilter">
-          <option value="">전체 카테고리</option>
-          <option value="글">글</option>
-          <option value="그림">그림</option>
-          <option value="기타">기타</option>
-        </select>
-        <select id="adminPriceFilter">
-          <option value="">무료·유료 전체</option>
-          <option value="무료">무료</option>
-          <option value="유료">유료</option>
-        </select>
-        <select id="adminAgeFilter">
-          <option value="">연령 전체</option>
-          <option value="전연령">전연령</option>
-          <option value="성인">성인</option>
-        </select>
-        <select id="adminSeriesFilter">
-          <option value="">시리즈 전체</option>
-          <option value="단편">단편</option>
-          <option value="연재중">연재중</option>
-          <option value="완결">완결</option>
-        </select>
-        <select id="adminSortSelect">
-          <option value="date-desc">최신순</option>
-          <option value="title-asc">제목순</option>
-          <option value="author-asc">작가명순</option>
-        </select>
-      </div>
-      <p class="admin-list-count" id="adminListCount">전체 0개</p>
       <div class="admin-list" id="adminList"></div>
       <div class="admin-editor" id="adminEditor" hidden>
         <section class="admin-editor-card">
@@ -1665,7 +1608,6 @@
           </div>
           <form id="adminForm" class="admin-grid">
             <input type="hidden" name="_rowNumber">
-            <input type="hidden" name="_supabaseId">
             <label><span class="label">제목</span><input name="제목" required></label>
             <label><span class="label">작가</span><input name="작가"></label>
             <label class="wide"><span class="label">링크</span><input name="링크" type="url"></label>
@@ -1673,17 +1615,6 @@
             <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
             <label><span class="label">유료</span><select name="유료"><option value="X">무료</option><option value="O">유료</option></select></label>
             <label><span class="label">성인</span><select name="성인"><option value="X">전연령</option><option value="O">성인</option></select></label>
-            <div class="wide series-editor-group">
-              <p class="series-editor-title">시리즈 · 연재 설정</p>
-              <div class="series-editor-grid">
-                <label><span class="label">시리즈 여부</span><select name="시리즈"><option value="">단편</option><option value="Y">시리즈</option></select></label>
-                <label><span class="label">연재 상태</span><select name="연재상태"><option value="">상태 없음</option><option value="연재중">연재중</option><option value="완결">완결</option></select></label>
-                <label><span class="label">시리즈명</span><input name="시리즈명" placeholder="같은 시리즈는 이름을 동일하게 입력"></label>
-                <label><span class="label">회차</span><input name="시리즈회차" placeholder="예: 1, 2, 외전, 상"></label>
-                <label class="wide"><span class="label">상태 근거</span><input name="상태근거" placeholder="예: 직접 지정, 제목 완결 표기"></label>
-              </div>
-              <p class="series-editor-help">같은 시리즈명으로 묶인 글 중 가장 큰 회차 또는 등록 글 수가 목록의 최종 회차로 표시됩니다.</p>
-            </div>
             <label><span class="label">장르</span><input name="장르" placeholder="현대물, 피폐물"></label>
             <label><span class="label">키워드</span><input name="키워드" placeholder="재회, 오해"></label>
             <label><span class="label">공</span><input name="공" placeholder="다정공"></label>
@@ -1697,6 +1628,15 @@
         </section>
       </div>
     </section>
+
+    <details class="guide panel">
+      <summary>이용 가이드</summary>
+      <div class="guide-body">
+        <p>아카이브 목록과 일부 분류 기능은 자동화되어 있으며, 자료 정리 목적 외에는 사용하지 않습니다.</p>
+        <p>일부 기능에 AI를 사용하고 있지만, 수집한 자료를 정리하고 검색하기 쉽게 만드는 용도로만 활용합니다.</p>
+        <p>목록에서 내리고 싶은 글이 있거나 오류·문의사항이 있다면 디엠, 스핀, 또는 사이트 하단 문의로 편하게 연락해 주세요.</p>
+      </div>
+    </details>
 
     <section class="layout">
       <aside class="filters panel">
@@ -1778,7 +1718,7 @@
       SUPABASE_URL: "",
       SUPABASE_ANON_KEY: "",
       SUPABASE_TABLE: "postype_archive",
-      SUPABASE_WRITE_ENABLED: false,
+      ADMIN_FUNCTION_URL: "",
       LOCAL_CSV_URL: "data/postype_archive_series_columns_limited.csv",
       ADMIN_API_URL: ""
     };
@@ -1825,16 +1765,10 @@
       active: {},
       query: "",
       adminQuery: "",
-      adminCategory: "",
-      adminPrice: "",
-      adminAge: "",
-      adminSeries: "",
-      adminSort: "date-desc",
-      adminPassword: "",
-      editingPost: null,
       sort: "date-desc",
       randomScope: "current",
       randomPost: null,
+      adminPassword: "",
       seriesStats: new Map()
     };
 
@@ -1854,12 +1788,6 @@
       total: $("#totalCount"),
       adminToggle: $("#adminToggle"),
       adminSearch: $("#adminSearchInput"),
-      adminCategory: $("#adminCategoryFilter"),
-      adminPrice: $("#adminPriceFilter"),
-      adminAge: $("#adminAgeFilter"),
-      adminSeries: $("#adminSeriesFilter"),
-      adminSort: $("#adminSortSelect"),
-      adminListCount: $("#adminListCount"),
       adminList: $("#adminList"),
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
@@ -2004,9 +1932,9 @@
       const stats = state.seriesStats.get(post);
       const status = (stats && stats.status) || series.status;
       if (status !== "연재중") return status;
-      const finalCount = stats && stats.total;
-      if (!finalCount) return status;
-      return `${status} (${finalCount}/n)`;
+      const current = stats && stats.current;
+      if (!current) return status;
+      return `${status} (${current}/n)`;
     }
 
     function tagsFor(post, group) {
@@ -2055,6 +1983,33 @@
       if (response.status === 204) return null;
       const text = await response.text();
       return text ? JSON.parse(text) : null;
+    }
+
+    function adminFunctionUrl() {
+      const configured = normalize(CONFIG.ADMIN_FUNCTION_URL);
+      if (configured) return configured;
+      if (!hasSupabaseConfig()) return "";
+      return `${supabaseBaseUrl()}/functions/v1/postype-admin`;
+    }
+
+    async function requestAdminFunction(action, payload = {}, password = state.adminPassword) {
+      const url = adminFunctionUrl();
+      if (!url) throw new Error("관리자 Edge Function URL이 설정되지 않았습니다.");
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          apikey: normalize(CONFIG.SUPABASE_ANON_KEY),
+          Authorization: `Bearer ${normalize(CONFIG.SUPABASE_ANON_KEY)}`
+        },
+        body: JSON.stringify({ action, password, payload })
+      });
+      const text = await response.text();
+      const result = text ? JSON.parse(text) : {};
+      if (!response.ok || result.ok === false) {
+        throw new Error(result.error || `관리자 요청 실패 (${response.status})`);
+      }
+      return result;
     }
 
     function fromBool(value) {
@@ -2339,41 +2294,21 @@
       });
     }
 
-    function adminSeriesLabel(post) {
-      const series = seriesInfo(post);
-      if (!series.isSeries) return "단편";
-      const stats = state.seriesStats.get(post);
-      return (stats && stats.status) || series.status || "연재중";
-    }
-
     function renderAdminList() {
       els.adminList.innerHTML = "";
       const query = normalize(state.adminQuery).toLowerCase();
       const posts = state.posts
         .filter((post) => !query || searchText(post).includes(query))
-        .filter((post) => !state.adminCategory || postCategory(post) === state.adminCategory)
-        .filter((post) => !state.adminPrice || priceLabel(post) === state.adminPrice)
-        .filter((post) => !state.adminAge || ageLabel(post) === state.adminAge)
-        .filter((post) => !state.adminSeries || adminSeriesLabel(post) === state.adminSeries)
         .slice()
         .sort((a, b) => {
-          if (state.adminSort === "title-asc") {
-            return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
-          }
-          if (state.adminSort === "author-asc") {
-            return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
-          }
-          return (Date.parse(normalize(b["날짜"])) || 0) - (Date.parse(normalize(a["날짜"])) || 0);
+          return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
         });
-
-      els.adminListCount.textContent = `검색 결과 ${posts.length.toLocaleString("ko-KR")}개 / 전체 ${state.posts.length.toLocaleString("ko-KR")}개`;
-
       if (!state.posts.length) {
         els.adminList.innerHTML = `<div class="empty">아직 불러온 글이 없습니다.</div>`;
         return;
       }
       if (!posts.length) {
-        els.adminList.innerHTML = `<div class="empty">관리자 검색·필터 결과가 없습니다.</div>`;
+        els.adminList.innerHTML = `<div class="empty">관리자 검색 결과가 없습니다.</div>`;
         return;
       }
       posts.forEach((post) => {
@@ -2382,10 +2317,7 @@
         button.type = "button";
         button.innerHTML = `
           <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
-          <span class="admin-item-meta">${escapeHtml([
-            post["날짜"], post["작가"], postCategory(post), ageLabel(post), priceLabel(post),
-            seriesInfo(post).isSeries ? seriesStatusText(post, seriesInfo(post)) : "단편"
-          ].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
+          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
         button.addEventListener("click", () => fillAdminForm(post, button));
         els.adminList.appendChild(button);
@@ -2509,7 +2441,6 @@
     function fillAdminForm(post, anchor) {
       document.body.classList.add("admin-on");
       placeAdminEditor(anchor);
-      state.editingPost = post;
       els.adminEditorTitle.textContent = "글 수정";
       els.deletePost.hidden = false;
       els.adminEditor.hidden = false;
@@ -2517,37 +2448,25 @@
         if (!field.name) return;
         field.value = post[field.name] || "";
       });
-      const series = seriesInfo(post);
-      if (series.isSeries) {
-        els.adminForm.elements["시리즈"].value = "Y";
-        if (!normalize(els.adminForm.elements["시리즈명"].value)) els.adminForm.elements["시리즈명"].value = series.name || "";
-        if (!normalize(els.adminForm.elements["시리즈회차"].value)) els.adminForm.elements["시리즈회차"].value = series.volume || "";
-        if (!normalize(els.adminForm.elements["연재상태"].value)) els.adminForm.elements["연재상태"].value = series.status || "연재중";
-        if (!normalize(els.adminForm.elements["상태근거"].value)) els.adminForm.elements["상태근거"].value = series.reason || "";
-      }
       els.adminForm.elements["_rowNumber"].value = post._rowNumber || "";
-      els.adminForm.elements["_supabaseId"].value = post._supabaseId || "";
     }
 
     function openNewPostForm() {
       document.body.classList.add("admin-on");
       placeAdminEditor(document.querySelector(".admin-head"));
-      state.editingPost = null;
       els.adminForm.reset();
       els.adminEditorTitle.textContent = "신규 글 추가";
       els.deletePost.hidden = true;
       els.adminForm.elements["_rowNumber"].value = "";
-      els.adminForm.elements["_supabaseId"].value = "";
       els.adminEditor.hidden = false;
     }
 
     function closeAdminEditor() {
-      state.editingPost = null;
       els.adminForm.reset();
       els.adminEditor.hidden = true;
     }
 
-    function toggleAdminMode() {
+    async function toggleAdminMode() {
       if (document.body.classList.contains("admin-on")) {
         document.body.classList.remove("admin-on");
         state.adminPassword = "";
@@ -2556,162 +2475,60 @@
       }
       const password = window.prompt("관리자 비밀번호를 입력해 주세요.");
       if (password === null) return;
-      if (!normalize(password)) {
-        alert("관리자 비밀번호를 입력해 주세요.");
+      try {
+        await requestAdminFunction("auth", {}, password);
+        state.adminPassword = password;
+      } catch (error) {
+        alert(`비밀번호를 확인해 주세요. ${error.message}`);
         return;
       }
-      state.adminPassword = password;
       document.body.classList.add("admin-on");
       renderAdminList();
-    }
-
-    function handleSeriesModeChange() {
-      const isSeries = els.adminForm.elements["시리즈"].value === "Y";
-      const names = ["시리즈명", "시리즈회차", "연재상태", "상태근거"];
-      if (isSeries) {
-        if (!normalize(els.adminForm.elements["연재상태"].value)) {
-          els.adminForm.elements["연재상태"].value = "연재중";
-        }
-        return;
-      }
-      names.forEach((name) => {
-        els.adminForm.elements[name].value = "";
-      });
-    }
-
-    function markAsSeriesFromDetail() {
-      const names = ["시리즈명", "시리즈회차", "연재상태", "상태근거"];
-      const hasSeriesDetail = names.some((name) => normalize(els.adminForm.elements[name].value));
-      if (hasSeriesDetail) els.adminForm.elements["시리즈"].value = "Y";
-    }
-
-    function normalizeSeriesFormFields(data) {
-      const hasSeriesDetail = ["시리즈명", "시리즈회차", "연재상태", "상태근거"].some((name) => normalize(data[name]));
-      const isSeries = normalize(data["시리즈"]) === "Y" || hasSeriesDetail;
-      if (!isSeries) {
-        data["시리즈"] = "";
-        data["시리즈명"] = "";
-        data["시리즈회차"] = "";
-        data["연재상태"] = "";
-        data["상태근거"] = "";
-        return data;
-      }
-      data["시리즈"] = "Y";
-      data["연재상태"] ||= "연재중";
-      return data;
     }
 
     function formData() {
       const data = {};
       new FormData(els.adminForm).forEach((value, key) => data[key] = normalize(value));
-      normalizeSeriesFormFields(data);
-      const existing = state.editingPost ? { ...state.editingPost } : {};
-      const merged = { ...existing, ...data };
-      merged._source = merged._rowNumber ? "supabase-edit" : "supabase-new";
-      return merged;
+      data._source = data._rowNumber ? "local-edit" : "local";
+      data._rowNumber ||= `local-${Date.now()}`;
+      return data;
     }
 
-    function rpcHeaders() {
-      return {
-        ...supabaseHeaders(true),
-        Prefer: "return=representation"
-      };
-    }
-
-    async function callAdminRpc(action, payload) {
-      if (!hasSupabaseConfig()) {
-        throw new Error("Supabase URL 또는 ANON KEY가 설정되지 않았습니다.");
+    async function sendAdminAction(action, payload) {
+      if (hasSupabaseConfig()) {
+        return requestAdminFunction(action, payload);
       }
-      if (!CONFIG.SUPABASE_WRITE_ENABLED) {
-        throw new Error("config.js의 SUPABASE_WRITE_ENABLED가 false입니다.");
-      }
-      if (!normalize(state.adminPassword)) {
-        throw new Error("관리자 비밀번호가 없습니다. 관리자 모드에 다시 들어가 주세요.");
-      }
-
-      const response = await fetch(`${supabaseBaseUrl()}/rest/v1/rpc/admin_manage_post`, {
+      if (!CONFIG.ADMIN_API_URL) return { ok: false, localOnly: true };
+      await fetch(CONFIG.ADMIN_API_URL, {
         method: "POST",
-        headers: rpcHeaders(),
-        body: JSON.stringify({
-          p_action: action,
-          p_password: state.adminPassword,
-          p_payload: payload
-        })
+        mode: "no-cors",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ action, payload })
       });
-
-      const text = await response.text();
-      let result = null;
-      if (text) {
-        try {
-          result = JSON.parse(text);
-        } catch {
-          result = text;
-        }
-      }
-      if (!response.ok) {
-        const message = typeof result === "object" && result
-          ? result.message || result.details || result.hint || JSON.stringify(result)
-          : result || response.statusText;
-        throw new Error(`관리자 저장 요청 실패 (${response.status}): ${message}`);
-      }
-      return result;
-    }
-
-    function rpcPostPayload(post, action) {
-      const row = postToSupabaseRow(post, action === "insert" ? "create" : "update");
-      if (action === "update" || action === "delete") {
-        const id = normalize(post._supabaseId);
-        if (!id) throw new Error("수정할 Supabase ID가 없습니다. 데이터를 새로고침한 뒤 다시 시도해 주세요.");
-        row.id = /^\d+$/.test(id) ? Number(id) : id;
-      }
-      if (action === "delete") return { id: row.id };
-      return row;
+      return { ok: true, opaque: true };
     }
 
     async function savePost(event) {
       event.preventDefault();
-      const submitButton = els.adminForm.querySelector('button[type="submit"]');
-      const originalText = submitButton.textContent;
-      submitButton.disabled = true;
-      submitButton.textContent = "저장 중";
-
+      const data = formData();
+      const action = data._rowNumber && !data._rowNumber.startsWith("local-") ? "update" : "create";
+      els.status.textContent = "저장 내용을 Supabase에 반영하는 중입니다.";
       try {
-        const post = formData();
-        const action = normalize(post._supabaseId) ? "update" : "insert";
-        await callAdminRpc(action, rpcPostPayload(post, action));
-        await loadData();
+        const result = await sendAdminAction(action, data);
+        if (result && result.localOnly) {
+          upsertLocal(data);
+          state.posts = mergeSheetAndLocal(state.posts);
+          render();
+          closeAdminEditor();
+          els.status.textContent = "저장 내용을 이 브라우저에만 반영했습니다.";
+          return;
+        }
         closeAdminEditor();
-        alert(action === "insert" ? "신규 글을 저장했습니다." : "수정 내용을 저장했습니다.");
-      } catch (error) {
-        console.error(error);
-        alert(error.message || "저장에 실패했습니다.");
-      } finally {
-        submitButton.disabled = false;
-        submitButton.textContent = originalText;
-      }
-    }
-
-    async function deleteCurrentPost() {
-      if (!state.editingPost || !normalize(state.editingPost._supabaseId)) {
-        alert("삭제할 Supabase 글을 선택해 주세요.");
-        return;
-      }
-      if (!confirm("정말 이 글을 삭제하시겠습니까?")) return;
-
-      els.deletePost.disabled = true;
-      const originalText = els.deletePost.textContent;
-      els.deletePost.textContent = "삭제 중";
-      try {
-        await callAdminRpc("delete", rpcPostPayload(state.editingPost, "delete"));
         await loadData();
-        closeAdminEditor();
-        alert("글을 삭제했습니다.");
+        els.status.textContent = "저장 내용을 Supabase에 반영했습니다.";
       } catch (error) {
-        console.error(error);
-        alert(error.message || "삭제에 실패했습니다.");
-      } finally {
-        els.deletePost.disabled = false;
-        els.deletePost.textContent = originalText;
+        els.status.textContent = `저장에 실패했습니다: ${error.message}`;
+        alert(`저장에 실패했습니다. ${error.message}`);
       }
     }
 
@@ -2721,6 +2538,32 @@
       data._deleted = false;
       index >= 0 ? posts.splice(index, 1, data) : posts.unshift(data);
       saveLocalPosts(posts);
+    }
+
+    async function deleteCurrentPost() {
+      const rowNumber = normalize(els.adminForm.elements["_rowNumber"].value);
+      if (!rowNumber) return;
+      if (!confirm("정말 이 글을 아카이브에서 삭제하시겠습니까?")) return;
+      els.status.textContent = "삭제 내용을 Supabase에 반영하는 중입니다.";
+      try {
+        const result = await sendAdminAction("delete", { _rowNumber: rowNumber });
+        if (result && result.localOnly) {
+          const posts = localPosts().filter((post) => post._rowNumber !== rowNumber);
+          posts.unshift({ _rowNumber: rowNumber, _deleted: true });
+          saveLocalPosts(posts);
+          state.posts = mergeSheetAndLocal(state.posts.filter((post) => post._rowNumber !== rowNumber));
+          render();
+          closeAdminEditor();
+          els.status.textContent = "삭제 내용을 이 브라우저에만 반영했습니다.";
+          return;
+        }
+        closeAdminEditor();
+        await loadData();
+        els.status.textContent = "삭제 내용을 Supabase에 반영했습니다.";
+      } catch (error) {
+        els.status.textContent = `삭제에 실패했습니다: ${error.message}`;
+        alert(`삭제에 실패했습니다. ${error.message}`);
+      }
     }
 
     function recommendRandomPost(scope = "current") {
@@ -2795,35 +2638,10 @@
       state.adminQuery = event.target.value;
       renderAdminList();
     });
-    els.adminCategory.addEventListener("change", (event) => {
-      state.adminCategory = event.target.value;
-      renderAdminList();
-    });
-    els.adminPrice.addEventListener("change", (event) => {
-      state.adminPrice = event.target.value;
-      renderAdminList();
-    });
-    els.adminAge.addEventListener("change", (event) => {
-      state.adminAge = event.target.value;
-      renderAdminList();
-    });
-    els.adminSeries.addEventListener("change", (event) => {
-      state.adminSeries = event.target.value;
-      renderAdminList();
-    });
-    els.adminSort.addEventListener("change", (event) => {
-      state.adminSort = event.target.value;
-      renderAdminList();
-    });
     els.adminToggle.addEventListener("click", toggleAdminMode);
     els.newPost.addEventListener("click", openNewPostForm);
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
-    els.adminForm.elements["시리즈"].addEventListener("change", handleSeriesModeChange);
-    ["시리즈명", "시리즈회차", "연재상태", "상태근거"].forEach((name) => {
-      els.adminForm.elements[name].addEventListener("input", markAsSeriesFromDetail);
-      els.adminForm.elements[name].addEventListener("change", markAsSeriesFromDetail);
-    });
     els.adminForm.addEventListener("submit", savePost);
     els.adminEditor.addEventListener("click", (event) => {
       if (event.target === els.adminEditor) closeAdminEditor();
