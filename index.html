@@ -659,6 +659,13 @@
       grid-column: 1 / -1;
     }
 
+    .brand-actions {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
     h1 {
       font-size: 30px;
       font-weight: 650;
@@ -717,6 +724,15 @@
       stroke: #d8dbe0;
       stroke-width: 1.8;
       fill: none;
+    }
+
+    .top-library-button {
+      min-height: 34px;
+      border-radius: 12px;
+      padding: 0 12px;
+      color: #d8dbe0;
+      font-size: 12px;
+      white-space: nowrap;
     }
 
     .layout {
@@ -1448,6 +1464,228 @@
       grid-column: 1 / -1;
     }
 
+    .library-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .library-action {
+      min-height: 26px;
+      border: 1px solid #30343a;
+      border-radius: 999px;
+      background: transparent;
+      color: #8f98a4;
+      padding: 0 9px;
+      font-size: 11px;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    .bookmark-action {
+      width: 31px;
+      min-height: 31px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: auto;
+      padding: 0;
+      border-radius: 999px;
+    }
+
+    .bookmark-action svg,
+    .bookmark-toggle svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .bookmark-action.active svg,
+    .bookmark-toggle.active svg {
+      fill: currentColor;
+    }
+
+    .library-action.active {
+      border-color: #e6e8eb;
+      background: #e6e8eb;
+      color: #111316;
+    }
+
+    .bookmark-dock {
+      position: fixed;
+      right: max(18px, calc((100vw - 650px) / 2 + 18px));
+      bottom: 72px;
+      z-index: 70;
+    }
+
+    .bookmark-toggle {
+      width: 42px;
+      height: 42px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #34363c;
+      border-radius: 999px;
+      background: #14161a;
+      color: #f4f4f5;
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .32);
+      cursor: pointer;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 95;
+      display: grid;
+      place-items: center;
+      padding: 18px;
+      background: rgba(0, 0, 0, .68);
+    }
+
+    .modal[hidden] {
+      display: none;
+    }
+
+    .modal-card {
+      width: min(calc(100vw - 32px), 520px);
+      max-height: min(90vh, 820px);
+      overflow: auto;
+      border: 1px solid #24262b;
+      border-radius: 12px;
+      background: #101011;
+      color: #f7f7f8;
+      padding: 18px;
+    }
+
+    .modal-card.wide {
+      width: min(calc(100vw - 32px), 760px);
+    }
+
+    .modal-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 14px;
+    }
+
+    .modal-head h2 {
+      margin: 0;
+      font-size: 17px;
+      font-weight: 500;
+    }
+
+    .modal-close {
+      border: 0;
+      background: transparent;
+      color: #7a818c;
+      font-size: 22px;
+      cursor: pointer;
+    }
+
+    .modal-grid {
+      display: grid;
+      gap: 10px;
+    }
+
+    .modal-grid.two {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .modal-grid .wide {
+      grid-column: 1 / -1;
+    }
+
+    .modal-note {
+      margin: 0 0 12px;
+      color: #7b8490;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .library-list {
+      display: grid;
+      gap: 8px;
+    }
+
+    .library-item {
+      border: 1px solid #292b30;
+      border-radius: 10px;
+      background: #151619;
+      padding: 11px;
+    }
+
+    .library-item-title {
+      display: block;
+      color: #e8e9ec;
+      font-size: 13px;
+      overflow-wrap: anywhere;
+    }
+
+    .library-item-meta {
+      display: block;
+      margin-top: 4px;
+      color: #747d89;
+      font-size: 11px;
+    }
+
+    .library-item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 9px;
+    }
+
+    .excerpt-layout {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 260px;
+      gap: 14px;
+      align-items: start;
+    }
+
+    .excerpt-preview {
+      display: grid;
+      justify-items: center;
+      gap: 10px;
+    }
+
+    #excerptCanvas {
+      width: min(100%, 390px);
+      height: auto;
+      border: 1px solid #282a2f;
+      border-radius: 10px;
+      background: #111;
+    }
+
+    .swatches {
+      display: flex;
+      gap: 7px;
+      flex-wrap: wrap;
+    }
+
+    .swatch {
+      min-height: 30px;
+      border: 1px solid #34363c;
+      border-radius: 999px;
+      background: transparent;
+      color: #aeb5bf;
+      padding: 0 10px;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .swatch.active {
+      border-color: #e6e8eb;
+      background: #e6e8eb;
+      color: #111316;
+    }
+
     body {
       font-weight: 400;
     }
@@ -1593,6 +1831,16 @@
         right: 18px;
         bottom: 18px;
       }
+
+      .bookmark-dock {
+        right: 18px;
+        bottom: 72px;
+      }
+
+      .excerpt-layout,
+      .modal-grid.two {
+        grid-template-columns: 1fr;
+      }
     }
 
     html,
@@ -1617,12 +1865,15 @@
     <header class="topbar">
       <div class="brand">
         <h1>혚쾌 포타 검색기</h1>
-        <button class="button lock-button" id="adminToggle" type="button" aria-label="관리자 모드">
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
-            <rect x="5" y="10" width="14" height="10" rx="2"></rect>
-          </svg>
-        </button>
+        <div class="brand-actions">
+          <button class="button top-library-button" id="libraryToggle" type="button">내 서재</button>
+          <button class="button lock-button" id="adminToggle" type="button" aria-label="관리자 모드">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
+              <rect x="5" y="10" width="14" height="10" rx="2"></rect>
+            </svg>
+          </button>
+        </div>
       </div>
     </header>
 
@@ -1718,6 +1969,14 @@
     </section>
   </main>
 
+  <div class="bookmark-dock">
+    <button class="bookmark-toggle" id="bookmarkToggle" type="button" aria-label="북마크한 글 보기">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5v17l-6-3.5-6 3.5z"></path>
+      </svg>
+    </button>
+  </div>
+
   <div class="random-dock">
     <button class="random-toggle" id="randomToggle" type="button">랜덤 추천</button>
     <div class="random-panel" id="randomPanel" hidden>
@@ -1742,6 +2001,83 @@
     </section>
   </div>
 
+  <div class="modal" id="libraryModal" hidden>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="libraryTitle">
+      <div class="modal-head">
+        <h2 id="libraryTitle">내 서재</h2>
+        <button class="modal-close" id="libraryClose" type="button" aria-label="닫기">×</button>
+      </div>
+      <p class="modal-note">이 서재는 이 브라우저에만 저장됩니다. 브라우저 데이터를 지우면 함께 삭제될 수 있어요.</p>
+      <div class="library-list" id="libraryList"></div>
+    </section>
+  </div>
+
+  <div class="modal" id="noteModal" hidden>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="noteTitle">
+      <div class="modal-head">
+        <h2 id="noteTitle">작품 메모</h2>
+        <button class="modal-close" id="noteClose" type="button" aria-label="닫기">×</button>
+      </div>
+      <p class="modal-note" id="noteMeta"></p>
+      <label class="modal-grid">
+        <span class="label">메모</span>
+        <textarea id="noteText" placeholder="읽은 감상, 회차 메모, 다시 볼 포인트 등을 적어둘 수 있어요."></textarea>
+      </label>
+      <div class="random-result-actions" style="margin-top: 12px;">
+        <button class="button primary" id="noteSave" type="button">메모 저장</button>
+        <button class="button" id="noteToExcerpt" type="button">발췌 만들기</button>
+        <button class="button wide" id="noteDelete" type="button">메모 삭제</button>
+      </div>
+    </section>
+  </div>
+
+  <div class="modal" id="excerptModal" hidden>
+    <section class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="excerptTitle">
+      <div class="modal-head">
+        <h2 id="excerptTitle">발췌짤 만들기</h2>
+        <button class="modal-close" id="excerptClose" type="button" aria-label="닫기">×</button>
+      </div>
+      <div class="excerpt-layout">
+        <div class="excerpt-preview">
+          <canvas id="excerptCanvas" width="1080" height="1080"></canvas>
+          <div class="random-result-actions">
+            <button class="button primary" id="excerptDownload" type="button">이미지 저장</button>
+            <button class="button" id="excerptShare" type="button">공유</button>
+          </div>
+        </div>
+        <div class="modal-grid">
+          <label><span class="label">작품 이름</span><input id="excerptWorkTitle"></label>
+          <label><span class="label">작가</span><input id="excerptAuthor"></label>
+          <label><span class="label">발췌 텍스트</span><textarea id="excerptText" placeholder="텍스트를 복붙해 주세요."></textarea></label>
+          <div class="modal-grid two">
+            <label><span class="label">글꼴</span><select id="excerptFont"><option value="Pretendard, system-ui, sans-serif">기본</option><option value="'Nanum Gothic', '나눔고딕', system-ui, sans-serif">나눔고딕</option><option value="'Nanum Myeongjo', '나눔명조', serif">나눔명조</option></select></label>
+            <label><span class="label">글자크기 <span id="excerptFontSizeLabel">38</span></span><input id="excerptFontSize" type="range" min="26" max="58" value="38"></label>
+          </div>
+          <div class="modal-grid">
+            <span class="label">배경</span>
+            <div class="swatches">
+              <button class="swatch active" type="button" data-bg="dark">검정</button>
+              <button class="swatch" type="button" data-bg="light">하양</button>
+            </div>
+          </div>
+          <div class="modal-grid">
+            <span class="label">글자 색상</span>
+            <div class="swatches">
+              <button class="swatch active" type="button" data-text-color="white">흰색</button>
+              <button class="swatch" type="button" data-text-color="black">검정색</button>
+            </div>
+          </div>
+          <label><span class="label">배경 이미지</span><input id="excerptImage" type="file" accept="image/*"></label>
+          <div class="modal-grid two">
+            <label><span class="label">이미지 크기 <span id="excerptImageScaleLabel">100</span>%</span><input id="excerptImageScale" type="range" min="60" max="180" value="100"></label>
+            <label><span class="label">좌우 위치</span><input id="excerptImageX" type="range" min="-100" max="100" value="0"></label>
+            <label><span class="label">상하 위치</span><input id="excerptImageY" type="range" min="-100" max="100" value="0"></label>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
   <template id="postTemplate">
     <article class="post-card">
       <div class="post-head">
@@ -1753,6 +2089,14 @@
       </div>
       <p class="summary"></p>
       <div class="tag-row"></div>
+      <div class="library-actions">
+        <button class="library-action read-action" type="button">읽음</button>
+        <button class="library-action bookmark-action" type="button" aria-label="북마크">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5v17l-6-3.5-6 3.5z"></path>
+          </svg>
+        </button>
+      </div>
       <div class="card-actions">
         <button class="button edit-button" type="button">수정</button>
       </div>
@@ -1771,6 +2115,7 @@
       ADMIN_API_URL: ""
     };
     Object.assign(CONFIG, window.POSTYPE_CONFIG || {});
+    const LIBRARY_STORAGE_KEY = "hq-postype-library-v1";
 
     const TAG_GROUPS = {
       "카테고리": ["글", "그림", "기타"],
@@ -1830,6 +2175,16 @@
       sort: "date-desc",
       randomScope: "current",
       randomPost: null,
+      library: loadLibrary(),
+      libraryView: "all",
+      notePost: null,
+      excerptPost: null,
+      excerptBackground: "dark",
+      excerptTextColor: "white",
+      excerptImage: null,
+      excerptImageScale: 1,
+      excerptImageX: 0,
+      excerptImageY: 0,
       adminPassword: "",
       seriesStats: new Map()
     };
@@ -1860,6 +2215,35 @@
       newPost: $("#newPostButton"),
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
+      libraryToggle: $("#libraryToggle"),
+      bookmarkToggle: $("#bookmarkToggle"),
+      libraryModal: $("#libraryModal"),
+      libraryTitle: $("#libraryTitle"),
+      libraryClose: $("#libraryClose"),
+      libraryList: $("#libraryList"),
+      noteModal: $("#noteModal"),
+      noteClose: $("#noteClose"),
+      noteMeta: $("#noteMeta"),
+      noteText: $("#noteText"),
+      noteSave: $("#noteSave"),
+      noteDelete: $("#noteDelete"),
+      noteToExcerpt: $("#noteToExcerpt"),
+      excerptModal: $("#excerptModal"),
+      excerptClose: $("#excerptClose"),
+      excerptCanvas: $("#excerptCanvas"),
+      excerptWorkTitle: $("#excerptWorkTitle"),
+      excerptAuthor: $("#excerptAuthor"),
+      excerptText: $("#excerptText"),
+      excerptFont: $("#excerptFont"),
+      excerptFontSize: $("#excerptFontSize"),
+      excerptFontSizeLabel: $("#excerptFontSizeLabel"),
+      excerptImage: $("#excerptImage"),
+      excerptImageScale: $("#excerptImageScale"),
+      excerptImageScaleLabel: $("#excerptImageScaleLabel"),
+      excerptImageX: $("#excerptImageX"),
+      excerptImageY: $("#excerptImageY"),
+      excerptDownload: $("#excerptDownload"),
+      excerptShare: $("#excerptShare"),
       randomToggle: $("#randomToggle"),
       randomPanel: $("#randomPanel"),
       randomCurrent: $("#randomCurrent"),
@@ -2252,6 +2636,57 @@
       localStorage.setItem("hq-postype-local-posts", JSON.stringify(posts));
     }
 
+    function loadLibrary() {
+      try {
+        const data = JSON.parse(localStorage.getItem(LIBRARY_STORAGE_KEY) || "{}");
+        return data && typeof data === "object" ? data : {};
+      } catch {
+        return {};
+      }
+    }
+
+    function saveLibrary() {
+      localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(state.library));
+    }
+
+    function postKey(post) {
+      return normalize(post["링크"]) || normalize(post._rowNumber) || [post["제목"], post["작가"]].map(normalize).join("::");
+    }
+
+    function postLibraryEntry(post) {
+      const key = postKey(post);
+      state.library[key] ||= {
+        title: normalize(post["제목"]),
+        author: normalize(post["작가"]),
+        link: normalize(post["링크"]),
+        date: normalize(post["날짜"]),
+        note: "",
+        read: false,
+        bookmarked: false,
+        openedAt: ""
+      };
+      const entry = state.library[key];
+      entry.title = normalize(post["제목"]) || entry.title;
+      entry.author = normalize(post["작가"]) || entry.author;
+      entry.link = normalize(post["링크"]) || entry.link;
+      entry.date = normalize(post["날짜"]) || entry.date;
+      return entry;
+    }
+
+    function findPostByLibraryKey(key) {
+      return state.posts.find((post) => postKey(post) === key) || null;
+    }
+
+    function updateLibraryEntry(post, patch = {}) {
+      const entry = postLibraryEntry(post);
+      Object.assign(entry, patch);
+      if (!entry.read && !entry.bookmarked && !normalize(entry.note) && !entry.openedAt) {
+        delete state.library[postKey(post)];
+      }
+      saveLibrary();
+      renderLibraryList();
+    }
+
     function mergeSheetAndLocal(sheetPosts) {
       const locals = localPosts();
       const sheetLinks = new Set(sheetPosts.map((post) => normalize(post["링크"])).filter(Boolean));
@@ -2463,10 +2898,13 @@
       const badges = node.querySelector(".badges");
       const tagRow = node.querySelector(".tag-row");
       const edit = node.querySelector(".edit-button");
+      const readButton = node.querySelector(".read-action");
+      const bookmarkButton = node.querySelector(".bookmark-action");
       const series = seriesInfo(post);
 
       title.textContent = normalize(post["제목"]) || "제목 없음";
       title.href = normalize(post["링크"]) || "#";
+      title.addEventListener("click", () => updateLibraryEntry(post, { openedAt: new Date().toISOString() }));
       meta.textContent = [post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ");
 
       if (series.isSeries) {
@@ -2482,12 +2920,305 @@
         splitTags(post[group]).forEach((tag) => tagRow.appendChild(makeTag(tag)));
       });
       renderEndingTags(post, tagRow);
+      renderLibraryButtons(post, { readButton, bookmarkButton });
+      readButton.addEventListener("click", () => {
+        const entry = postLibraryEntry(post);
+        updateLibraryEntry(post, { read: !entry.read });
+        renderLibraryButtons(post, { readButton, bookmarkButton });
+      });
+      bookmarkButton.addEventListener("click", () => {
+        const entry = postLibraryEntry(post);
+        updateLibraryEntry(post, { bookmarked: !entry.bookmarked });
+        renderLibraryButtons(post, { readButton, bookmarkButton });
+      });
       edit.addEventListener("click", () => fillAdminForm(post));
       node.addEventListener("click", (event) => {
         if (event.target.closest("a, button")) return;
         openPostLink(post);
       });
       return node;
+    }
+
+    function renderLibraryButtons(post, buttons) {
+      const entry = state.library[postKey(post)] || {};
+      buttons.readButton.classList.toggle("active", Boolean(entry.read));
+      buttons.bookmarkButton.classList.toggle("active", Boolean(entry.bookmarked));
+      buttons.readButton.textContent = entry.read ? "읽음 완료" : "읽음";
+      buttons.bookmarkButton.setAttribute("aria-label", entry.bookmarked ? "북마크 해제" : "북마크");
+    }
+
+    function openLibraryModal(view = "all") {
+      state.libraryView = view;
+      els.libraryTitle.textContent = view === "bookmarked" ? "북마크" : "내 서재";
+      els.bookmarkToggle.classList.toggle("active", view === "bookmarked");
+      renderLibraryList();
+      els.libraryModal.hidden = false;
+    }
+
+    function closeLibraryModal() {
+      els.libraryModal.hidden = true;
+      els.bookmarkToggle.classList.remove("active");
+    }
+
+    function renderLibraryList() {
+      if (!els.libraryList) return;
+      const entries = Object.entries(state.library)
+        .filter(([, entry]) => entry.read || entry.bookmarked || normalize(entry.note) || entry.openedAt)
+        .filter(([, entry]) => state.libraryView !== "bookmarked" || entry.bookmarked)
+        .sort(([, a], [, b]) => {
+          const ad = Date.parse(a.openedAt || a.updatedAt || a.date) || 0;
+          const bd = Date.parse(b.openedAt || b.updatedAt || b.date) || 0;
+          return bd - ad;
+        });
+
+      els.libraryList.innerHTML = "";
+      if (!entries.length) {
+        els.libraryList.innerHTML = `<div class="empty">${state.libraryView === "bookmarked" ? "아직 북마크한 글이 없습니다." : "아직 저장된 글이 없습니다."}</div>`;
+        return;
+      }
+
+      entries.forEach(([key, entry]) => {
+        const item = document.createElement("article");
+        item.className = "library-item";
+        const flags = [
+          entry.read ? "읽음" : "",
+          entry.bookmarked ? "북마크" : "",
+          normalize(entry.note) ? "메모" : "",
+          entry.openedAt ? "열람" : ""
+        ].filter(Boolean).join(" · ");
+        item.innerHTML = `
+          <span class="library-item-title">${escapeHtml(entry.title || "제목 없음")}</span>
+          <span class="library-item-meta">${escapeHtml([entry.author, flags].filter(Boolean).join(" · ") || "개인 기록")}</span>
+          <div class="library-item-actions">
+            <button class="library-action" type="button" data-action="open">열기</button>
+            <button class="library-action" type="button" data-action="note">메모</button>
+            <button class="library-action" type="button" data-action="excerpt">발췌</button>
+          </div>
+        `;
+        item.querySelector('[data-action="open"]').addEventListener("click", () => {
+          const post = findPostByLibraryKey(key);
+          if (post) openPostLink(post);
+          else if (entry.link) window.open(entry.link, "_blank", "noopener");
+        });
+        item.querySelector('[data-action="note"]').addEventListener("click", () => {
+          const post = findPostByLibraryKey(key) || libraryEntryToPost(entry, key);
+          openNoteModal(post);
+        });
+        item.querySelector('[data-action="excerpt"]').addEventListener("click", () => {
+          const post = findPostByLibraryKey(key) || libraryEntryToPost(entry, key);
+          openExcerptModal(post);
+        });
+        els.libraryList.appendChild(item);
+      });
+    }
+
+    function libraryEntryToPost(entry, key) {
+      return {
+        _rowNumber: key,
+        "제목": entry.title,
+        "작가": entry.author,
+        "링크": entry.link,
+        "날짜": entry.date
+      };
+    }
+
+    function openNoteModal(post) {
+      state.notePost = post;
+      const entry = postLibraryEntry(post);
+      els.noteMeta.textContent = [entry.title, entry.author].filter(Boolean).join(" · ");
+      els.noteText.value = entry.note || "";
+      els.noteModal.hidden = false;
+    }
+
+    function closeNoteModal() {
+      els.noteModal.hidden = true;
+      state.notePost = null;
+    }
+
+    function saveNote() {
+      if (!state.notePost) return;
+      updateLibraryEntry(state.notePost, { note: normalize(els.noteText.value), updatedAt: new Date().toISOString() });
+      closeNoteModal();
+      render();
+    }
+
+    function deleteNote() {
+      if (!state.notePost) return;
+      updateLibraryEntry(state.notePost, { note: "", updatedAt: new Date().toISOString() });
+      closeNoteModal();
+      render();
+    }
+
+    function openExcerptModal(post) {
+      state.excerptPost = post;
+      els.excerptWorkTitle.value = normalize(post["제목"]);
+      els.excerptAuthor.value = normalize(post["작가"]);
+      if (!normalize(els.excerptText.value)) {
+        const entry = state.library[postKey(post)] || {};
+        els.excerptText.value = normalize(entry.note);
+      }
+      els.excerptModal.hidden = false;
+      drawExcerptCanvas();
+    }
+
+    function closeExcerptModal() {
+      els.excerptModal.hidden = true;
+      state.excerptPost = null;
+    }
+
+    function setExcerptBackground(value) {
+      state.excerptBackground = value;
+      document.querySelectorAll(".swatch[data-bg]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.bg === value);
+      });
+      drawExcerptCanvas();
+    }
+
+    function setExcerptTextColor(value) {
+      state.excerptTextColor = value;
+      document.querySelectorAll(".swatch[data-text-color]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.textColor === value);
+      });
+      drawExcerptCanvas();
+    }
+
+    function updateExcerptImageTransform() {
+      state.excerptImageScale = (Number(els.excerptImageScale.value) || 100) / 100;
+      state.excerptImageX = Number(els.excerptImageX.value) || 0;
+      state.excerptImageY = Number(els.excerptImageY.value) || 0;
+      els.excerptImageScaleLabel.textContent = els.excerptImageScale.value;
+      drawExcerptCanvas();
+    }
+
+    function loadExcerptImage(file) {
+      if (!file) {
+        state.excerptImage = null;
+        drawExcerptCanvas();
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const image = new Image();
+        image.onload = () => {
+          state.excerptImage = image;
+          drawExcerptCanvas();
+        };
+        image.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function drawCoverImage(ctx, image, width, height) {
+      const scale = Math.max(width / image.width, height / image.height) * state.excerptImageScale;
+      const drawWidth = image.width * scale;
+      const drawHeight = image.height * scale;
+      const x = (width - drawWidth) / 2 + state.excerptImageX;
+      const y = (height - drawHeight) / 2 + state.excerptImageY;
+      ctx.drawImage(image, x, y, drawWidth, drawHeight);
+    }
+
+    function wrapCanvasText(ctx, text, maxWidth) {
+      const lines = [];
+      normalize(text).split(/\n+/).forEach((paragraph) => {
+        let line = "";
+        [...paragraph].forEach((char) => {
+          const next = `${line}${char}`;
+          if (ctx.measureText(next).width > maxWidth && line) {
+            lines.push(line);
+            line = char.trimStart();
+          } else {
+            line = next;
+          }
+        });
+        if (line) {
+          lines.push(line);
+        }
+        lines.push("");
+      });
+      return lines.filter((line, index, all) => line || (index > 0 && index < all.length - 1));
+    }
+
+    function drawExcerptCanvas() {
+      const canvas = els.excerptCanvas;
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      const width = canvas.width;
+      const height = canvas.height;
+      const dark = state.excerptBackground === "dark";
+      const baseBg = dark ? "#101114" : "#f7f5ef";
+      const textColor = state.excerptTextColor === "black" ? "#202124" : "#f4f4f5";
+      const subColor = state.excerptTextColor === "black" ? "rgba(32,33,36,.72)" : "rgba(244,244,245,.78)";
+      const fontFamily = els.excerptFont.value;
+      const fontSize = Number(els.excerptFontSize.value) || 38;
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.fillStyle = baseBg;
+      ctx.fillRect(0, 0, width, height);
+
+      if (state.excerptImage) {
+        drawCoverImage(ctx, state.excerptImage, width, height);
+        const gradient = ctx.createLinearGradient(0, 0, 0, height);
+        gradient.addColorStop(0, dark ? "rgba(0,0,0,.20)" : "rgba(255,255,255,.12)");
+        gradient.addColorStop(.55, dark ? "rgba(0,0,0,.36)" : "rgba(255,255,255,.42)");
+        gradient.addColorStop(1, dark ? "rgba(0,0,0,.68)" : "rgba(255,255,255,.72)");
+        ctx.fillStyle = gradient;
+        ctx.fillRect(0, 0, width, height);
+      }
+
+      ctx.fillStyle = textColor;
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.textBaseline = "top";
+      const margin = 82;
+      const lineHeight = Math.round(fontSize * 1.65);
+      const quote = normalize(els.excerptText.value) || "발췌 텍스트를 입력해 주세요.";
+      const lines = wrapCanvasText(ctx, `“${quote}”`, width - margin * 2).slice(0, 9);
+      let y = 210;
+      lines.forEach((line) => {
+        ctx.fillText(line, margin, y);
+        y += lineHeight;
+      });
+
+      ctx.fillStyle = subColor;
+      ctx.font = `30px ${fontFamily}`;
+      const title = normalize(els.excerptWorkTitle.value) || "작품 이름";
+      const author = normalize(els.excerptAuthor.value) || "작가";
+      ctx.fillText(title, margin, Math.max(y + 62, 760));
+      ctx.fillText(author, margin, Math.max(y + 110, 808));
+
+      ctx.fillStyle = dark ? "rgba(244,244,245,.38)" : "rgba(32,33,36,.38)";
+      ctx.font = `24px ${fontFamily}`;
+      ctx.textAlign = "right";
+      ctx.fillText("HQ POSTYPE ARCHIVE", width - margin, height - 72);
+      ctx.textAlign = "left";
+    }
+
+    function canvasToBlob(canvas) {
+      return new Promise((resolve) => canvas.toBlob(resolve, "image/png"));
+    }
+
+    async function downloadExcerptImage() {
+      drawExcerptCanvas();
+      const blob = await canvasToBlob(els.excerptCanvas);
+      if (!blob) return;
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const fileName = `${normalize(els.excerptWorkTitle.value) || "postype-excerpt"}.png`.replace(/[\\/:*?"<>|]/g, "_");
+      link.href = url;
+      link.download = fileName;
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    async function shareExcerptImage() {
+      drawExcerptCanvas();
+      const blob = await canvasToBlob(els.excerptCanvas);
+      if (!blob) return;
+      const file = new File([blob], "postype-excerpt.png", { type: "image/png" });
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({ files: [file], title: normalize(els.excerptWorkTitle.value) || "발췌" });
+        return;
+      }
+      await downloadExcerptImage();
     }
 
     function renderSeriesLine(meta, series) {
@@ -2502,6 +3233,7 @@
     function openPostLink(post) {
       const link = normalize(post["링크"]);
       if (!link) return;
+      updateLibraryEntry(post, { openedAt: new Date().toISOString() });
       window.open(link, "_blank", "noopener");
     }
 
@@ -2765,6 +3497,49 @@
     els.adminForm.addEventListener("submit", savePost);
     els.adminEditor.addEventListener("click", (event) => {
       if (event.target === els.adminEditor) closeAdminEditor();
+    });
+    els.libraryToggle.addEventListener("click", () => openLibraryModal("all"));
+    els.bookmarkToggle.addEventListener("click", () => openLibraryModal("bookmarked"));
+    els.libraryClose.addEventListener("click", closeLibraryModal);
+    els.libraryModal.addEventListener("click", (event) => {
+      if (event.target === els.libraryModal) closeLibraryModal();
+    });
+    els.noteClose.addEventListener("click", closeNoteModal);
+    els.noteSave.addEventListener("click", saveNote);
+    els.noteDelete.addEventListener("click", deleteNote);
+    els.noteToExcerpt.addEventListener("click", () => {
+      if (!state.notePost) return;
+      const post = state.notePost;
+      els.excerptText.value = normalize(els.noteText.value);
+      closeNoteModal();
+      openExcerptModal(post);
+    });
+    els.noteModal.addEventListener("click", (event) => {
+      if (event.target === els.noteModal) closeNoteModal();
+    });
+    els.excerptClose.addEventListener("click", closeExcerptModal);
+    els.excerptModal.addEventListener("click", (event) => {
+      if (event.target === els.excerptModal) closeExcerptModal();
+    });
+    [els.excerptWorkTitle, els.excerptAuthor, els.excerptText, els.excerptFont, els.excerptFontSize].forEach((input) => {
+      input.addEventListener("input", () => {
+        els.excerptFontSizeLabel.textContent = els.excerptFontSize.value;
+        drawExcerptCanvas();
+      });
+    });
+    document.querySelectorAll(".swatch[data-bg]").forEach((button) => {
+      button.addEventListener("click", () => setExcerptBackground(button.dataset.bg));
+    });
+    document.querySelectorAll(".swatch[data-text-color]").forEach((button) => {
+      button.addEventListener("click", () => setExcerptTextColor(button.dataset.textColor));
+    });
+    els.excerptImage.addEventListener("change", (event) => loadExcerptImage(event.target.files[0]));
+    [els.excerptImageScale, els.excerptImageX, els.excerptImageY].forEach((input) => {
+      input.addEventListener("input", updateExcerptImageTransform);
+    });
+    els.excerptDownload.addEventListener("click", downloadExcerptImage);
+    els.excerptShare.addEventListener("click", () => {
+      shareExcerptImage().catch(() => downloadExcerptImage());
     });
     els.randomToggle.addEventListener("click", toggleRandomPanel);
     els.randomCurrent.addEventListener("click", () => {
