@@ -1609,6 +1609,55 @@
       line-height: 1.55;
     }
 
+    .library-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .library-tabs {
+      display: flex;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .library-tab,
+    .library-reset {
+      min-height: 32px;
+      border: 1px solid #30343a;
+      border-radius: 999px;
+      background: transparent;
+      color: #8f98a4;
+      padding: 0 11px;
+      font-size: 11px;
+      font-weight: 400;
+      cursor: pointer;
+    }
+
+    .library-tab.active {
+      border-color: #e6e8eb;
+      background: #e6e8eb;
+      color: #111316;
+    }
+
+    .library-reset {
+      flex: 0 0 auto;
+      border-color: rgba(255, 99, 99, .38);
+      color: #ff8f8f;
+    }
+
+    .library-reset:hover {
+      border-color: rgba(255, 99, 99, .72);
+      background: rgba(255, 99, 99, .08);
+    }
+
+    .library-reset[hidden] {
+      display: none;
+    }
+
     .library-list {
       display: grid;
       gap: 8px;
@@ -2031,7 +2080,14 @@
         <h2 id="libraryTitle">내 서재</h2>
         <button class="modal-close" id="libraryClose" type="button" aria-label="닫기">×</button>
       </div>
-      <p class="modal-note">이 서재는 이 브라우저에만 저장됩니다. 브라우저 데이터를 지우면 함께 삭제될 수 있어요.</p>
+      <p class="modal-note">작품을 열면 읽은 목록에 자동으로 기록됩니다. 북마크와 메모는 별도로 유지됩니다.</p>
+      <div class="library-toolbar">
+        <div class="library-tabs" id="libraryTabs" role="tablist" aria-label="서재 목록 선택">
+          <button class="library-tab active" type="button" data-library-view="history" role="tab" aria-selected="true">읽은 목록</button>
+          <button class="library-tab" type="button" data-library-view="bookmarked" role="tab" aria-selected="false">북마크</button>
+        </div>
+        <button class="library-reset" id="libraryReset" type="button">읽은 기록 초기화</button>
+      </div>
       <div class="library-list" id="libraryList"></div>
     </section>
   </div>
@@ -2113,7 +2169,6 @@
       <p class="summary"></p>
       <div class="tag-row"></div>
       <div class="library-actions">
-        <button class="library-action read-action" type="button">읽음</button>
         <button class="library-action bookmark-action" type="button" aria-label="북마크">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5v17l-6-3.5-6 3.5z"></path>
@@ -2199,7 +2254,7 @@
       randomScope: "current",
       randomPost: null,
       library: loadLibrary(),
-      libraryView: "all",
+      libraryView: "history",
       notePost: null,
       excerptPost: null,
       excerptBackground: "dark",
@@ -2245,6 +2300,8 @@
       libraryModal: $("#libraryModal"),
       libraryTitle: $("#libraryTitle"),
       libraryClose: $("#libraryClose"),
+      libraryTabs: $("#libraryTabs"),
+      libraryReset: $("#libraryReset"),
       libraryList: $("#libraryList"),
       noteModal: $("#noteModal"),
       noteClose: $("#noteClose"),
@@ -2661,7 +2718,22 @@
     function loadLibrary() {
       try {
         const data = JSON.parse(localStorage.getItem(LIBRARY_STORAGE_KEY) || "{}");
-        return data && typeof data === "object" ? data : {};
+        if (!data || typeof data !== "object") return {};
+
+        let migrated = false;
+        Object.values(data).forEach((entry) => {
+          if (!entry || typeof entry !== "object") return;
+          if (entry.read && !entry.openedAt) {
+            entry.openedAt = entry.updatedAt || entry.date || new Date().toISOString();
+            migrated = true;
+          }
+          if ("read" in entry) {
+            delete entry.read;
+            migrated = true;
+          }
+        });
+        if (migrated) localStorage.setItem(LIBRARY_STORAGE_KEY, JSON.stringify(data));
+        return data;
       } catch {
         return {};
       }
@@ -2683,7 +2755,6 @@
         link: normalize(post["링크"]),
         date: normalize(post["날짜"]),
         note: "",
-        read: false,
         bookmarked: false,
         openedAt: ""
       };
@@ -2702,7 +2773,7 @@
     function updateLibraryEntry(post, patch = {}) {
       const entry = postLibraryEntry(post);
       Object.assign(entry, patch);
-      if (!entry.read && !entry.bookmarked && !normalize(entry.note) && !entry.openedAt) {
+      if (!entry.bookmarked && !normalize(entry.note) && !entry.openedAt) {
         delete state.library[postKey(post)];
       }
       saveLibrary();
@@ -2920,7 +2991,6 @@
       const badges = node.querySelector(".badges");
       const tagRow = node.querySelector(".tag-row");
       const edit = node.querySelector(".edit-button");
-      const readButton = node.querySelector(".read-action");
       const bookmarkButton = node.querySelector(".bookmark-action");
       const series = seriesInfo(post);
 
@@ -2942,16 +3012,11 @@
         splitTags(post[group]).forEach((tag) => tagRow.appendChild(makeTag(tag)));
       });
       renderEndingTags(post, tagRow);
-      renderLibraryButtons(post, { readButton, bookmarkButton });
-      readButton.addEventListener("click", () => {
-        const entry = postLibraryEntry(post);
-        updateLibraryEntry(post, { read: !entry.read });
-        renderLibraryButtons(post, { readButton, bookmarkButton });
-      });
+      renderLibraryButtons(post, bookmarkButton);
       bookmarkButton.addEventListener("click", () => {
         const entry = postLibraryEntry(post);
-        updateLibraryEntry(post, { bookmarked: !entry.bookmarked });
-        renderLibraryButtons(post, { readButton, bookmarkButton });
+        updateLibraryEntry(post, { bookmarked: !entry.bookmarked, updatedAt: new Date().toISOString() });
+        renderLibraryButtons(post, bookmarkButton);
       });
       edit.addEventListener("click", () => fillAdminForm(post));
       node.addEventListener("click", (event) => {
@@ -2961,18 +3026,26 @@
       return node;
     }
 
-    function renderLibraryButtons(post, buttons) {
+    function renderLibraryButtons(post, bookmarkButton) {
       const entry = state.library[postKey(post)] || {};
-      buttons.readButton.classList.toggle("active", Boolean(entry.read));
-      buttons.bookmarkButton.classList.toggle("active", Boolean(entry.bookmarked));
-      buttons.readButton.textContent = entry.read ? "읽음 완료" : "읽음";
-      buttons.bookmarkButton.setAttribute("aria-label", entry.bookmarked ? "북마크 해제" : "북마크");
+      bookmarkButton.classList.toggle("active", Boolean(entry.bookmarked));
+      bookmarkButton.setAttribute("aria-label", entry.bookmarked ? "북마크 해제" : "북마크");
     }
 
-    function openLibraryModal(view = "all") {
-      state.libraryView = view;
-      els.libraryTitle.textContent = view === "bookmarked" ? "북마크" : "내 서재";
+    function setLibraryView(view) {
+      state.libraryView = view === "bookmarked" ? "bookmarked" : "history";
+      els.libraryTabs.querySelectorAll("[data-library-view]").forEach((button) => {
+        const active = button.dataset.libraryView === state.libraryView;
+        button.classList.toggle("active", active);
+        button.setAttribute("aria-selected", String(active));
+      });
+      els.libraryReset.hidden = state.libraryView !== "history";
       renderLibraryList();
+    }
+
+    function openLibraryModal(view = "history") {
+      els.libraryTitle.textContent = "내 서재";
+      setLibraryView(view);
       els.libraryModal.hidden = false;
     }
 
@@ -2982,18 +3055,25 @@
 
     function renderLibraryList() {
       if (!els.libraryList) return;
-      const entries = Object.entries(state.library)
-        .filter(([, entry]) => entry.read || entry.bookmarked || normalize(entry.note) || entry.openedAt)
-        .filter(([, entry]) => state.libraryView !== "bookmarked" || entry.bookmarked)
+
+      const allEntries = Object.entries(state.library);
+      const historyEntries = allEntries.filter(([, entry]) => Boolean(entry.openedAt));
+      const bookmarkedEntries = allEntries.filter(([, entry]) => Boolean(entry.bookmarked));
+      const entries = (state.libraryView === "bookmarked" ? bookmarkedEntries : historyEntries)
         .sort(([, a], [, b]) => {
-          const ad = Date.parse(a.openedAt || a.updatedAt || a.date) || 0;
-          const bd = Date.parse(b.openedAt || b.updatedAt || b.date) || 0;
+          const ad = Date.parse(state.libraryView === "bookmarked" ? (a.updatedAt || a.openedAt || a.date) : (a.openedAt || a.date)) || 0;
+          const bd = Date.parse(state.libraryView === "bookmarked" ? (b.updatedAt || b.openedAt || b.date) : (b.openedAt || b.date)) || 0;
           return bd - ad;
         });
 
+      const historyTab = els.libraryTabs.querySelector('[data-library-view="history"]');
+      const bookmarkTab = els.libraryTabs.querySelector('[data-library-view="bookmarked"]');
+      historyTab.textContent = `읽은 목록 ${historyEntries.length}`;
+      bookmarkTab.textContent = `북마크 ${bookmarkedEntries.length}`;
+
       els.libraryList.innerHTML = "";
       if (!entries.length) {
-        els.libraryList.innerHTML = `<div class="empty">${state.libraryView === "bookmarked" ? "아직 북마크한 글이 없습니다." : "아직 저장된 글이 없습니다."}</div>`;
+        els.libraryList.innerHTML = `<div class="empty">${state.libraryView === "bookmarked" ? "아직 북마크한 글이 없습니다." : "아직 읽은 기록이 없습니다. 작품을 열면 자동으로 기록됩니다."}</div>`;
         return;
       }
 
@@ -3001,10 +3081,8 @@
         const item = document.createElement("article");
         item.className = "library-item";
         const flags = [
-          entry.read ? "읽음" : "",
-          entry.bookmarked ? "북마크" : "",
-          normalize(entry.note) ? "메모" : "",
-          entry.openedAt ? "열람" : ""
+          state.libraryView === "bookmarked" ? "북마크" : "열람 기록",
+          normalize(entry.note) ? "메모" : ""
         ].filter(Boolean).join(" · ");
         item.innerHTML = `
           <span class="library-item-title">${escapeHtml(entry.title || "제목 없음")}</span>
@@ -3018,7 +3096,12 @@
         item.querySelector('[data-action="open"]').addEventListener("click", () => {
           const post = findPostByLibraryKey(key);
           if (post) openPostLink(post);
-          else if (entry.link) window.open(entry.link, "_blank", "noopener");
+          else if (entry.link) {
+            entry.openedAt = new Date().toISOString();
+            saveLibrary();
+            renderLibraryList();
+            window.open(entry.link, "_blank", "noopener");
+          }
         });
         item.querySelector('[data-action="note"]').addEventListener("click", () => {
           const post = findPostByLibraryKey(key) || libraryEntryToPost(entry, key);
@@ -3030,6 +3113,21 @@
         });
         els.libraryList.appendChild(item);
       });
+    }
+
+    function clearReadingHistory() {
+      const hasHistory = Object.values(state.library).some((entry) => entry && entry.openedAt);
+      if (!hasHistory) return;
+      const confirmed = window.confirm("읽은 기록을 모두 초기화할까요? 북마크와 메모는 유지됩니다.");
+      if (!confirmed) return;
+
+      Object.keys(state.library).forEach((key) => {
+        const entry = state.library[key];
+        entry.openedAt = "";
+        if (!entry.bookmarked && !normalize(entry.note)) delete state.library[key];
+      });
+      saveLibrary();
+      renderLibraryList();
     }
 
     function libraryEntryToPost(entry, key) {
@@ -3651,7 +3749,13 @@
     els.adminEditor.addEventListener("click", (event) => {
       if (event.target === els.adminEditor) closeAdminEditor();
     });
-    els.libraryToggle.addEventListener("click", () => openLibraryModal("all"));
+    els.libraryToggle.addEventListener("click", () => openLibraryModal("history"));
+    els.libraryTabs.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-library-view]");
+      if (!button) return;
+      setLibraryView(button.dataset.libraryView);
+    });
+    els.libraryReset.addEventListener("click", clearReadingHistory);
     els.libraryClose.addEventListener("click", closeLibraryModal);
     els.libraryModal.addEventListener("click", (event) => {
       if (event.target === els.libraryModal) closeLibraryModal();
