@@ -1202,6 +1202,13 @@
       max-width: 100%;
     }
 
+    .admin-filter-toggle {
+      margin: 0 0 10px;
+      border: 1px solid #262a31;
+      border-radius: 9px;
+      background: #101114;
+    }
+
     .admin-filters {
       display: grid;
       gap: 8px;
@@ -1210,6 +1217,10 @@
       border: 1px solid #262a31;
       border-radius: 9px;
       background: #101114;
+    }
+
+    .admin-filters.is-collapsed {
+      display: none;
     }
 
     .admin-filter-group {
@@ -1626,6 +1637,7 @@
       <label class="admin-search">
         <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
       </label>
+      <button class="filter-title admin-filter-toggle" id="adminFilterToggle" type="button"><strong>관리자 필터</strong><span id="adminFilterCaret">접기</span></button>
       <div class="admin-filters" id="adminFilterMount"></div>
       <div class="admin-list" id="adminList"></div>
       <div class="admin-editor" id="adminEditor" hidden>
@@ -1648,7 +1660,7 @@
             <label><span class="label">공</span><input name="공" placeholder="다정공"></label>
             <label><span class="label">수</span><input name="수" placeholder="상처수"></label>
             <label><span class="label">시리즈 여부</span><select name="시리즈"><option value="">단편/미표기</option><option value="Y">시리즈</option></select></label>
-            <label><span class="label">연재상태</span><select name="연재상태"><option value="">미표기</option><option>연재중</option><option>완결</option></select></label>
+            <label><span class="label">연재상태</span><select name="연재상태"><option value="">미표기</option><option>단편</option><option>연재중</option><option>완결</option></select></label>
             <label><span class="label">시리즈명</span><input name="시리즈명" placeholder="시리즈명"></label>
             <label><span class="label">시리즈회차</span><input name="시리즈회차" placeholder="1, 2, 上, 下"></label>
             <label class="wide"><span class="label">상태근거</span><input name="상태근거" placeholder="완결표기, 반복제목 등"></label>
@@ -1665,9 +1677,10 @@
             <details class="guide panel">
                 <summary>이용 가이드</summary>
                 <div class="guide-body">
-                    <p>이 아카이브는 혚쾌 좌우상대고정 기준으로 정리하고 있습니다.</p>
-                    <p>일부 분류 기능은 AI를 통해 자동화하고 있으며, 자료 정리 목적 외에는 사용하지 않습니다.</p>
-                    <p>목록에서 내리고 싶은 글이 있거나 오류·문의사항이 있다면 디엠(Penta_1031) 혹은 스핀으로 편하게 연락해 주세요.</p>
+                    <p>혚쾌 포타 검색기는 혚쾌 좌우상대고정 기준으로 정리하고 있습니다.</p>
+                    <p>일부 분류 기능은 AI를 통해 자동화하고 있으며, 자료 정리 목적 외에는 절대 사용하지 않습니다.</p>
+                    <p>혹 목록에서 내리고 싶은 글이 있다면 편하게 관리자(@Penta_1031)에게 요청해주세요.</p>
+                    <p>오류/문의사항이 있다면 디엠 혹은 해당 계정 스핀으로 문의 부탁드립니다.</p>
                 </div>
             </details>
 
@@ -1763,7 +1776,7 @@
       "카테고리": ["글", "그림", "기타"],
       "가격": ["무료", "유료"],
       "성인": ["전연령", "성인"],
-      "연재상태": ["완결", "연재중"],
+      "연재상태": ["완결", "연재중", "단편"],
       "장르": ["현대물", "학원물", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
       "키워드": ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스"],
       "공": ["집착공", "다정공", "무심공", "능글공", "까칠공", "연하공", "대형견공", "계략공", "후회공", "절륜공", "재벌공", "연예인공", "상처공", "순정공", "강공", "짝사랑공", "헤테로공"],
@@ -1773,7 +1786,7 @@
 
     const ADMIN_TAG_GROUPS = {
       "시리즈여부": ["시리즈", "단편"],
-      "연재상태": ["연재중", "완결"],
+      "연재상태": ["단편", "연재중", "완결"],
       "카테고리": ["글", "그림", "기타"],
       "가격": ["무료", "유료"],
       "성인": ["전연령", "성인"],
@@ -1837,6 +1850,8 @@
       total: $("#totalCount"),
       adminToggle: $("#adminToggle"),
       adminSearch: $("#adminSearchInput"),
+      adminFilterToggle: $("#adminFilterToggle"),
+      adminFilterCaret: $("#adminFilterCaret"),
       adminFilterMount: $("#adminFilterMount"),
       adminList: $("#adminList"),
       adminEditor: $("#adminEditor"),
@@ -1996,7 +2011,7 @@
       }
       if (group === "연재상태") {
         const series = seriesInfo(post);
-        if (!series.isSeries) return [];
+        if (!series.isSeries) return ["단편"];
         const stats = state.seriesStats.get(post);
         return [(stats && stats.status) || series.status];
       }
@@ -2539,6 +2554,7 @@
         field.value = post[field.name] || "";
       });
       els.adminForm.elements["_rowNumber"].value = post._rowNumber || "";
+      syncStandaloneStatus();
     }
 
     function openNewPostForm() {
@@ -2548,6 +2564,7 @@
       els.adminEditorTitle.textContent = "신규 글 추가";
       els.deletePost.hidden = true;
       els.adminForm.elements["_rowNumber"].value = "";
+      syncStandaloneStatus();
       els.adminEditor.hidden = false;
     }
 
@@ -2579,9 +2596,17 @@
     function formData() {
       const data = {};
       new FormData(els.adminForm).forEach((value, key) => data[key] = normalize(value));
+      if (!data["시리즈"]) data["연재상태"] = "";
       data._source = data._rowNumber ? "local-edit" : "local";
       data._rowNumber ||= `local-${Date.now()}`;
       return data;
+    }
+
+    function syncStandaloneStatus() {
+      const seriesField = els.adminForm.elements["시리즈"];
+      const statusField = els.adminForm.elements["연재상태"];
+      if (!seriesField || !statusField) return;
+      if (!seriesField.value) statusField.value = "";
     }
 
     async function sendAdminAction(action, payload) {
@@ -2728,10 +2753,15 @@
       state.adminQuery = event.target.value;
       renderAdminList();
     });
+    els.adminFilterToggle.addEventListener("click", () => {
+      els.adminFilterMount.classList.toggle("is-collapsed");
+      els.adminFilterCaret.textContent = els.adminFilterMount.classList.contains("is-collapsed") ? "펼치기" : "접기";
+    });
     els.adminToggle.addEventListener("click", toggleAdminMode);
     els.newPost.addEventListener("click", openNewPostForm);
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
+    els.adminForm.elements["시리즈"].addEventListener("change", syncStandaloneStatus);
     els.adminForm.addEventListener("submit", savePost);
     els.adminEditor.addEventListener("click", (event) => {
       if (event.target === els.adminEditor) closeAdminEditor();
