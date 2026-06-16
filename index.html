@@ -1202,6 +1202,33 @@
       max-width: 100%;
     }
 
+    .admin-filters {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 12px;
+      padding: 10px;
+      border: 1px solid #262a31;
+      border-radius: 9px;
+      background: #101114;
+    }
+
+    .admin-filter-group {
+      display: grid;
+      gap: 6px;
+    }
+
+    .admin-filter-label {
+      color: #68717d;
+      font-size: 11px;
+      font-weight: 400;
+    }
+
+    .admin-filter-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
     .admin-list {
       display: grid;
       gap: 7px;
@@ -1599,6 +1626,7 @@
       <label class="admin-search">
         <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
       </label>
+      <div class="admin-filters" id="adminFilterMount"></div>
       <div class="admin-list" id="adminList"></div>
       <div class="admin-editor" id="adminEditor" hidden>
         <section class="admin-editor-card">
@@ -1619,6 +1647,11 @@
             <label><span class="label">키워드</span><input name="키워드" placeholder="재회, 오해"></label>
             <label><span class="label">공</span><input name="공" placeholder="다정공"></label>
             <label><span class="label">수</span><input name="수" placeholder="상처수"></label>
+            <label><span class="label">시리즈 여부</span><select name="시리즈"><option value="">단편/미표기</option><option value="Y">시리즈</option></select></label>
+            <label><span class="label">연재상태</span><select name="연재상태"><option value="">미표기</option><option>연재중</option><option>완결</option></select></label>
+            <label><span class="label">시리즈명</span><input name="시리즈명" placeholder="시리즈명"></label>
+            <label><span class="label">시리즈회차</span><input name="시리즈회차" placeholder="1, 2, 上, 下"></label>
+            <label class="wide"><span class="label">상태근거</span><input name="상태근거" placeholder="완결표기, 반복제목 등"></label>
             <label><span class="label">스포일러</span><input name="엔딩" placeholder="해피엔딩"></label>
             <div class="wide top-actions">
               <button class="button primary" type="submit">저장</button>
@@ -1629,14 +1662,14 @@
       </div>
     </section>
 
-    <details class="guide panel">
-      <summary>이용 가이드</summary>
-      <div class="guide-body">
-        <p>아카이브 목록과 일부 분류 기능은 자동화되어 있으며, 자료 정리 목적 외에는 사용하지 않습니다.</p>
-        <p>일부 기능에 AI를 사용하고 있지만, 수집한 자료를 정리하고 검색하기 쉽게 만드는 용도로만 활용합니다.</p>
-        <p>목록에서 내리고 싶은 글이 있거나 오류·문의사항이 있다면 디엠, 스핀, 또는 사이트 하단 문의로 편하게 연락해 주세요.</p>
-      </div>
-    </details>
+            <details class="guide panel">
+                <summary>이용 가이드</summary>
+                <div class="guide-body">
+                    <p>이 아카이브는 혚쾌 좌우상대고정 기준으로 정리하고 있습니다.</p>
+                    <p>일부 분류 기능은 AI를 통해 자동화하고 있으며, 자료 정리 목적 외에는 사용하지 않습니다.</p>
+                    <p>목록에서 내리고 싶은 글이 있거나 오류·문의사항이 있다면 디엠(Penta_1031) 혹은 스핀으로 편하게 연락해 주세요.</p>
+                </div>
+            </details>
 
     <section class="layout">
       <aside class="filters panel">
@@ -1645,11 +1678,12 @@
         </label>
         <button class="filter-title" id="filterToggle" type="button"><strong>필터</strong><span id="filterCaret">접기</span></button>
         <div id="filterBody">
-          <select id="sortSelect" hidden>
-            <option value="date-desc">최신순</option>
-            <option value="title-asc">제목순</option>
-            <option value="author-asc">작가명순</option>
-          </select>
+            <select id="sortSelect" hidden>
+                <option value="date-desc">최신순</option>
+                <option value="date-asc">과거순</option>
+                <option value="title-asc">제목순</option>
+                <option value="author-asc">작가명순</option>
+            </select>
           <div id="filterMount"></div>
         </div>
       </aside>
@@ -1657,11 +1691,12 @@
       <section class="content">
         <div class="list-toolbar">
           <span id="totalCount">글 목록</span>
-          <div class="sort-pills" id="sortButtons">
-            <button class="sort-pill active" type="button" data-sort="date-desc">최신순</button>
-            <button class="sort-pill" type="button" data-sort="title-asc">제목순</button>
-            <button class="sort-pill" type="button" data-sort="author-asc">작가명순</button>
-          </div>
+                <div class="sort-pills" id="sortButtons">
+                    <button class="sort-pill active" type="button" data-sort="date-desc">최신순</button>
+                    <button class="sort-pill" type="button" data-sort="date-asc">과거순</button>
+                    <button class="sort-pill" type="button" data-sort="title-asc">제목순</button>
+                    <button class="sort-pill" type="button" data-sort="author-asc">작가명순</button>
+                </div>
         </div>
         <span id="visibleCount" hidden>0</span>
         <div id="status" class="status">아카이브 데이터를 불러오는 중입니다.</div>
@@ -1736,6 +1771,19 @@
       "스포일러": ["해피엔딩", "새드엔딩", "오픈엔딩", "사망"]
     };
 
+    const ADMIN_TAG_GROUPS = {
+      "시리즈여부": ["시리즈", "단편"],
+      "연재상태": ["연재중", "완결"],
+      "카테고리": ["글", "그림", "기타"],
+      "가격": ["무료", "유료"],
+      "성인": ["전연령", "성인"],
+      "장르": TAG_GROUPS["장르"],
+      "키워드": TAG_GROUPS["키워드"],
+      "공": TAG_GROUPS["공"],
+      "수": TAG_GROUPS["수"],
+      "스포일러": TAG_GROUPS["스포일러"]
+    };
+
     const SAMPLE_POSTS = [
       {
         "_rowNumber": "sample-1",
@@ -1763,6 +1811,7 @@
     const state = {
       posts: [],
       active: {},
+      adminActive: {},
       query: "",
       adminQuery: "",
       sort: "date-desc",
@@ -1788,6 +1837,7 @@
       total: $("#totalCount"),
       adminToggle: $("#adminToggle"),
       adminSearch: $("#adminSearchInput"),
+      adminFilterMount: $("#adminFilterMount"),
       adminList: $("#adminList"),
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
@@ -1941,6 +1991,9 @@
       if (group === "카테고리") return [postCategory(post)];
       if (group === "성인") return [ageLabel(post)];
       if (group === "가격") return [priceLabel(post)];
+      if (group === "시리즈여부") {
+        return [seriesInfo(post).isSeries ? "시리즈" : "단편"];
+      }
       if (group === "연재상태") {
         const series = seriesInfo(post);
         if (!series.isSeries) return [];
@@ -2203,16 +2256,17 @@
     async function loadData() {
       els.status.textContent = "아카이브 데이터를 불러오는 중입니다.";
       try {
-        const result = await loadRemotePosts();
-        state.posts = mergeSheetAndLocal(result.posts);
-        updateSeriesStats();
-        els.status.textContent = `${result.label}에서 ${result.posts.length.toLocaleString("ko-KR")}개를 불러왔습니다.`;
+            const result = await loadRemotePosts();
+            state.posts = mergeSheetAndLocal(result.posts);
+            updateSeriesStats();
+            els.status.textContent = "";
       } catch (error) {
         state.posts = mergeSheetAndLocal(SAMPLE_POSTS);
         updateSeriesStats();
         els.status.textContent = `${error.message} 지금은 샘플/로컬 데이터로 표시합니다.`;
       }
       buildFilters();
+      buildAdminFilters();
       render();
     }
 
@@ -2247,14 +2301,50 @@
       });
     }
 
-    function filteredPosts() {
-      const query = normalize(state.query).toLowerCase();
-      return state.posts.filter((post) => matchesPost(post, state.active, query)).sort((a, b) => {
-        if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
-        if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
-        return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+    function buildAdminFilters() {
+      els.adminFilterMount.innerHTML = "";
+      Object.entries(ADMIN_TAG_GROUPS).forEach(([group, options]) => {
+        const box = document.createElement("div");
+        box.className = "admin-filter-group";
+        box.dataset.group = group;
+
+        const label = document.createElement("span");
+        label.className = "admin-filter-label";
+        label.textContent = group;
+
+        const chips = document.createElement("div");
+        chips.className = "admin-filter-chips";
+
+        options.forEach((option) => {
+          const button = document.createElement("button");
+          button.className = "chip";
+          button.type = "button";
+          button.textContent = option;
+          button.dataset.group = group;
+          button.dataset.option = option;
+          button.addEventListener("click", () => {
+            state.adminActive[group] ||= new Set();
+            state.adminActive[group].has(option) ? state.adminActive[group].delete(option) : state.adminActive[group].add(option);
+            button.classList.toggle("active");
+            renderAdminList();
+          });
+          chips.appendChild(button);
+        });
+
+        box.append(label, chips);
+        els.adminFilterMount.appendChild(box);
       });
     }
+
+    function filteredPosts() {
+      const query = normalize(state.query).toLowerCase();
+            return state.posts.filter((post) => matchesPost(post, state.active, query)).sort((a, b) => {
+                if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
+                if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
+                if (state.sort === "date-asc") return Date.parse(normalize(a["날짜"])) - Date.parse(normalize(b["날짜"]));
+                return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+            });
+        }
 
     function matchesPost(post, activeGroups = state.active, query = normalize(state.query).toLowerCase()) {
       if (query && !searchText(post).includes(query)) return false;
@@ -2298,7 +2388,7 @@
       els.adminList.innerHTML = "";
       const query = normalize(state.adminQuery).toLowerCase();
       const posts = state.posts
-        .filter((post) => !query || searchText(post).includes(query))
+        .filter((post) => matchesPost(post, state.adminActive, query))
         .slice()
         .sort((a, b) => {
           return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
