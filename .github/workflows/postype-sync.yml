@@ -28,7 +28,7 @@ jobs:
       GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
       GEMINI_MAX_ATTEMPTS: ${{ vars.GEMINI_MAX_ATTEMPTS || '4' }}
       AI_REVIEW_CONFIDENCE_THRESHOLD: ${{ vars.AI_REVIEW_CONFIDENCE_THRESHOLD || '0.72' }}
-      RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'false' }}
+      RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'true' }}
 
     steps:
       - uses: actions/checkout@v4

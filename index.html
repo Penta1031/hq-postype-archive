@@ -1228,6 +1228,18 @@
       margin-bottom: 12px;
     }
 
+    .admin-head-actions {
+      display: grid;
+      gap: 7px;
+      min-width: 118px;
+    }
+
+    .admin-head-actions .button {
+      min-height: 34px;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+
     .admin-head strong {
       font-weight: 500;
     }
@@ -2046,6 +2058,11 @@
         display: grid;
       }
 
+      .admin-head-actions {
+        grid-template-columns: 1fr 1fr;
+        min-width: 0;
+      }
+
       .random-dock {
         right: 18px;
         bottom: 18px;
@@ -2097,13 +2114,16 @@
           <strong>관리자 모드</strong>
           <p class="admin-note">신규 글은 버튼 아래에, 기존 글은 목록 바로 아래에 편집창이 열립니다.</p>
         </div>
-        <button class="button primary" id="newPostButton" type="button">+ 신규 글 추가</button>
+        <div class="admin-head-actions">
+          <button class="button" id="adminRefreshButton" type="button">새로고침</button>
+          <button class="button primary" id="newPostButton" type="button">+ 신규 글</button>
+        </div>
       </div>
       <div class="crawler-admin" id="crawlerAdmin">
         <section class="crawler-section">
           <div class="crawler-section-head">
             <strong>크롤링 상태</strong>
-            <a class="button crawler-manual" id="manualCrawlLink" href="#" target="_blank" rel="noreferrer">새 글 확인</a>
+            <button class="button crawler-manual" id="manualCrawlButton" type="button">새 글 확인</button>
           </div>
           <div class="crawler-status-grid">
             <div class="crawler-stat"><span>마지막 실행</span><strong id="crawlLastRun">-</strong></div>
@@ -2480,10 +2500,11 @@
       newPostsList: $("#newPostsList"),
       aiReviewCount: $("#aiReviewCount"),
       aiReviewList: $("#aiReviewList"),
-      manualCrawlLink: $("#manualCrawlLink"),
+      manualCrawlButton: $("#manualCrawlButton"),
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
       adminForm: $("#adminForm"),
+      adminRefresh: $("#adminRefreshButton"),
       newPost: $("#newPostButton"),
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
@@ -3021,6 +3042,24 @@
       render();
     }
 
+    async function refreshAdminData() {
+      if (!els.adminRefresh) return;
+      els.adminRefresh.disabled = true;
+      const originalText = els.adminRefresh.textContent;
+      els.adminRefresh.textContent = "갱신 중";
+      try {
+        closeAdminEditor();
+        await loadData();
+        els.status.textContent = "관리자 데이터를 새로 불러왔습니다.";
+      } catch (error) {
+        els.status.textContent = `새로고침에 실패했습니다: ${error.message}`;
+        alert(`새로고침에 실패했습니다. ${error.message}`);
+      } finally {
+        els.adminRefresh.disabled = false;
+        els.adminRefresh.textContent = originalText;
+      }
+    }
+
     function buildFilters() {
       els.filterMount.innerHTML = "";
       Object.entries(TAG_GROUPS).forEach(([group, options]) => {
@@ -3200,10 +3239,6 @@
       els.crawlLastStatus.textContent = run.status === "success" ? "성공" : run.status === "failed" ? "실패" : (run.status || "-");
       els.crawlFoundCount.textContent = Number(run.found_count || 0).toLocaleString("ko-KR");
       els.crawlFailedCount.textContent = Number(run.failed_count || 0).toLocaleString("ko-KR");
-      const link = manualCrawlUrl();
-      els.manualCrawlLink.href = link;
-      els.manualCrawlLink.toggleAttribute("aria-disabled", link === "#");
-
       const pendingPosts = crawlerPosts();
       const reviewPosts = pendingPosts.filter(aiNeedsReview);
       els.newPostsCount.textContent = `${pendingPosts.length}건`;
@@ -3954,6 +3989,32 @@
       }
     }
 
+    async function runCrawlerNow() {
+      if (!els.manualCrawlButton) return;
+      els.manualCrawlButton.disabled = true;
+      const originalText = els.manualCrawlButton.textContent;
+      els.manualCrawlButton.textContent = "실행 요청 중";
+      els.status.textContent = "GitHub Actions에 새 글 확인 실행을 요청하는 중입니다.";
+      try {
+        const result = await requestAdminFunction("run_crawler", {});
+        els.status.textContent = "새 글 확인 실행을 요청했습니다. 잠시 뒤 새로고침을 눌러 상태를 확인해 주세요.";
+        if (result.actionsUrl && confirm("GitHub Actions 실행 화면을 열까요?")) {
+          window.open(result.actionsUrl, "_blank", "noopener");
+        }
+      } catch (error) {
+        const link = manualCrawlUrl();
+        els.status.textContent = `수동 실행 요청에 실패했습니다: ${error.message}`;
+        if (link && link !== "#" && confirm("자동 요청에 실패했습니다. GitHub Actions 화면을 열까요?")) {
+          window.open(link, "_blank", "noopener");
+        } else {
+          alert(`수동 실행 요청에 실패했습니다. ${error.message}`);
+        }
+      } finally {
+        els.manualCrawlButton.disabled = false;
+        els.manualCrawlButton.textContent = originalText;
+      }
+    }
+
     async function savePost(event) {
       event.preventDefault();
       const data = formData();
@@ -4091,13 +4152,9 @@
       els.adminFilterCaret.textContent = els.adminFilterMount.classList.contains("is-collapsed") ? "펼치기" : "접기";
     });
     els.adminToggle.addEventListener("click", toggleAdminMode);
+    els.adminRefresh.addEventListener("click", refreshAdminData);
     els.newPost.addEventListener("click", openNewPostForm);
-    els.manualCrawlLink.addEventListener("click", (event) => {
-      if (els.manualCrawlLink.getAttribute("href") === "#") {
-        event.preventDefault();
-        alert("GitHub Actions 수동 실행 링크를 config.js의 MANUAL_CRAWL_URL 또는 GITHUB_REPOSITORY에 설정해 주세요.");
-      }
-    });
+    els.manualCrawlButton.addEventListener("click", runCrawlerNow);
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
     els.adminForm.elements["시리즈"].addEventListener("change", syncStandaloneStatus);

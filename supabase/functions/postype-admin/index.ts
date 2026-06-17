@@ -125,6 +125,39 @@ function archiveFilter(payload: Record<string, unknown>) {
   return `${encodeURIComponent(tableName)}?source_row_number=eq.${encodeURIComponent(rowNumber)}`;
 }
 
+async function dispatchCrawlerWorkflow() {
+  const token = Deno.env.get("GITHUB_WORKFLOW_TOKEN") || Deno.env.get("GITHUB_ACTIONS_TOKEN");
+  const repository = Deno.env.get("GITHUB_REPOSITORY");
+  const workflowId = Deno.env.get("GITHUB_WORKFLOW_ID") || "postype-sync.yml";
+  const ref = Deno.env.get("GITHUB_WORKFLOW_REF") || "main";
+
+  if (!token || !repository) {
+    throw new Error("GITHUB_WORKFLOW_TOKEN and GITHUB_REPOSITORY are required to run the crawler manually.");
+  }
+
+  const url = `https://api.github.com/repos/${repository}/actions/workflows/${encodeURIComponent(workflowId)}/dispatches`;
+  const response = await fetch(url, {
+    method: "POST",
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${token}`,
+      "Content-Type": "application/json",
+      "User-Agent": "hq-postype-archive-admin",
+      "X-GitHub-Api-Version": "2022-11-28",
+    },
+    body: JSON.stringify({ ref }),
+  });
+
+  const responseText = await response.text();
+  if (!response.ok) {
+    throw new Error(responseText || `GitHub workflow dispatch failed (${response.status}).`);
+  }
+
+  return {
+    actionsUrl: `https://github.com/${repository}/actions/workflows/${workflowId}`,
+  };
+}
+
 async function rest(path: string, init: RequestInit = {}) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") || Deno.env.get("POSTYPE_SERVICE_ROLE_KEY");
@@ -166,8 +199,13 @@ Deno.serve(async (request) => {
     }
 
     if (action === "auth") return json({ ok: true });
-    if (!["create", "update", "delete", "approve"].includes(action)) {
+    if (!["create", "update", "delete", "approve", "run_crawler"].includes(action)) {
       return json({ ok: false, error: "Unknown action." }, 400);
+    }
+
+    if (action === "run_crawler") {
+      const result = await dispatchCrawlerWorkflow();
+      return json({ ok: true, ...result });
     }
 
     if (action === "create") {

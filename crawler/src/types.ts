@@ -46,7 +46,7 @@ export type Classification = {
 };
 
 export type RunSummary = {
-  status: "success" | "failed";
+  status: "success" | "partial_success" | "failed";
   foundCount: number;
   insertedCount: number;
   aiReviewCount: number;

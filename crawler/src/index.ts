@@ -36,7 +36,7 @@ async function main() {
     }
 
     const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
-    const retryFailedAi = truthyEnv("RETRY_FAILED_AI", false);
+    const retryFailedAi = truthyEnv("RETRY_FAILED_AI", true);
     const newLinks: ProcessTarget[] = [];
     for (const link of candidates) {
       const existing = await getExistingArchive(link.url, link.postypePostId);
@@ -45,7 +45,7 @@ async function main() {
         continue;
       }
       const retryableAiStatus = ["failed", "review_required", "pending"];
-      if (retryFailedAi && !existing.admin_reviewed && retryableAiStatus.includes(existing.ai_status) && existing.crawl_status === "success") {
+      if (retryFailedAi && !existing.admin_reviewed && retryableAiStatus.includes(existing.ai_status)) {
         newLinks.push({ ...link, existingId: existing.id });
       }
     }
@@ -107,6 +107,7 @@ async function main() {
       }
     }
 
+    summary.status = summary.failedCount > 0 ? "partial_success" : "success";
     await finishRun(runId, {
       status: summary.status,
       found_count: summary.foundCount,
