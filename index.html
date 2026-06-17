@@ -3167,6 +3167,8 @@
 
     function aiNeedsReview(post) {
       if (!crawlMarker(post) || isReviewed(post)) return false;
+      if (normalize(post._crawlStatus) && normalize(post._crawlStatus) !== "success") return false;
+      if (["skipped", "approved"].includes(normalize(post["AI상태"]))) return false;
       if (normalize(post["AI상태"]) === "review_required") return true;
       const confidence = aiConfidence(post);
       return confidence !== null && confidence < Number(CONFIG.AI_REVIEW_CONFIDENCE_THRESHOLD || 0.72);
