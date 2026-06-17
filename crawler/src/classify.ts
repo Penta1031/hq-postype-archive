@@ -102,6 +102,8 @@ async function classifyWithGemini(inputText: string): Promise<Classification> {
     "본문 원문을 저장하지 않을 것이므로 결과에는 분류값, 0~1 confidence, 짧은 근거 note만 둔다.",
     "note에는 긴 직접 인용을 넣지 말고 판단 근거를 요약해서 적는다.",
     "확실하지 않은 값은 빈 배열 또는 빈 문자열로 두고 confidence를 낮춘다.",
+    "반드시 JSON 객체만 출력한다. 마크다운 코드블록이나 설명문은 붙이지 않는다.",
+    "JSON 키는 genres, keywords, top, bottom, isSeries, seriesName, seriesVolume, serializationStatus, isAdult, isPaid, endings, confidence, note만 사용한다.",
     "",
     inputText,
   ].join("\n");
@@ -115,12 +117,7 @@ async function classifyWithGemini(inputText: string): Promise<Classification> {
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
       generationConfig: {
-        responseFormat: {
-          text: {
-            mimeType: "application/json",
-            schema: classificationSchema,
-          },
-        },
+        responseMimeType: "application/json",
       },
     }),
   });
@@ -130,7 +127,7 @@ async function classifyWithGemini(inputText: string): Promise<Classification> {
   const data = JSON.parse(body);
   const text = data.candidates?.[0]?.content?.parts?.map((part: { text?: string }) => part.text || "").join("") || "";
   if (!text) throw new Error("Gemini API returned an empty classification.");
-  return JSON.parse(text) as Classification;
+  return JSON.parse(text.replace(/^```json\s*/i, "").replace(/```$/i, "").trim()) as Classification;
 }
 
 function normalizeClassification(parsed: Classification): Classification {
