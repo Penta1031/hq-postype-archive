@@ -16,12 +16,15 @@ jobs:
       SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
       SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
       POSTYPE_AUTH_STATE: ${{ secrets.POSTYPE_AUTH_STATE }}
       DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
       ADMIN_PAGE_URL: ${{ vars.ADMIN_PAGE_URL }}
       SEND_DISCORD_WHEN_EMPTY: ${{ vars.SEND_DISCORD_WHEN_EMPTY || 'false' }}
       POSTYPE_SOURCE_URLS: ${{ vars.POSTYPE_SOURCE_URLS }}
+      AI_PROVIDER: ${{ vars.AI_PROVIDER || 'openai' }}
       OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
+      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
       AI_REVIEW_CONFIDENCE_THRESHOLD: ${{ vars.AI_REVIEW_CONFIDENCE_THRESHOLD || '0.72' }}
 
     steps:
