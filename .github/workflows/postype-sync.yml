@@ -1,0 +1,40 @@
+name: Postype Sync
+
+on:
+  schedule:
+    # KST 04:00 = UTC 19:00 on the previous day.
+    - cron: "0 19 * * *"
+  workflow_dispatch:
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: crawler
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+      POSTYPE_AUTH_STATE: ${{ secrets.POSTYPE_AUTH_STATE }}
+      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+      ADMIN_PAGE_URL: ${{ vars.ADMIN_PAGE_URL }}
+      SEND_DISCORD_WHEN_EMPTY: ${{ vars.SEND_DISCORD_WHEN_EMPTY || 'false' }}
+      POSTYPE_SOURCE_URLS: ${{ vars.POSTYPE_SOURCE_URLS }}
+      OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
+      AI_REVIEW_CONFIDENCE_THRESHOLD: ${{ vars.AI_REVIEW_CONFIDENCE_THRESHOLD || '0.72' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - run: npm install
+
+      - run: npx playwright install --with-deps chromium
+
+      - run: npm run check
+
+      - run: npm start
