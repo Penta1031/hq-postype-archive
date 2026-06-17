@@ -40,8 +40,10 @@ GitHub Actions Variable:
 - `SEND_DISCORD_WHEN_EMPTY` 기본값 `false`
 - `POSTYPE_SOURCE_URLS` DB 소스가 비어 있을 때만 쓰는 쉼표 구분 fallback
 - `AI_PROVIDER` 기본값 `openai`, Gemini를 쓰면 `gemini`
+- `AI_FALLBACK_PROVIDER` Gemini 실패 시 OpenAI로 재시도하려면 `openai`
 - `OPENAI_MODEL` 기본값 `gpt-4.1-mini`
 - `GEMINI_MODEL` 기본값 `gemini-3.5-flash`
+- `GEMINI_MAX_ATTEMPTS` Gemini 일시 오류 재시도 횟수, 기본값 `4`
 - `AI_REVIEW_CONFIDENCE_THRESHOLD` 기본값 `0.72`
 
 `POSTYPE_AUTH_STATE`는 Playwright `storageState` JSON 또는 base64 JSON을 넣습니다. 로그인/성인글/구매글은 해당 계정이 정상 열람 가능한 범위에서만 수집되며, 접근 불가 글은 `crawl_status`로 실패 기록만 남깁니다.

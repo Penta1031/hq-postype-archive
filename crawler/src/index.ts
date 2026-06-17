@@ -1,9 +1,16 @@
 import { classificationRow, classifyPost, reviewRequired } from "./classify.js";
 import { sendDiscord } from "./discord.js";
 import { collectPostLinks, createPostypeContext, extractPost } from "./postype.js";
-import { createRun, finishRun, getEnabledSources, insertArchiveRow, markSourceChecked, postAlreadyExists, updateArchiveRow } from "./supabase.js";
+import { createRun, finishRun, getEnabledSources, getExistingArchive, insertArchiveRow, markSourceChecked, updateArchiveRow } from "./supabase.js";
 import type { RunSummary } from "./types.js";
-import { uniqueBy } from "./utils.js";
+import { truthyEnv, uniqueBy } from "./utils.js";
+
+type ProcessTarget = {
+  url: string;
+  postypePostId: number | null;
+  sourceUrl: string;
+  existingId?: number;
+};
 
 async function main() {
   const runId = await createRun();
@@ -29,9 +36,18 @@ async function main() {
     }
 
     const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
-    const newLinks = [];
+    const retryFailedAi = truthyEnv("RETRY_FAILED_AI", false);
+    const newLinks: ProcessTarget[] = [];
     for (const link of candidates) {
-      if (!(await postAlreadyExists(link.url, link.postypePostId))) newLinks.push(link);
+      const existing = await getExistingArchive(link.url, link.postypePostId);
+      if (!existing) {
+        newLinks.push(link);
+        continue;
+      }
+      const retryableAiStatus = ["failed", "review_required", "pending"];
+      if (retryFailedAi && !existing.admin_reviewed && retryableAiStatus.includes(existing.ai_status) && existing.crawl_status === "success") {
+        newLinks.push({ ...link, existingId: existing.id });
+      }
     }
 
     summary.foundCount = newLinks.length;
@@ -45,13 +61,30 @@ async function main() {
           continue;
         }
 
-        const inserted = await insertArchiveRow(post, { ai_status: "pending" });
-        summary.insertedCount += 1;
-        summary.newPosts.push({
-          title: inserted.title || post.title,
-          author: inserted.author || post.author,
-          link: inserted.link || post.link,
-        });
+        const inserted = link.existingId
+          ? await updateArchiveRow(link.existingId, {
+            ai_status: "pending",
+            ai_note: "",
+            title: post.title,
+            author: post.author,
+            published_date: post.publishedDate,
+            category: "글",
+            is_paid: post.isPaid,
+            is_adult: post.isAdult,
+            crawl_status: post.crawlStatus,
+            crawl_error: post.crawlError,
+            crawled_at: new Date().toISOString(),
+          })
+          : await insertArchiveRow(post, { ai_status: "pending" });
+
+        if (!link.existingId) {
+          summary.insertedCount += 1;
+          summary.newPosts.push({
+            title: inserted.title || post.title,
+            author: inserted.author || post.author,
+            link: inserted.link || post.link,
+          });
+        }
         try {
           const classification = await classifyPost(post);
           const row = classificationRow(classification);

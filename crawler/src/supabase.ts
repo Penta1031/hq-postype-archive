@@ -54,23 +54,29 @@ export async function finishRun(runId: number, patch: Record<string, unknown>) {
 }
 
 export async function postAlreadyExists(link: string, postypePostId: number | null) {
+  return Boolean(await getExistingArchive(link, postypePostId));
+}
+
+export async function getExistingArchive(link: string, postypePostId: number | null) {
   if (postypePostId) {
     const { data, error } = await supabase
       .from(tableName)
-      .select("id")
+      .select("id, title, author, link, ai_status, crawl_status, admin_reviewed")
       .eq("postype_post_id", postypePostId)
+      .is("deleted_at", null)
       .limit(1);
     if (error) throw error;
-    if (data?.length) return true;
+    if (data?.length) return data[0];
   }
 
   const { data, error } = await supabase
     .from(tableName)
-    .select("id")
+    .select("id, title, author, link, ai_status, crawl_status, admin_reviewed")
     .eq("link", link)
+    .is("deleted_at", null)
     .limit(1);
   if (error) throw error;
-  return Boolean(data?.length);
+  return data?.[0] || null;
 }
 
 export async function insertArchiveRow(post: ExtractedPost, extra: Record<string, unknown>) {
@@ -82,6 +88,7 @@ export async function insertArchiveRow(post: ExtractedPost, extra: Record<string
     published_date: post.publishedDate,
     link: post.link,
     source_url: post.sourceUrl,
+    category: "글",
     is_paid: post.isPaid,
     is_adult: post.isAdult,
     preview: post.preview,

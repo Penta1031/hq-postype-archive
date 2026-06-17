@@ -4,6 +4,9 @@
   "type": "module",
   "scripts": {
     "start": "tsx src/index.ts",
+    "save-auth": "tsx src/save-auth-state.ts",
+    "capture-chrome-auth": "tsx src/capture-open-chrome-auth.ts",
+    "compact-auth": "tsx src/compact-auth-state.ts",
     "check": "tsc --noEmit"
   },
   "dependencies": {

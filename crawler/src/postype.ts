@@ -57,18 +57,18 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
     }
 
     const title = await firstText(page, [
-      "meta[property='og:title']",
       "h1",
+      "meta[property='og:title']",
+      "meta[name='twitter:title']",
       "[class*='title']",
     ], "content");
-    const author = await firstText(page, [
-      "meta[name='author']",
-      "[class*='author']",
-      "a[href*='/@']",
-    ], "content");
-    const publishedDate = await firstText(page, ["time[datetime]", "time"], "datetime");
-    const tags = await page.locator("a[href*='tag'], [class*='tag']").evaluateAll((nodes) =>
-      nodes.map((node) => (node.textContent || "").trim()).filter(Boolean).slice(0, 30)
+    const author = await extractAuthor(page, title);
+    const publishedDate = await extractPublishedDate(page);
+    const tags = await page.locator("a[href*='tag'], a[href*='keyword'], a[href*='search']").evaluateAll((nodes) =>
+      nodes
+        .map((node) => (node.textContent || "").trim())
+        .filter((text) => text && text.length <= 30)
+        .slice(0, 30)
     ).catch(() => []);
 
     return {
@@ -77,7 +77,7 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       link: link.url,
       title: cleanTitle(title) || `포스타입 글 ${link.postypePostId || ""}`.trim(),
       author: cleanAuthor(author),
-      publishedDate: todayIsoDate(publishedDate),
+      publishedDate: parsePostypeDate(publishedDate) || todayIsoDate(publishedDate),
       bodyText,
       preview: "",
       tags: [...new Set(tags)],
@@ -94,12 +94,50 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
 }
 
 async function extractBodyText(page: Page) {
+  const paragraphText = await page.locator("article p, main p").evaluateAll((nodes) =>
+    nodes.map((node) => (node.textContent || "").trim()).filter(Boolean).join("\n\n")
+  ).catch(() => "");
+  const compactedParagraphs = compactText(paragraphText, 40_000);
+  if (compactedParagraphs.length > 300) return compactedParagraphs;
+
   for (const selector of ["article", "main", "[class*='content']", "[class*='post']", "body"]) {
     const text = await page.locator(selector).first().innerText({ timeout: 4000 }).catch(() => "");
     const compacted = compactText(text, 40_000);
     if (compacted.length > 300) return compacted;
   }
   return "";
+}
+
+async function extractAuthor(page: Page, title: string) {
+  const bodyText = await page.locator("body").innerText({ timeout: 4000 }).catch(() => "");
+  const lines = bodyText.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+  const titleLine = cleanTitle(title);
+  const titleIndex = lines.findIndex((line) => cleanTitle(line) === titleLine);
+  const searchStart = titleIndex >= 0 ? titleIndex + 1 : 0;
+  const candidates = lines.slice(searchStart, searchStart + 8);
+  const dateIndex = candidates.findIndex((line) => /\d{4}\.\s*\d{1,2}\.\s*\d{1,2}/.test(line));
+  const beforeDate = dateIndex >= 0 ? candidates.slice(0, dateIndex) : candidates;
+  const author = beforeDate
+    .filter((line) => line !== titleLine)
+    .filter((line) => !/조회|댓글|좋아요|구독|공유|설정|^\W+$/.test(line))
+    .filter((line) => line.length <= 30)
+    .at(-1);
+
+  if (author) return author;
+
+  return firstText(page, [
+    "meta[name='author']",
+    "meta[property='article:author']",
+    "meta[name='twitter:creator']",
+  ], "content");
+}
+
+async function extractPublishedDate(page: Page) {
+  const datetime = await firstText(page, ["time[datetime]", "time"], "datetime");
+  if (datetime) return datetime;
+  const text = await page.locator("body").innerText({ timeout: 4000 }).catch(() => "");
+  const match = text.match(/\d{4}\.\s*\d{1,2}\.\s*\d{1,2}\.?/);
+  return match ? match[0] : "";
 }
 
 async function firstText(page: Page, selectors: string[], attr?: string) {
@@ -138,9 +176,19 @@ function deniedPost(link: PostLink, status: ExtractedPost["crawlStatus"], messag
 }
 
 function cleanTitle(value: string) {
-  return value.replace(/\s*-\s*Postype.*$/i, "").trim();
+  return value
+    .replace(/\s*-\s*Postype.*$/i, "")
+    .replace(/\s*[•|]\s*[^•|]+$/u, "")
+    .trim();
 }
 
 function cleanAuthor(value: string) {
-  return value.replace(/^@/, "").trim();
+  return value.replace(/^@/, "").replace(/^작성자\s*/u, "").trim();
+}
+
+function parsePostypeDate(value: string) {
+  const match = value.match(/(\d{4})\.\s*(\d{1,2})\.\s*(\d{1,2})/);
+  if (!match) return null;
+  const [, year, month, day] = match;
+  return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
 }

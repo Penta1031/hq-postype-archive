@@ -1,0 +1,10 @@
+node_modules/
+crawler/node_modules/
+crawler/.npm-cache/
+.env
+.env.*
+UPLOAD_TO_GITHUB/
+postype-auth-state*.json
+crawler/postype-auth-state*.json
+crawler/postype-login-profile/
+chrome-postype-login-profile/

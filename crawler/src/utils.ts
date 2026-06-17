@@ -64,6 +64,13 @@ export function todayIsoDate(value: string | null | undefined) {
   return parsed.toISOString().slice(0, 10);
 }
 
-export function joinList(values: string[]) {
-  return values.map((value) => value.trim()).filter(Boolean).join(", ");
+export function joinList(values: unknown) {
+  if (Array.isArray(values)) {
+    return values.map((value) => String(value ?? "").trim()).filter(Boolean).join(", ");
+  }
+  return String(values ?? "")
+    .split(/[,，、\n]/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .join(", ");
 }
