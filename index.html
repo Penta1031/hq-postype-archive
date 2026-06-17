@@ -1309,6 +1309,105 @@
       overflow-x: hidden;
     }
 
+    .crawler-admin {
+      display: grid;
+      gap: 10px;
+      margin: 0 0 12px;
+    }
+
+    .crawler-status-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+    }
+
+    .crawler-stat {
+      min-width: 0;
+      border: 1px solid #292b30;
+      border-radius: 10px;
+      background: #151619;
+      padding: 10px;
+    }
+
+    .crawler-stat span,
+    .crawler-section-head span,
+    .review-meta {
+      display: block;
+      color: #727b87;
+      font-size: 11px;
+    }
+
+    .crawler-stat strong {
+      display: block;
+      margin-top: 3px;
+      overflow-wrap: anywhere;
+      color: #f1f2f4;
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .crawler-section {
+      display: grid;
+      gap: 7px;
+      border: 1px solid #262a31;
+      border-radius: 10px;
+      background: #101114;
+      padding: 10px;
+    }
+
+    .crawler-section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .crawler-section-head strong {
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .review-list {
+      display: grid;
+      gap: 7px;
+    }
+
+    .review-item {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      border: 1px solid #292b30;
+      border-radius: 9px;
+      background: #151619;
+      padding: 9px;
+    }
+
+    .review-title {
+      color: #f4f4f5;
+      font-size: 13px;
+      font-weight: 550;
+      overflow-wrap: anywhere;
+    }
+
+    .review-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .review-actions .button,
+    .crawler-manual {
+      min-height: 34px;
+      font-size: 12px;
+    }
+
+    .crawler-manual {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-decoration: none;
+    }
+
     .admin-item {
       width: 100%;
       max-width: 100%;
@@ -2000,6 +2099,34 @@
         </div>
         <button class="button primary" id="newPostButton" type="button">+ 신규 글 추가</button>
       </div>
+      <div class="crawler-admin" id="crawlerAdmin">
+        <section class="crawler-section">
+          <div class="crawler-section-head">
+            <strong>크롤링 상태</strong>
+            <a class="button crawler-manual" id="manualCrawlLink" href="#" target="_blank" rel="noreferrer">새 글 확인</a>
+          </div>
+          <div class="crawler-status-grid">
+            <div class="crawler-stat"><span>마지막 실행</span><strong id="crawlLastRun">-</strong></div>
+            <div class="crawler-stat"><span>상태</span><strong id="crawlLastStatus">-</strong></div>
+            <div class="crawler-stat"><span>신규 발견</span><strong id="crawlFoundCount">0</strong></div>
+            <div class="crawler-stat"><span>실패</span><strong id="crawlFailedCount">0</strong></div>
+          </div>
+        </section>
+        <section class="crawler-section">
+          <div class="crawler-section-head">
+            <strong>신규글</strong>
+            <span id="newPostsCount">0건</span>
+          </div>
+          <div class="review-list" id="newPostsList"></div>
+        </section>
+        <section class="crawler-section">
+          <div class="crawler-section-head">
+            <strong>AI 검수대기</strong>
+            <span id="aiReviewCount">0건</span>
+          </div>
+          <div class="review-list" id="aiReviewList"></div>
+        </section>
+      </div>
       <label class="admin-search">
         <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
       </label>
@@ -2014,6 +2141,7 @@
           </div>
           <form id="adminForm" class="admin-grid">
             <input type="hidden" name="_rowNumber">
+            <input type="hidden" name="_supabaseId">
             <label><span class="label">제목</span><input name="제목" required></label>
             <label><span class="label">작가</span><input name="작가"></label>
             <label class="wide"><span class="label">링크</span><input name="링크" type="url"></label>
@@ -2031,6 +2159,11 @@
             <label><span class="label">시리즈회차</span><input name="시리즈회차" placeholder="1, 2, 上, 下"></label>
             <label class="wide"><span class="label">상태근거</span><input name="상태근거" placeholder="완결표기, 반복제목 등"></label>
             <label><span class="label">스포일러</span><input name="엔딩" placeholder="해피엔딩"></label>
+            <label><span class="label">AI 상태</span><select name="AI상태"><option value="pending">대기</option><option value="classified">분류완료</option><option value="review_required">검수대기</option><option value="approved">승인</option><option value="failed">실패</option><option value="skipped">건너뜀</option></select></label>
+            <label><span class="label">AI 신뢰도</span><input name="AI신뢰도" type="number" min="0" max="1" step="0.01"></label>
+            <label class="wide"><span class="label">AI 근거</span><input name="AI근거" placeholder="AI 판단 근거 메모"></label>
+            <label><span class="label">관리자 검수</span><select name="관리자검수"><option value="">미검수</option><option value="Y">승인</option></select></label>
+            <label class="wide"><span class="label">수집 출처</span><input name="수집출처" type="url"></label>
             <div class="wide top-actions">
               <button class="button primary" type="submit">저장</button>
               <button class="button danger" id="deletePost" type="button">삭제</button>
@@ -2232,6 +2365,11 @@
       SUPABASE_ANON_KEY: "",
       SUPABASE_TABLE: "postype_archive",
       ADMIN_FUNCTION_URL: "",
+      ADMIN_PAGE_URL: "",
+      MANUAL_CRAWL_URL: "",
+      GITHUB_REPOSITORY: "",
+      SHOW_UNREVIEWED_POSTS: true,
+      AI_REVIEW_CONFIDENCE_THRESHOLD: 0.72,
       LOCAL_CSV_URL: "data/postype_archive_series_columns_limited.csv",
       ADMIN_API_URL: ""
     };
@@ -2310,7 +2448,8 @@
       excerptPinch: null,
       excerptDragPoint: null,
       adminPassword: "",
-      seriesStats: new Map()
+      seriesStats: new Map(),
+      crawlRun: null
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -2333,6 +2472,15 @@
       adminFilterCaret: $("#adminFilterCaret"),
       adminFilterMount: $("#adminFilterMount"),
       adminList: $("#adminList"),
+      crawlLastRun: $("#crawlLastRun"),
+      crawlLastStatus: $("#crawlLastStatus"),
+      crawlFoundCount: $("#crawlFoundCount"),
+      crawlFailedCount: $("#crawlFailedCount"),
+      newPostsCount: $("#newPostsCount"),
+      newPostsList: $("#newPostsList"),
+      aiReviewCount: $("#aiReviewCount"),
+      aiReviewList: $("#aiReviewList"),
+      manualCrawlLink: $("#manualCrawlLink"),
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
       adminForm: $("#adminForm"),
@@ -2599,6 +2747,13 @@
         _rowNumber: normalize(row.source_row_number || row.id),
         _supabaseId: normalize(row.id),
         _source: "supabase",
+        _postypePostId: normalize(row.postype_post_id),
+        _discoveredAt: normalize(row.discovered_at),
+        _crawledAt: normalize(row.crawled_at),
+        _crawlStatus: normalize(row.crawl_status),
+        _crawlError: normalize(row.crawl_error),
+        _aiClassifiedAt: normalize(row.ai_classified_at),
+        _adminReviewedAt: normalize(row.admin_reviewed_at),
         "제목": normalize(row.title),
         "작가": normalize(row.author),
         "날짜": normalize(row.published_date),
@@ -2622,6 +2777,8 @@
         "AI원본응답": normalize(row.ai_raw_response),
         "AI신뢰도": normalize(row.ai_confidence),
         "AI처리일시": normalize(row.ai_processed_at),
+        "AI상태": normalize(row.ai_status),
+        "AI근거": normalize(row.ai_note),
         "정리메모": normalize(row.cleanup_note),
         "시리즈": fromFlag(row.is_series),
         "시리즈명": normalize(row.series_name),
@@ -2631,7 +2788,9 @@
         "시리즈열통일": fromFlag(row.series_columns_unified),
         "시리즈열통일메모": normalize(row.series_columns_unified_note),
         "장르키워드5개제한": fromFlag(row.tag_limit_applied),
-        "장르키워드5개제한메모": normalize(row.tag_limit_note)
+        "장르키워드5개제한메모": normalize(row.tag_limit_note),
+        "관리자검수": fromFlag(row.admin_reviewed),
+        "수집출처": normalize(row.source_url)
       };
     }
 
@@ -2665,8 +2824,10 @@
         summary: normalize(post["요약"]),
         body_extract: normalize(post["본문추출"]),
         ai_raw_response: normalize(post["AI원본응답"]),
-        ai_confidence: normalize(post["AI신뢰도"]),
+        ai_confidence: normalize(post["AI신뢰도"]) || null,
         ai_processed_at: normalize(post["AI처리일시"]),
+        ai_status: normalize(post["AI상태"]),
+        ai_note: normalize(post["AI근거"]),
         cleanup_note: normalize(post["정리메모"]),
         is_series: postFlag(post["시리즈"]),
         series_name: normalize(post["시리즈명"]),
@@ -2676,15 +2837,32 @@
         series_columns_unified: postFlag(post["시리즈열통일"]),
         series_columns_unified_note: normalize(post["시리즈열통일메모"]),
         tag_limit_applied: postFlag(post["장르키워드5개제한"]),
-        tag_limit_note: normalize(post["장르키워드5개제한메모"])
+        tag_limit_note: normalize(post["장르키워드5개제한메모"]),
+        admin_reviewed: postFlag(post["관리자검수"]),
+        admin_reviewed_at: postFlag(post["관리자검수"]) ? new Date().toISOString() : null,
+        source_url: normalize(post["수집출처"]) || null
       };
     }
 
     async function loadSupabase() {
       const table = encodeURIComponent(CONFIG.SUPABASE_TABLE);
-      const query = `${table}?select=*&deleted_at=is.null&order=published_date.desc.nullslast,title.asc`;
+      const reviewFilter = CONFIG.SHOW_UNREVIEWED_POSTS === false ? "&admin_reviewed=eq.true" : "";
+      const query = `${table}?select=*&deleted_at=is.null${reviewFilter}&order=published_date.desc.nullslast,title.asc`;
       const rows = await requestSupabase(query, { headers: supabaseHeaders() });
       return rows.map(rowToPost).filter((post) => normalize(post["제목"]) || normalize(post["링크"]));
+    }
+
+    async function loadCrawlStatus() {
+      if (!hasSupabaseConfig()) {
+        state.crawlRun = null;
+        return;
+      }
+      try {
+        const rows = await requestSupabase("crawl_runs?select=*&order=started_at.desc&limit=1", { headers: supabaseHeaders() });
+        state.crawlRun = rows && rows[0] ? rows[0] : null;
+      } catch (_) {
+        state.crawlRun = null;
+      }
     }
 
     function parseCsv(text) {
@@ -2837,6 +3015,7 @@
         updateSeriesStats();
         els.status.textContent = `${error.message} 지금은 샘플/로컬 데이터로 표시합니다.`;
       }
+      await loadCrawlStatus();
       buildFilters();
       buildAdminFilters();
       render();
@@ -2962,7 +3141,107 @@
       });
     }
 
+    function formatDateTime(value) {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "-";
+      return date.toLocaleString("ko-KR", {
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      });
+    }
+
+    function crawlMarker(post) {
+      return Boolean(normalize(post._crawlStatus) || normalize(post._postypePostId) || normalize(post["수집출처"]));
+    }
+
+    function isReviewed(post) {
+      return postFlag(post["관리자검수"]);
+    }
+
+    function aiConfidence(post) {
+      const value = Number(normalize(post["AI신뢰도"]));
+      return Number.isFinite(value) ? value : null;
+    }
+
+    function aiNeedsReview(post) {
+      if (!crawlMarker(post) || isReviewed(post)) return false;
+      if (normalize(post["AI상태"]) === "review_required") return true;
+      const confidence = aiConfidence(post);
+      return confidence !== null && confidence < Number(CONFIG.AI_REVIEW_CONFIDENCE_THRESHOLD || 0.72);
+    }
+
+    function crawlerPosts() {
+      return state.posts
+        .filter((post) => crawlMarker(post) && !isReviewed(post))
+        .slice()
+        .sort((a, b) => {
+          const ad = Date.parse(normalize(a._discoveredAt || a._crawledAt || a["날짜"])) || 0;
+          const bd = Date.parse(normalize(b._discoveredAt || b._crawledAt || b["날짜"])) || 0;
+          return bd - ad;
+        });
+    }
+
+    function manualCrawlUrl() {
+      if (normalize(CONFIG.MANUAL_CRAWL_URL)) return normalize(CONFIG.MANUAL_CRAWL_URL);
+      if (normalize(CONFIG.GITHUB_REPOSITORY)) {
+        return `https://github.com/${normalize(CONFIG.GITHUB_REPOSITORY)}/actions/workflows/postype-sync.yml`;
+      }
+      return normalize(CONFIG.ADMIN_PAGE_URL) || "#";
+    }
+
+    function renderCrawlerAdmin() {
+      if (!els.crawlLastRun) return;
+      const run = state.crawlRun || {};
+      els.crawlLastRun.textContent = formatDateTime(run.finished_at || run.started_at);
+      els.crawlLastStatus.textContent = run.status === "success" ? "성공" : run.status === "failed" ? "실패" : (run.status || "-");
+      els.crawlFoundCount.textContent = Number(run.found_count || 0).toLocaleString("ko-KR");
+      els.crawlFailedCount.textContent = Number(run.failed_count || 0).toLocaleString("ko-KR");
+      const link = manualCrawlUrl();
+      els.manualCrawlLink.href = link;
+      els.manualCrawlLink.toggleAttribute("aria-disabled", link === "#");
+
+      const pendingPosts = crawlerPosts();
+      const reviewPosts = pendingPosts.filter(aiNeedsReview);
+      els.newPostsCount.textContent = `${pendingPosts.length}건`;
+      els.aiReviewCount.textContent = `${reviewPosts.length}건`;
+      renderReviewList(els.newPostsList, pendingPosts.slice(0, 8), "승인 대기 중인 신규글이 없습니다.");
+      renderReviewList(els.aiReviewList, reviewPosts.slice(0, 8), "AI 검수대기 글이 없습니다.");
+    }
+
+    function renderReviewList(container, posts, emptyText) {
+      container.innerHTML = "";
+      if (!posts.length) {
+        container.innerHTML = `<div class="empty">${escapeHtml(emptyText)}</div>`;
+        return;
+      }
+      posts.forEach((post) => {
+        const item = document.createElement("article");
+        item.className = "review-item";
+        const confidence = aiConfidence(post);
+        const meta = [
+          normalize(post["작가"]),
+          normalize(post["AI상태"]) || normalize(post._crawlStatus),
+          confidence === null ? "" : `신뢰도 ${confidence.toFixed(2)}`,
+          normalize(post["AI근거"])
+        ].filter(Boolean).join(" · ");
+        item.innerHTML = `
+          <div class="review-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</div>
+          <div class="review-meta">${escapeHtml(meta || "검수 정보 없음")}</div>
+          <div class="review-actions">
+            <button class="button primary" type="button" data-action="approve">승인</button>
+            <button class="button" type="button" data-action="edit">수정</button>
+          </div>
+        `;
+        item.querySelector('[data-action="approve"]').addEventListener("click", () => approvePost(post));
+        item.querySelector('[data-action="edit"]').addEventListener("click", () => fillAdminForm(post, item));
+        container.appendChild(item);
+      });
+    }
+
     function renderAdminList() {
+      renderCrawlerAdmin();
       els.adminList.innerHTML = "";
       const query = normalize(state.adminQuery).toLowerCase();
       const posts = state.posts
@@ -3650,6 +3929,29 @@
       return { ok: true, opaque: true };
     }
 
+    async function approvePost(post) {
+      if (!confirm("이 글을 승인 처리할까요?")) return;
+      els.status.textContent = "검수 승인 내용을 반영하는 중입니다.";
+      try {
+        const result = await sendAdminAction("approve", {
+          _rowNumber: post._rowNumber,
+          _supabaseId: post._supabaseId
+        });
+        if (result && result.localOnly) {
+          post["관리자검수"] = "Y";
+          post["AI상태"] = "approved";
+          render();
+          els.status.textContent = "이 브라우저에서 승인 처리했습니다.";
+          return;
+        }
+        await loadData();
+        els.status.textContent = "검수 승인 내용을 Supabase에 반영했습니다.";
+      } catch (error) {
+        els.status.textContent = `승인에 실패했습니다: ${error.message}`;
+        alert(`승인에 실패했습니다. ${error.message}`);
+      }
+    }
+
     async function savePost(event) {
       event.preventDefault();
       const data = formData();
@@ -3788,6 +4090,12 @@
     });
     els.adminToggle.addEventListener("click", toggleAdminMode);
     els.newPost.addEventListener("click", openNewPostForm);
+    els.manualCrawlLink.addEventListener("click", (event) => {
+      if (els.manualCrawlLink.getAttribute("href") === "#") {
+        event.preventDefault();
+        alert("GitHub Actions 수동 실행 링크를 config.js의 MANUAL_CRAWL_URL 또는 GITHUB_REPOSITORY에 설정해 주세요.");
+      }
+    });
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
     els.adminForm.elements["시리즈"].addEventListener("change", syncStandaloneStatus);
