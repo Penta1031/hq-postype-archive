@@ -948,6 +948,13 @@
 
     .guide-body p {
       margin: 0;
+      display: grid;
+      grid-template-columns: auto minmax(0, 1fr);
+      gap: 6px;
+    }
+
+    .guide-body p::before {
+      content: "-";
     }
 
     .contact-panel {
@@ -2466,11 +2473,11 @@
             </details>
 
     <section class="layout">
-      <aside class="filters panel">
+      <aside class="filters panel collapsed">
         <label class="search">
           <input id="searchInput" type="search" placeholder="제목 · 작가 검색">
         </label>
-        <button class="filter-title" id="filterToggle" type="button"><strong>필터</strong><span id="filterCaret">접기</span></button>
+        <button class="filter-title" id="filterToggle" type="button"><strong>필터</strong><span id="filterCaret">펼치기</span></button>
         <div id="filterBody">
             <select id="sortSelect" hidden>
                 <option value="date-desc">최신순</option>
