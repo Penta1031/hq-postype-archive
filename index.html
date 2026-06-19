@@ -1515,6 +1515,93 @@
       grid-column: auto;
     }
 
+    .admin-multi-field {
+      min-width: 0;
+    }
+
+    .admin-multiselect {
+      border: 1px solid #292b30;
+      border-radius: 8px;
+      background: #08090b;
+      color: #e8e9ec;
+    }
+
+    .admin-multiselect summary {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .admin-multiselect summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .admin-multiselect summary::after {
+      content: "⌄";
+      flex: 0 0 auto;
+      color: #8a929d;
+      font-size: 16px;
+    }
+
+    .admin-multiselect[open] summary::after {
+      transform: rotate(180deg);
+    }
+
+    .admin-multiselect summary span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      font-size: 13px;
+    }
+
+    .admin-multiselect-options {
+      max-height: 240px;
+      overflow-y: auto;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 6px;
+      padding: 9px;
+      border-top: 1px solid #24262b;
+    }
+
+    .admin-multiselect-option {
+      min-width: 0;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px;
+      border: 1px solid #24262b;
+      border-radius: 6px;
+      background: #121316;
+      color: #c8cdd4;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .admin-multiselect-option input {
+      width: 16px;
+      height: 16px;
+      min-height: 0;
+      flex: 0 0 16px;
+      margin: 0;
+      accent-color: #8fe1d4;
+    }
+
+    .admin-multiselect-clear {
+      grid-column: 1 / -1;
+      min-height: 36px;
+      border: 1px solid #34373d;
+      border-radius: 6px;
+      background: #191b1f;
+      color: #b9c0c9;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
     .admin-editor .top-actions {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -2169,10 +2256,38 @@
             <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
             <label><span class="label">유료</span><select name="유료"><option value="X">무료</option><option value="O">유료</option></select></label>
             <label><span class="label">성인</span><select name="성인"><option value="X">전연령</option><option value="O">성인</option></select></label>
-            <label><span class="label">장르</span><input name="장르" placeholder="현대물, 피폐물"></label>
-            <label><span class="label">키워드</span><input name="키워드" placeholder="재회, 오해"></label>
-            <label><span class="label">공</span><input name="공" placeholder="다정공"></label>
-            <label><span class="label">수</span><input name="수" placeholder="상처수"></label>
+            <div class="admin-multi-field">
+              <span class="label">장르</span>
+              <input type="hidden" name="장르">
+              <details class="admin-multiselect" data-admin-multiselect="장르">
+                <summary><span data-admin-multiselect-summary>선택 없음</span></summary>
+                <div class="admin-multiselect-options"></div>
+              </details>
+            </div>
+            <div class="admin-multi-field">
+              <span class="label">키워드</span>
+              <input type="hidden" name="키워드">
+              <details class="admin-multiselect" data-admin-multiselect="키워드">
+                <summary><span data-admin-multiselect-summary>선택 없음</span></summary>
+                <div class="admin-multiselect-options"></div>
+              </details>
+            </div>
+            <div class="admin-multi-field">
+              <span class="label">공</span>
+              <input type="hidden" name="공">
+              <details class="admin-multiselect" data-admin-multiselect="공">
+                <summary><span data-admin-multiselect-summary>선택 없음</span></summary>
+                <div class="admin-multiselect-options"></div>
+              </details>
+            </div>
+            <div class="admin-multi-field">
+              <span class="label">수</span>
+              <input type="hidden" name="수">
+              <details class="admin-multiselect" data-admin-multiselect="수">
+                <summary><span data-admin-multiselect-summary>선택 없음</span></summary>
+                <div class="admin-multiselect-options"></div>
+              </details>
+            </div>
             <label><span class="label">시리즈 여부</span><select name="시리즈"><option value="">단편/미표기</option><option value="Y">시리즈</option></select></label>
             <label><span class="label">연재상태</span><select name="연재상태"><option value="">미표기</option><option>단편</option><option>연재중</option><option>완결</option></select></label>
             <label><span class="label">시리즈명</span><input name="시리즈명" placeholder="시리즈명"></label>
@@ -2403,8 +2518,8 @@
       "연재상태": ["완결", "연재중", "단편"],
       "장르": ["현대물", "학원물", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
       "키워드": ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스"],
-      "공": ["미인공", "미남공", "다정공", "헌신공", "강공", "냉혈공", "무심공", "까칠공", "츤데레공", "능글공", "초딩공", "집착공", "광공", "개아가공", "계략공", "후회공", "사랑꾼공", "순정공", "절륜공", "존댓말공", "대형견공", "연하공", "연상공", "재벌공", "능력공", "황제공", "왕자공", "귀족공", "군인공", "배우공", "아이돌공", "조폭공", "양아치공", "인외공", "상처공", "동정공", "헤테로공", "짝사랑공"],
-      "수": ["미인수", "미남수", "다정수", "단정수", "소심수", "헌신수", "강수", "냉혈수", "무심수", "까칠수", "츤데레수", "허당수", "지랄수", "계략수", "유혹수", "적극수", "잔망수", "명랑수", "순진수", "임신수", "도망수", "굴림수", "후회수", "능글수", "능력수", "순정수", "떡대수", "평범수", "연하수", "연상수", "재벌수", "황제수", "왕자수", "귀족수", "군인수", "배우수", "아이돌수", "조폭수", "양아치수", "인외수", "상처수", "병약수", "동정수", "헤테로수", "짝사랑수"],
+      "공": ["다정공", "헌신공", "강공", "냉혈공", "무심공", "까칠공", "츤데레공", "능글공", "초딩공", "집착공", "광공", "개아가공", "계략공", "후회공", "사랑꾼공", "순정공", "절륜공", "존댓말공", "대형견공", "연하공", "연상공", "재벌공", "능력공", "황제공", "왕자공", "귀족공", "군인공", "배우공", "아이돌공", "조폭공", "양아치공", "인외공", "상처공", "동정공", "헤테로공", "짝사랑공"],
+      "수": ["다정수", "단정수", "소심수", "헌신수", "강수", "냉혈수", "무심수", "까칠수", "츤데레수", "허당수", "지랄수", "계략수", "유혹수", "적극수", "잔망수", "명랑수", "순진수", "임신수", "도망수", "굴림수", "후회수", "능글수", "능력수", "순정수", "떡대수", "평범수", "연하수", "연상수", "재벌수", "황제수", "왕자수", "귀족수", "군인수", "배우수", "아이돌수", "조폭수", "양아치수", "인외수", "상처수", "병약수", "동정수", "헤테로수", "짝사랑수"],
       "스포일러": ["해피엔딩", "새드엔딩", "오픈엔딩", "사망"]
     };
 
@@ -3890,6 +4005,70 @@
       }
     }
 
+    function syncAdminMultiValue(details) {
+      const fieldName = details.dataset.adminMultiselect;
+      const checked = [...details.querySelectorAll('input[type="checkbox"]:checked')]
+        .map((input) => input.value);
+      const existing = Array.isArray(details._unknownValues) ? details._unknownValues : [];
+      let values = [...existing, ...checked];
+      if (fieldName === "장르") values = values.filter((value) => normalize(value).toUpperCase() !== "RPS");
+      values = [...new Set(values.map(normalize).filter(Boolean))];
+
+      const hidden = els.adminForm.elements[fieldName];
+      const summary = details.querySelector("[data-admin-multiselect-summary]");
+      if (hidden) hidden.value = values.join(", ");
+      if (summary) summary.textContent = values.length ? values.join(", ") : "선택 없음";
+    }
+
+    function syncAdminMultiSelectsFromForm() {
+      document.querySelectorAll("[data-admin-multiselect]").forEach((details) => {
+        const fieldName = details.dataset.adminMultiselect;
+        const hidden = els.adminForm.elements[fieldName];
+        let selected = splitTags(hidden?.value || "");
+        if (fieldName === "장르") selected = selected.filter((value) => normalize(value).toUpperCase() !== "RPS");
+
+        const optionValues = new Set(ADMIN_TAG_GROUPS[fieldName] || []);
+        details._unknownValues = selected.filter((value) => !optionValues.has(value));
+        details.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+          input.checked = selected.includes(input.value);
+        });
+        syncAdminMultiValue(details);
+      });
+    }
+
+    function buildAdminMultiSelects() {
+      document.querySelectorAll("[data-admin-multiselect]").forEach((details) => {
+        const fieldName = details.dataset.adminMultiselect;
+        const mount = details.querySelector(".admin-multiselect-options");
+        mount.innerHTML = "";
+
+        const clear = document.createElement("button");
+        clear.type = "button";
+        clear.className = "admin-multiselect-clear";
+        clear.textContent = "선택 초기화";
+        clear.addEventListener("click", () => {
+          details._unknownValues = [];
+          details.querySelectorAll('input[type="checkbox"]').forEach((input) => input.checked = false);
+          syncAdminMultiValue(details);
+        });
+        mount.appendChild(clear);
+
+        (ADMIN_TAG_GROUPS[fieldName] || []).forEach((option) => {
+          const label = document.createElement("label");
+          label.className = "admin-multiselect-option";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = option;
+          checkbox.addEventListener("change", () => syncAdminMultiValue(details));
+          const text = document.createElement("span");
+          text.textContent = option;
+          label.append(checkbox, text);
+          mount.appendChild(label);
+        });
+      });
+      syncAdminMultiSelectsFromForm();
+    }
+
     function fillAdminForm(post, anchor) {
       document.body.classList.add("admin-on");
       placeAdminEditor(anchor);
@@ -3901,6 +4080,7 @@
         field.value = post[field.name] || "";
       });
       els.adminForm.elements["_rowNumber"].value = post._rowNumber || "";
+      syncAdminMultiSelectsFromForm();
       syncStandaloneStatus();
     }
 
@@ -3911,12 +4091,14 @@
       els.adminEditorTitle.textContent = "신규 글 추가";
       els.deletePost.hidden = true;
       els.adminForm.elements["_rowNumber"].value = "";
+      syncAdminMultiSelectsFromForm();
       syncStandaloneStatus();
       els.adminEditor.hidden = false;
     }
 
     function closeAdminEditor() {
       els.adminForm.reset();
+      syncAdminMultiSelectsFromForm();
       els.adminEditor.hidden = true;
     }
 
@@ -4236,6 +4418,7 @@
       if (event.target === els.randomResult) closeRandomResult();
     });
 
+    buildAdminMultiSelects();
     loadData();
   </script>
 </body>
