@@ -3067,6 +3067,8 @@
         _crawlError: normalize(row.crawl_error),
         _aiClassifiedAt: normalize(row.ai_classified_at),
         _adminReviewedAt: normalize(row.admin_reviewed_at),
+        _viewCount: normalize(row.view_count),
+        _viewCountCheckedAt: normalize(row.view_count_checked_at),
         "제목": normalize(row.title),
         "작가": normalize(row.author),
         "날짜": normalize(row.published_date),
@@ -3484,6 +3486,13 @@
       });
     }
 
+    function viewCountLabel(post) {
+      const raw = normalize(post._viewCount);
+      if (!raw) return "";
+      const count = Number(raw);
+      return Number.isFinite(count) && count >= 0 ? `조회 ${Math.round(count).toLocaleString("ko-KR")}` : "";
+    }
+
     function crawlMarker(post) {
       return Boolean(normalize(post._crawlStatus) || normalize(post._postypePostId) || normalize(post["수집출처"]));
     }
@@ -3615,7 +3624,7 @@
         button.type = "button";
         button.innerHTML = `
           <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
-          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
+          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"], viewCountLabel(post)].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
         button.addEventListener("click", () => fillAdminForm(post, row));
         row.append(checkLabel, button);
@@ -3785,7 +3794,7 @@
       title.textContent = normalize(post["제목"]) || "제목 없음";
       title.href = normalize(post["링크"]) || "#";
       title.addEventListener("click", () => updateLibraryEntry(post, { openedAt: new Date().toISOString() }));
-      meta.textContent = [post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ");
+      meta.textContent = [post["날짜"], post["작가"], viewCountLabel(post)].map(normalize).filter(Boolean).join(" · ");
 
       if (series.isSeries) {
         const statusText = seriesStatusText(post, series);

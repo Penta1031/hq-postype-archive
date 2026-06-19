@@ -45,12 +45,14 @@ GitHub Actions Variable:
 - `GEMINI_MODEL` 기본값 `gemini-3.5-flash`
 - `GEMINI_MAX_ATTEMPTS` Gemini 일시 오류 재시도 횟수, 기본값 `4`
 - `AI_REVIEW_CONFIDENCE_THRESHOLD` 기본값 `0.72`
+- `UPDATE_VIEW_COUNTS` 기존 글의 최신 조회수 갱신 여부, 기본값 `true`
+- `VIEW_COUNT_CONCURRENCY` 조회수 확인 동시 실행 수, 기본값 `2`
 
 `POSTYPE_AUTH_STATE`는 Playwright `storageState` JSON 또는 base64 JSON을 넣습니다. 로그인/성인글/구매글은 해당 계정이 정상 열람 가능한 범위에서만 수집되며, 접근 불가 글은 `crawl_status`로 실패 기록만 남깁니다.
 
-관리자 화면의 “새 글 확인” 버튼은 `config.js`의 `MANUAL_CRAWL_URL` 또는 `GITHUB_REPOSITORY`를 설정하면 GitHub Actions 수동 실행 화면으로 연결됩니다.
+관리자 화면의 “수동 크롤링 실행” 버튼은 `config.js`의 `MANUAL_CRAWL_URL` 또는 `GITHUB_REPOSITORY`를 설정하면 GitHub Actions 수동 실행 화면으로 연결됩니다.
 
-관리자 화면에서 “새 글 확인” 버튼으로 GitHub Actions를 직접 실행하려면 Supabase Edge Function `postype-admin`에 아래 Secret을 추가합니다.
+관리자 화면에서 “수동 크롤링 실행” 버튼으로 GitHub Actions를 직접 실행하려면 Supabase Edge Function `postype-admin`에 아래 Secret을 추가합니다.
 
 - `GITHUB_WORKFLOW_TOKEN` GitHub fine-grained token 또는 classic PAT. Actions workflow 실행 권한 필요
 - `GITHUB_REPOSITORY` 예: `Penta1031/hq-postype-archive`

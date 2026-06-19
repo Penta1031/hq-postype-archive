@@ -1,7 +1,7 @@
 import { classificationRow, classifyPost, reviewRequired } from "./classify.js";
 import { sendDiscord } from "./discord.js";
-import { collectPostLinks, createPostypeContext, extractPost, isExcludedPost } from "./postype.js";
-import { createRun, finishRun, getEnabledSources, getExistingArchive, insertArchiveRow, markSourceChecked, updateArchiveRow } from "./supabase.js";
+import { collectPostLinks, createPostypeContext, extractPost, fetchViewCount, isExcludedPost } from "./postype.js";
+import { createRun, finishRun, getEnabledSources, getExistingArchive, getViewRefreshTargets, insertArchiveRow, markSourceChecked, updateArchiveRow, updateArchiveViewCount } from "./supabase.js";
 import type { RunSummary } from "./types.js";
 import { truthyEnv, uniqueBy } from "./utils.js";
 
@@ -38,6 +38,7 @@ async function main() {
     const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
     const retryFailedAi = truthyEnv("RETRY_FAILED_AI", true);
     const newLinks: ProcessTarget[] = [];
+    const viewRefreshedIds = new Set<number>();
     for (const link of candidates) {
       const existing = await getExistingArchive(link.url, link.postypePostId);
       if (!existing) {
@@ -78,8 +79,14 @@ async function main() {
             crawl_status: post.crawlStatus,
             crawl_error: post.crawlError,
             crawled_at: new Date().toISOString(),
+            ...(post.viewCount === null ? {} : {
+              view_count: post.viewCount,
+              view_count_checked_at: new Date().toISOString(),
+            }),
           })
           : await insertArchiveRow(post, { ai_status: "pending" });
+
+        if (post.viewCount !== null) viewRefreshedIds.add(inserted.id);
 
         if (!link.existingId) {
           summary.insertedCount += 1;
@@ -111,6 +118,11 @@ async function main() {
       }
     }
 
+    if (truthyEnv("UPDATE_VIEW_COUNTS", true)) {
+      const viewResult = await refreshArchiveViewCounts(context, viewRefreshedIds);
+      console.log(`View counts refreshed: ${viewResult.updated}/${viewResult.total}, unavailable: ${viewResult.unavailable}`);
+    }
+
     summary.status = summary.failedCount > 0 ? "partial_success" : "success";
     await finishRun(runId, {
       status: summary.status,
@@ -136,6 +148,33 @@ async function main() {
   }
 
   await sendDiscord(summary);
+}
+
+async function refreshArchiveViewCounts(context: Awaited<ReturnType<typeof createPostypeContext>>["context"], skipIds: Set<number>) {
+  const targets = (await getViewRefreshTargets()).filter((target) => !skipIds.has(target.id));
+  const configuredConcurrency = Number(process.env.VIEW_COUNT_CONCURRENCY || "2");
+  const concurrency = Math.min(4, Math.max(1, Number.isFinite(configuredConcurrency) ? configuredConcurrency : 2));
+  let cursor = 0;
+  let updated = 0;
+  let unavailable = 0;
+
+  async function worker() {
+    while (cursor < targets.length) {
+      const target = targets[cursor];
+      cursor += 1;
+      const viewCount = await fetchViewCount(context, target.link);
+      if (viewCount === null) {
+        unavailable += 1;
+      } else {
+        await updateArchiveViewCount(target.id, viewCount);
+        updated += 1;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+  }
+
+  await Promise.all(Array.from({ length: concurrency }, () => worker()));
+  return { total: targets.length, updated, unavailable };
 }
 
 main().catch(async (error) => {

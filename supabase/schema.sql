@@ -45,6 +45,8 @@ create table if not exists public.postype_archive (
   admin_reviewed boolean default false,
   admin_reviewed_at timestamptz,
   source_url text,
+  view_count bigint,
+  view_count_checked_at timestamptz,
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -61,7 +63,9 @@ alter table public.postype_archive
   add column if not exists ai_classified_at timestamptz,
   add column if not exists admin_reviewed boolean default false,
   add column if not exists admin_reviewed_at timestamptz,
-  add column if not exists source_url text;
+  add column if not exists source_url text,
+  add column if not exists view_count bigint,
+  add column if not exists view_count_checked_at timestamptz;
 
 do $$
 begin

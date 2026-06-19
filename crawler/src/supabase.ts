@@ -1,6 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { optionalEnv, requiredEnv } from "./utils.js";
-import type { ExtractedPost, Source } from "./types.js";
+import type { ExtractedPost, Source, ViewRefreshTarget } from "./types.js";
 
 const supabaseUrl = requiredEnv("SUPABASE_URL");
 const serviceRoleKey = requiredEnv("SUPABASE_SERVICE_ROLE_KEY");
@@ -80,6 +80,10 @@ export async function getExistingArchive(link: string, postypePostId: number | n
 }
 
 export async function insertArchiveRow(post: ExtractedPost, extra: Record<string, unknown>) {
+  const viewPatch = post.viewCount === null ? {} : {
+    view_count: post.viewCount,
+    view_count_checked_at: new Date().toISOString(),
+  };
   const row = {
     source_row_number: post.postypePostId ? `postype-${post.postypePostId}` : `postype-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     postype_post_id: post.postypePostId,
@@ -97,6 +101,7 @@ export async function insertArchiveRow(post: ExtractedPost, extra: Record<string
     crawled_at: new Date().toISOString(),
     discovered_at: new Date().toISOString(),
     admin_reviewed: false,
+    ...viewPatch,
     ...extra,
   };
 
@@ -108,6 +113,29 @@ export async function insertArchiveRow(post: ExtractedPost, extra: Record<string
 
   if (error) throw error;
   return data;
+}
+
+export async function getViewRefreshTargets() {
+  const { data, error } = await supabase
+    .from(tableName)
+    .select("id, link")
+    .is("deleted_at", null)
+    .not("link", "is", null)
+    .order("id", { ascending: true });
+  if (error) throw error;
+  return (data || [])
+    .filter((row) => /^https:\/\/(?:www\.)?postype\.com\//i.test(String(row.link || ""))) as ViewRefreshTarget[];
+}
+
+export async function updateArchiveViewCount(id: number, viewCount: number) {
+  const { error } = await supabase
+    .from(tableName)
+    .update({
+      view_count: viewCount,
+      view_count_checked_at: new Date().toISOString(),
+    })
+    .eq("id", id);
+  if (error) throw error;
 }
 
 export async function updateArchiveRow(id: number, patch: Record<string, unknown>) {
