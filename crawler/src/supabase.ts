@@ -80,10 +80,6 @@ export async function getExistingArchive(link: string, postypePostId: number | n
 }
 
 export async function insertArchiveRow(post: ExtractedPost, extra: Record<string, unknown>) {
-  const viewPatch = post.viewCount === null ? {} : {
-    view_count: post.viewCount,
-    view_count_checked_at: new Date().toISOString(),
-  };
   const row = {
     source_row_number: post.postypePostId ? `postype-${post.postypePostId}` : `postype-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     postype_post_id: post.postypePostId,
@@ -101,7 +97,8 @@ export async function insertArchiveRow(post: ExtractedPost, extra: Record<string
     crawled_at: new Date().toISOString(),
     discovered_at: new Date().toISOString(),
     admin_reviewed: false,
-    ...viewPatch,
+    view_count: post.viewCount,
+    view_count_checked_at: post.viewCount === null ? null : new Date().toISOString(),
     ...extra,
   };
 
