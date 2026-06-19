@@ -160,18 +160,60 @@ alter table public.postype_sources enable row level security;
 alter table public.crawl_runs enable row level security;
 
 drop policy if exists "postype_archive_public_read" on public.postype_archive;
-create policy "postype_archive_public_read"
-on public.postype_archive
-for select
-to anon
-using (deleted_at is null);
-
 drop policy if exists "crawl_runs_public_read" on public.crawl_runs;
-create policy "crawl_runs_public_read"
-on public.crawl_runs
-for select
-to anon
-using (true);
+
+revoke all on public.postype_archive from anon, authenticated;
+revoke all on public.postype_sources from anon, authenticated;
+revoke all on public.crawl_runs from anon, authenticated;
+
+-- The public site reads only these non-sensitive columns. The base table remains private.
+create or replace view public.postype_archive_public
+with (security_barrier = true)
+as
+select
+  id,
+  source_row_number,
+  title,
+  author,
+  published_date,
+  link,
+  is_paid,
+  is_adult,
+  category,
+  genres,
+  keywords,
+  top_tags,
+  bottom_tags,
+  endings,
+  is_series,
+  series_name,
+  series_volume,
+  serialization_status,
+  admin_reviewed,
+  view_count,
+  view_count_checked_at
+from public.postype_archive
+where deleted_at is null;
+
+create or replace view public.crawl_runs_public
+with (security_barrier = true)
+as
+select
+  id,
+  started_at,
+  finished_at,
+  status,
+  found_count,
+  inserted_count,
+  ai_review_count,
+  failed_count,
+  created_at
+from public.crawl_runs;
+
+revoke all on public.postype_archive_public from public;
+revoke all on public.crawl_runs_public from public;
+grant select on public.postype_archive_public to anon, authenticated;
+grant select on public.crawl_runs_public to anon, authenticated;
 
 -- 개인용/비공개 배포에서 관리자 편집을 바로 쓰려면 아래 정책을 켜세요.
 -- 공개 사이트에서는 anon 전체 쓰기 권한이 위험하므로 Edge Function 또는 인증 정책으로 분리하는 쪽을 권장합니다.

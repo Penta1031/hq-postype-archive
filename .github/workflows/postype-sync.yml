@@ -6,43 +6,53 @@ on:
     - cron: "0 19 * * *"
   workflow_dispatch:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: postype-sync
+  cancel-in-progress: false
+
 jobs:
   crawl:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     defaults:
       run:
         working-directory: crawler
-    env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-      POSTYPE_AUTH_STATE: ${{ secrets.POSTYPE_AUTH_STATE }}
-      DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
-      ADMIN_PAGE_URL: ${{ vars.ADMIN_PAGE_URL }}
-      SEND_DISCORD_WHEN_EMPTY: ${{ vars.SEND_DISCORD_WHEN_EMPTY || 'false' }}
-      POSTYPE_SOURCE_URLS: ${{ vars.POSTYPE_SOURCE_URLS }}
-      AI_PROVIDER: ${{ vars.AI_PROVIDER || 'openai' }}
-      AI_FALLBACK_PROVIDER: ${{ vars.AI_FALLBACK_PROVIDER }}
-      OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
-      GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
-      GEMINI_MAX_ATTEMPTS: ${{ vars.GEMINI_MAX_ATTEMPTS || '4' }}
-      AI_REVIEW_CONFIDENCE_THRESHOLD: ${{ vars.AI_REVIEW_CONFIDENCE_THRESHOLD || '0.72' }}
-      RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'true' }}
-      UPDATE_VIEW_COUNTS: ${{ vars.UPDATE_VIEW_COUNTS || 'true' }}
-      VIEW_COUNT_CONCURRENCY: ${{ vars.VIEW_COUNT_CONCURRENCY || '2' }}
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:
           node-version: "22"
 
-      - run: npm install
+      - run: npm ci
 
       - run: npx playwright install --with-deps chromium
 
       - run: npm run check
 
       - run: npm start
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          POSTYPE_AUTH_STATE: ${{ secrets.POSTYPE_AUTH_STATE }}
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          ADMIN_PAGE_URL: ${{ vars.ADMIN_PAGE_URL }}
+          SEND_DISCORD_WHEN_EMPTY: ${{ vars.SEND_DISCORD_WHEN_EMPTY || 'false' }}
+          POSTYPE_SOURCE_URLS: ${{ vars.POSTYPE_SOURCE_URLS }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER || 'openai' }}
+          AI_FALLBACK_PROVIDER: ${{ vars.AI_FALLBACK_PROVIDER }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
+          GEMINI_MAX_ATTEMPTS: ${{ vars.GEMINI_MAX_ATTEMPTS || '4' }}
+          AI_REVIEW_CONFIDENCE_THRESHOLD: ${{ vars.AI_REVIEW_CONFIDENCE_THRESHOLD || '0.72' }}
+          RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'true' }}
+          UPDATE_VIEW_COUNTS: ${{ vars.UPDATE_VIEW_COUNTS || 'true' }}
+          VIEW_COUNT_CONCURRENCY: ${{ vars.VIEW_COUNT_CONCURRENCY || '2' }}

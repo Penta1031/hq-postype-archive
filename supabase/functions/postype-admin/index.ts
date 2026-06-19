@@ -1,10 +1,18 @@
+const allowedOrigin = (Deno.env.get("ADMIN_ALLOWED_ORIGIN") || "https://hq-postype-archive.vercel.app").replace(/\/+$/, "");
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": allowedOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Cache-Control": "no-store",
+  "Vary": "Origin",
 };
 
 const tableName = Deno.env.get("POSTYPE_TABLE") || "postype_archive";
+const encoder = new TextEncoder();
+const failedLogins = new Map<string, { count: number; resetAt: number }>();
+const loginWindowMs = 15 * 60 * 1000;
+const maxLoginFailures = 5;
+const adminSessionMs = 30 * 60 * 1000;
 
 const K = {
   title: "\uC81C\uBAA9",
@@ -51,6 +59,87 @@ function json(body: Record<string, unknown>, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+function requestOriginAllowed(request: Request) {
+  const origin = (request.headers.get("origin") || "").replace(/\/+$/, "");
+  return !origin || origin === allowedOrigin;
+}
+
+function clientKey(request: Request) {
+  return (request.headers.get("x-forwarded-for") || request.headers.get("cf-connecting-ip") || "unknown")
+    .split(",")[0]
+    .trim();
+}
+
+function loginIsBlocked(key: string) {
+  const attempt = failedLogins.get(key);
+  if (!attempt) return false;
+  if (Date.now() >= attempt.resetAt) {
+    failedLogins.delete(key);
+    return false;
+  }
+  return attempt.count >= maxLoginFailures;
+}
+
+function recordLoginFailure(key: string) {
+  const current = failedLogins.get(key);
+  if (!current || Date.now() >= current.resetAt) {
+    failedLogins.set(key, { count: 1, resetAt: Date.now() + loginWindowMs });
+    return;
+  }
+  current.count += 1;
+}
+
+async function secureTextEqual(left: string, right: string) {
+  const [leftHash, rightHash] = await Promise.all([
+    crypto.subtle.digest("SHA-256", encoder.encode(left)),
+    crypto.subtle.digest("SHA-256", encoder.encode(right)),
+  ]);
+  const a = new Uint8Array(leftHash);
+  const b = new Uint8Array(rightHash);
+  let difference = a.length ^ b.length;
+  for (let index = 0; index < Math.max(a.length, b.length); index += 1) {
+    difference |= (a[index] || 0) ^ (b[index] || 0);
+  }
+  return difference === 0;
+}
+
+function base64Url(bytes: Uint8Array) {
+  let binary = "";
+  bytes.forEach((byte) => binary += String.fromCharCode(byte));
+  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+}
+
+async function sessionSignature(payload: string, secret: string) {
+  const key = await crypto.subtle.importKey(
+    "raw",
+    encoder.encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign"],
+  );
+  return base64Url(new Uint8Array(await crypto.subtle.sign("HMAC", key, encoder.encode(payload))));
+}
+
+async function issueAdminSession(secret: string) {
+  const payload = base64Url(encoder.encode(JSON.stringify({ exp: Date.now() + adminSessionMs })));
+  return `${payload}.${await sessionSignature(payload, secret)}`;
+}
+
+async function validAdminSession(token: string, secret: string) {
+  const [payload, signature, extra] = token.split(".");
+  if (!payload || !signature || extra) return false;
+  const expected = await sessionSignature(payload, secret);
+  if (!(await secureTextEqual(signature, expected))) return false;
+  try {
+    const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
+    const decoded = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
+    const data = JSON.parse(decoded) as { exp?: number };
+    return Number.isFinite(data.exp) && Number(data.exp) > Date.now();
+  } catch {
+    return false;
+  }
 }
 
 function text(value: unknown) {
@@ -190,25 +279,45 @@ async function rest(path: string, init: RequestInit = {}) {
 }
 
 Deno.serve(async (request) => {
+  if (!requestOriginAllowed(request)) return json({ ok: false, error: "Origin is not allowed." }, 403);
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (request.method !== "POST") return json({ ok: false, error: "POST only." }, 405);
 
   try {
     const adminPassword = Deno.env.get("ADMIN_PASSWORD");
     if (!adminPassword) return json({ ok: false, error: "ADMIN_PASSWORD is not configured." }, 500);
+    const sessionSecret = Deno.env.get("ADMIN_SESSION_SECRET") || adminPassword;
 
     const body = await request.json();
     const action = text(body.action);
     const password = text(body.password);
+    const token = text(body.token);
     const payload = (body.payload || {}) as Record<string, unknown>;
 
-    if (!password || password !== adminPassword) {
-      return json({ ok: false, error: "Wrong password." }, 401);
+    if (action === "auth") {
+      const key = clientKey(request);
+      if (loginIsBlocked(key)) {
+        return json({ ok: false, error: "Too many login attempts. Try again in 15 minutes." }, 429);
+      }
+      if (!password || !(await secureTextEqual(password, adminPassword))) {
+        recordLoginFailure(key);
+        return json({ ok: false, error: "Wrong password." }, 401);
+      }
+      failedLogins.delete(key);
+      return json({ ok: true, token: await issueAdminSession(sessionSecret), expiresIn: adminSessionMs / 1000 });
     }
 
-    if (action === "auth") return json({ ok: true });
-    if (!["create", "update", "delete", "approve", "run_crawler"].includes(action)) {
+    if (!(await validAdminSession(token, sessionSecret))) {
+      return json({ ok: false, error: "Admin session is missing or expired." }, 401);
+    }
+
+    if (!["list", "create", "update", "delete", "approve", "run_crawler"].includes(action)) {
       return json({ ok: false, error: "Unknown action." }, 400);
+    }
+
+    if (action === "list") {
+      const rows = await rest(`${encodeURIComponent(tableName)}?select=*&deleted_at=is.null&order=published_date.desc.nullslast,title.asc`);
+      return json({ ok: true, rows });
     }
 
     if (action === "run_crawler") {

@@ -2529,6 +2529,25 @@
     </section>
   </div>
 
+  <div class="modal" id="adminLoginModal" hidden>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="adminLoginTitle">
+      <div class="modal-head">
+        <h2 id="adminLoginTitle">관리자 로그인</h2>
+        <button class="modal-close" id="adminLoginClose" type="button" aria-label="닫기">×</button>
+      </div>
+      <form class="modal-grid" id="adminLoginForm">
+        <label>
+          <span class="label">관리자 비밀번호</span>
+          <input id="adminPasswordInput" type="password" autocomplete="current-password" required>
+        </label>
+        <div class="random-result-actions">
+          <button class="button primary" type="submit">로그인</button>
+          <button class="button" id="adminLoginCancel" type="button">취소</button>
+        </div>
+      </form>
+    </section>
+  </div>
+
   <div class="modal" id="libraryModal" hidden>
     <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="libraryTitle">
       <div class="modal-head">
@@ -2655,6 +2674,7 @@
       SUPABASE_URL: "",
       SUPABASE_ANON_KEY: "",
       SUPABASE_TABLE: "postype_archive",
+      SUPABASE_PUBLIC_VIEW: "postype_archive_public",
       ADMIN_FUNCTION_URL: "",
       ADMIN_PAGE_URL: "",
       MANUAL_CRAWL_URL: "",
@@ -2752,7 +2772,7 @@
       excerptPointers: new Map(),
       excerptPinch: null,
       excerptDragPoint: null,
-      adminPassword: "",
+      adminToken: "",
       adminSelected: new Set(),
       adminVisiblePosts: [],
       adminBulkValues: new Set(),
@@ -2775,6 +2795,11 @@
       visible: $("#visibleCount"),
       total: $("#totalCount"),
       adminToggle: $("#adminToggle"),
+      adminLoginModal: $("#adminLoginModal"),
+      adminLoginForm: $("#adminLoginForm"),
+      adminLoginClose: $("#adminLoginClose"),
+      adminLoginCancel: $("#adminLoginCancel"),
+      adminPasswordInput: $("#adminPasswordInput"),
       adminSearch: $("#adminSearchInput"),
       adminFilterToggle: $("#adminFilterToggle"),
       adminFilterCaret: $("#adminFilterCaret"),
@@ -3034,9 +3059,12 @@
       return `${supabaseBaseUrl()}/functions/v1/postype-admin`;
     }
 
-    async function requestAdminFunction(action, payload = {}, password = state.adminPassword) {
+    async function requestAdminFunction(action, payload = {}, credential = "") {
       const url = adminFunctionUrl();
       if (!url) throw new Error("관리자 Edge Function URL이 설정되지 않았습니다.");
+      const auth = action === "auth"
+        ? { password: credential }
+        : { token: credential || state.adminToken };
       const response = await fetch(url, {
         method: "POST",
         headers: {
@@ -3044,7 +3072,7 @@
           apikey: normalize(CONFIG.SUPABASE_ANON_KEY),
           Authorization: `Bearer ${normalize(CONFIG.SUPABASE_ANON_KEY)}`
         },
-        body: JSON.stringify({ action, password, payload })
+        body: JSON.stringify({ action, payload, ...auth })
       });
       const text = await response.text();
       const result = text ? JSON.parse(text) : {};
@@ -3167,9 +3195,9 @@
     }
 
     async function loadSupabase() {
-      const table = encodeURIComponent(CONFIG.SUPABASE_TABLE);
+      const table = encodeURIComponent(CONFIG.SUPABASE_PUBLIC_VIEW || "postype_archive_public");
       const reviewFilter = CONFIG.SHOW_UNREVIEWED_POSTS === false ? "&admin_reviewed=eq.true" : "";
-      const query = `${table}?select=*&deleted_at=is.null${reviewFilter}&order=published_date.desc.nullslast,title.asc`;
+      const query = `${table}?select=*${reviewFilter}&order=published_date.desc.nullslast,title.asc`;
       const rows = await requestSupabase(query, { headers: supabaseHeaders() });
       return rows.map(rowToPost).filter((post) => normalize(post["제목"]) || normalize(post["링크"]));
     }
@@ -3180,7 +3208,7 @@
         return;
       }
       try {
-        const rows = await requestSupabase("crawl_runs?select=*&order=started_at.desc&limit=1", { headers: supabaseHeaders() });
+        const rows = await requestSupabase("crawl_runs_public?select=*&order=started_at.desc&limit=1", { headers: supabaseHeaders() });
         state.crawlRun = rows && rows[0] ? rows[0] : null;
       } catch (_) {
         state.crawlRun = null;
@@ -3241,6 +3269,11 @@
 
     async function loadRemotePosts() {
       if (hasSupabaseConfig() && CONFIG.DATA_SOURCE !== "local-csv") {
+        if (state.adminToken) {
+          const result = await requestAdminFunction("list");
+          const rows = Array.isArray(result.rows) ? result.rows : [];
+          return { label: "Supabase 관리자", posts: rows.map(rowToPost) };
+        }
         return { label: "Supabase", posts: await loadSupabase() };
       }
       return { label: "로컬 CSV", posts: await loadLocalCsv() };
@@ -4445,24 +4478,44 @@
       els.adminEditor.hidden = true;
     }
 
+    let adminLoginResolve = null;
+
+    function requestAdminPassword() {
+      els.adminPasswordInput.value = "";
+      els.adminLoginModal.hidden = false;
+      setTimeout(() => els.adminPasswordInput.focus(), 0);
+      return new Promise((resolve) => {
+        adminLoginResolve = resolve;
+      });
+    }
+
+    function closeAdminLogin(password = null) {
+      els.adminLoginModal.hidden = true;
+      els.adminPasswordInput.value = "";
+      if (adminLoginResolve) adminLoginResolve(password);
+      adminLoginResolve = null;
+    }
+
     async function toggleAdminMode() {
       if (document.body.classList.contains("admin-on")) {
         document.body.classList.remove("admin-on");
-        state.adminPassword = "";
+        state.adminToken = "";
         closeAdminEditor();
+        await loadData();
         return;
       }
-      const password = window.prompt("관리자 비밀번호를 입력해 주세요.");
+      const password = await requestAdminPassword();
       if (password === null) return;
       try {
-        await requestAdminFunction("auth", {}, password);
-        state.adminPassword = password;
+        const result = await requestAdminFunction("auth", {}, password);
+        if (!result.token) throw new Error("관리자 보안 함수가 아직 최신 버전으로 배포되지 않았습니다.");
+        state.adminToken = result.token;
       } catch (error) {
         alert(`비밀번호를 확인해 주세요. ${error.message}`);
         return;
       }
       document.body.classList.add("admin-on");
-      renderAdminList();
+      await loadData();
     }
 
     function formData() {
@@ -4780,6 +4833,16 @@
       setLibraryView(button.dataset.libraryView);
     });
     els.libraryReset.addEventListener("click", clearReadingHistory);
+    els.adminLoginForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      const password = els.adminPasswordInput.value;
+      if (password) closeAdminLogin(password);
+    });
+    els.adminLoginClose.addEventListener("click", () => closeAdminLogin());
+    els.adminLoginCancel.addEventListener("click", () => closeAdminLogin());
+    els.adminLoginModal.addEventListener("click", (event) => {
+      if (event.target === els.adminLoginModal) closeAdminLogin();
+    });
     els.libraryClose.addEventListener("click", closeLibraryModal);
     els.libraryModal.addEventListener("click", (event) => {
       if (event.target === els.libraryModal) closeLibraryModal();

@@ -17,7 +17,8 @@
 ```js
 SUPABASE_URL: "https://프로젝트ID.supabase.co",
 SUPABASE_ANON_KEY: "anon public key",
-SUPABASE_TABLE: "postype_archive"
+SUPABASE_TABLE: "postype_archive",
+SUPABASE_PUBLIC_VIEW: "postype_archive_public"
 ```
 
 샘플 포스트만 보이면 Supabase 연결이 실패한 상태입니다. 화면에 표시되는 상태 문구를 확인한 뒤 URL과 anon key를 다시 확인하세요.
@@ -58,3 +59,11 @@ GitHub Actions Variable:
 - `GITHUB_REPOSITORY` 예: `Penta1031/hq-postype-archive`
 - `GITHUB_WORKFLOW_ID` 기본값 `postype-sync.yml`
 - `GITHUB_WORKFLOW_REF` 기본값 `main`
+- `ADMIN_ALLOWED_ORIGIN` 관리자 페이지 주소. 예: `https://hq-postype-archive.vercel.app`
+- `ADMIN_SESSION_SECRET` 관리자 임시 로그인 표 서명용 긴 무작위 문자열
+
+## 보안 적용
+
+`supabase/security-hardening.sql`을 Supabase SQL Editor에서 한 번 실행하면 공개 검색기는 검색에 필요한 열만 읽고, AI 원본 응답·크롤링 오류·수집 출처 등은 관리자 로그인 후에만 읽습니다. 기존 데이터는 삭제되지 않습니다.
+
+관리자 로그인은 실패 횟수를 제한하며, 성공 후 발급되는 임시 로그인 표는 30분 동안만 브라우저 메모리에 보관됩니다. Vercel 배포에서는 `vercel.json`의 보안 헤더도 자동 적용됩니다.
