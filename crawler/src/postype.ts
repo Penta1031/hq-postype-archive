@@ -56,14 +56,15 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       return deniedPost(link, accessStatus, accessStatus === "purchase_required" ? "구매 또는 유료 열람이 필요합니다." : "현재 로그인 세션으로 열람할 수 없습니다.");
     }
 
-    const title = await firstText(page, [
+    const structured = await extractStructuredMetadata(page);
+    const title = structured.title || await firstText(page, [
       "h1",
       "meta[property='og:title']",
       "meta[name='twitter:title']",
       "[class*='title']",
     ], "content");
-    const author = await extractAuthor(page, title);
-    const publishedDate = await extractPublishedDate(page);
+    const author = structured.author || await extractAuthor(page, title);
+    const publishedDate = structured.publishedDate || await extractPublishedDate(page);
     const tags = await page.locator("a[href*='tag'], a[href*='keyword'], a[href*='search']").evaluateAll((nodes) =>
       nodes
         .map((node) => (node.textContent || "").trim())
@@ -91,6 +92,26 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
   } finally {
     await page.close();
   }
+}
+
+async function extractStructuredMetadata(page: Page) {
+  const scripts = await page.locator("script[type='application/ld+json']").allTextContents().catch(() => []);
+  for (const script of scripts) {
+    try {
+      const parsed = JSON.parse(script);
+      const items = Array.isArray(parsed) ? parsed : [parsed];
+      const post = items.find((item) => item && ["BlogPosting", "Article"].includes(item["@type"]));
+      if (!post) continue;
+      return {
+        title: String(post.headline || post.name || "").trim(),
+        author: String(post.author?.name || "").trim(),
+        publishedDate: String(post.datePublished || "").trim(),
+      };
+    } catch (_) {
+      // Ignore unrelated or malformed structured-data blocks.
+    }
+  }
+  return { title: "", author: "", publishedDate: "" };
 }
 
 async function extractBodyText(page: Page) {
@@ -178,7 +199,7 @@ function deniedPost(link: PostLink, status: ExtractedPost["crawlStatus"], messag
 function cleanTitle(value: string) {
   return value
     .replace(/\s*-\s*Postype.*$/i, "")
-    .replace(/\s*[•|]\s*[^•|]+$/u, "")
+    .replace(/\s*[:•|]\s*[^:•|]+$/u, "")
     .trim();
 }
 

@@ -66,6 +66,14 @@ function cleanDate(value: unknown) {
   return valueText ? valueText.slice(0, 10) : null;
 }
 
+function withoutRps(value: unknown) {
+  return text(value)
+    .split(/[,，、/|·\n]/)
+    .map((item) => item.trim())
+    .filter((item) => item && item.toUpperCase() !== "RPS")
+    .join(", ");
+}
+
 function sourceRowNumber(payload: Record<string, unknown>) {
   const rowNumber = text(payload._rowNumber);
   if (rowNumber && !rowNumber.startsWith("local-")) return rowNumber;
@@ -84,7 +92,7 @@ function postToRow(payload: Record<string, unknown>, action: string) {
     is_adult: flag(payload[K.adult]),
     preview: text(payload[K.preview]),
     category: text(payload[K.category]),
-    genres: text(payload[K.genres]),
+    genres: withoutRps(payload[K.genres]),
     keywords: text(payload[K.keywords]),
     top_tags: text(payload[K.top]),
     bottom_tags: text(payload[K.bottom]),
