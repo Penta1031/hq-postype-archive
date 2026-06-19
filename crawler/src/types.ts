@@ -38,6 +38,7 @@ export type Classification = {
   seriesName: string;
   seriesVolume: string;
   serializationStatus: "단편" | "연재중" | "완결";
+  statusReason: string;
   isAdult: boolean;
   isPaid: boolean;
   endings: string[];

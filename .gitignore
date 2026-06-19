@@ -8,3 +8,4 @@ postype-auth-state*.json
 crawler/postype-auth-state*.json
 crawler/postype-login-profile/
 chrome-postype-login-profile/
+supabase/.temp/

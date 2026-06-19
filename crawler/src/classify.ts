@@ -9,6 +9,14 @@ const geminiModel = optionalEnv("GEMINI_MODEL", "gemini-3.5-flash");
 const reviewThreshold = Number(optionalEnv("AI_REVIEW_CONFIDENCE_THRESHOLD", "0.72"));
 const geminiMaxAttempts = Number(optionalEnv("GEMINI_MAX_ATTEMPTS", "4"));
 
+const FILTER_TAXONOMY = {
+  genres: ["현대물", "학원물", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
+  keywords: ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스"],
+  top: ["집착공", "다정공", "무심공", "능글공", "까칠공", "연하공", "대형견공", "계략공", "후회공", "절륜공", "재벌공", "연예인공", "상처공", "순정공", "강공", "짝사랑공", "헤테로공"],
+  bottom: ["단정수", "능력수", "무심수", "다정수", "연상수", "연하수", "까칠수", "강수", "순진수", "상처수", "굴림수", "떡대수", "임신수", "잔망수", "후회수", "능글수", "짝사랑수"],
+  endings: ["해피엔딩", "새드엔딩", "오픈엔딩", "사망"],
+} as const;
+
 const classificationSchema = {
   type: "object",
   additionalProperties: false,
@@ -21,6 +29,7 @@ const classificationSchema = {
     seriesName: { type: "string" },
     seriesVolume: { type: "string" },
     serializationStatus: { type: "string", enum: ["단편", "연재중", "완결"] },
+    statusReason: { type: "string" },
     isAdult: { type: "boolean" },
     isPaid: { type: "boolean" },
     endings: { type: "array", items: { type: "string" } },
@@ -36,6 +45,7 @@ const classificationSchema = {
     "seriesName",
     "seriesVolume",
     "serializationStatus",
+    "statusReason",
     "isAdult",
     "isPaid",
     "endings",
@@ -101,6 +111,7 @@ async function classifyWithOpenAI(inputText: string): Promise<Classification> {
           "genres는 작품 장르/세계관 계열만 넣고, keywords는 관계성/소재/전개 키워드만 넣는다.",
           "top과 bottom은 공/수 캐릭터 속성만 넣고, 인물 이름이나 제목을 넣지 않는다.",
           "isSeries는 제목/본문에 회차, 상/중/하, 숫자 회차, part/chapter, 시리즈명이 뚜렷할 때만 true로 둔다.",
+          taxonomyPrompt(),
         ].join("\n"),
       },
       { role: "user", content: inputText },
@@ -131,8 +142,9 @@ async function classifyWithGemini(inputText: string): Promise<Classification> {
     "genres는 작품 장르/세계관 계열만 넣고, keywords는 관계성/소재/전개 키워드만 넣는다.",
     "top과 bottom은 공/수 캐릭터 속성만 넣고, 인물 이름이나 제목을 넣지 않는다.",
     "isSeries는 제목/본문에 회차, 상/중/하, 숫자 회차, part/chapter, 시리즈명이 뚜렷할 때만 true로 둔다.",
+    taxonomyPrompt(),
     "반드시 JSON 객체만 출력한다. 마크다운 코드블록이나 설명문은 붙이지 않는다.",
-    "JSON 키는 genres, keywords, top, bottom, isSeries, seriesName, seriesVolume, serializationStatus, isAdult, isPaid, endings, confidence, note만 사용한다.",
+    "JSON 키는 genres, keywords, top, bottom, isSeries, seriesName, seriesVolume, serializationStatus, statusReason, isAdult, isPaid, endings, confidence, note만 사용한다.",
     "",
     inputText,
   ].join("\n");
@@ -173,22 +185,52 @@ async function classifyWithGemini(inputText: string): Promise<Classification> {
 
 function normalizeClassification(parsed: Classification): Classification {
   const raw = parsed as unknown as Record<string, unknown>;
+  const rawGenres = asStringArray(raw.genres);
+  const rawKeywords = asStringArray(raw.keywords);
+  const rawTop = asStringArray(raw.top);
+  const rawBottom = asStringArray(raw.bottom);
+  const rawEndings = asStringArray(raw.endings);
+  const genres = allowedOnly(rawGenres, FILTER_TAXONOMY.genres).slice(0, 8);
+  const keywords = allowedOnly(rawKeywords, FILTER_TAXONOMY.keywords).slice(0, 12);
+  const top = allowedOnly(rawTop, FILTER_TAXONOMY.top).slice(0, 8);
+  const bottom = allowedOnly(rawBottom, FILTER_TAXONOMY.bottom).slice(0, 8);
+  const endings = allowedOnly(rawEndings, FILTER_TAXONOMY.endings).slice(0, 5);
+  const removedUnknown = [rawGenres.length - genres.length, rawKeywords.length - keywords.length, rawTop.length - top.length, rawBottom.length - bottom.length, rawEndings.length - endings.length]
+    .some((count) => count > 0);
+  const confidence = Math.max(0, Math.min(1, Number(raw.confidence) || 0));
   return {
     ...parsed,
-    genres: asStringArray(raw.genres).slice(0, 8),
-    keywords: asStringArray(raw.keywords).slice(0, 12),
-    top: asStringArray(raw.top).slice(0, 8),
-    bottom: asStringArray(raw.bottom).slice(0, 8),
-    endings: asStringArray(raw.endings).slice(0, 5),
+    genres,
+    keywords,
+    top,
+    bottom,
+    endings,
     isSeries: Boolean(raw.isSeries),
     seriesName: String(raw.seriesName ?? ""),
     seriesVolume: String(raw.seriesVolume ?? ""),
     serializationStatus: normalizeSerializationStatus(raw.serializationStatus),
+    statusReason: compactText(String(raw.statusReason ?? ""), 300),
     isAdult: Boolean(raw.isAdult),
     isPaid: Boolean(raw.isPaid),
-    confidence: Math.max(0, Math.min(1, Number(raw.confidence) || 0)),
-    note: compactText(String(raw.note ?? ""), 500),
+    confidence: removedUnknown ? Math.min(confidence, 0.7) : confidence,
+    note: compactText(`${String(raw.note ?? "")}${removedUnknown ? " 필터 목록 밖 응답은 제외함." : ""}`, 500),
   };
+}
+
+function allowedOnly(values: string[], allowed: readonly string[]) {
+  const allowedSet = new Set(allowed);
+  return values.filter((value) => allowedSet.has(value));
+}
+
+function taxonomyPrompt() {
+  return [
+    `genres 허용값: ${FILTER_TAXONOMY.genres.join(", ")}`,
+    `keywords 허용값: ${FILTER_TAXONOMY.keywords.join(", ")}`,
+    `top 허용값: ${FILTER_TAXONOMY.top.join(", ")}`,
+    `bottom 허용값: ${FILTER_TAXONOMY.bottom.join(", ")}`,
+    `endings 허용값: ${FILTER_TAXONOMY.endings.join(", ")}`,
+    "허용값에 없는 단어를 새로 만들지 않는다.",
+  ].join("\n");
 }
 
 function asStringArray(value: unknown) {
@@ -228,6 +270,7 @@ export function classificationRow(classification: Classification) {
     series_name: classification.seriesName,
     series_volume: classification.seriesVolume,
     serialization_status: classification.serializationStatus,
+    status_reason: classification.statusReason,
     is_adult: classification.isAdult,
     is_paid: classification.isPaid,
     ai_confidence: classification.confidence,
