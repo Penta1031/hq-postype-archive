@@ -1331,6 +1331,45 @@
       overflow-x: hidden;
     }
 
+    .admin-list-tools {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin: 0 0 9px;
+    }
+
+    .admin-list-tools > span {
+      color: #727b87;
+      font-size: 11px;
+    }
+
+    .admin-sort-pills {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 3px;
+      padding: 3px;
+      border: 1px solid #292d34;
+      border-radius: 8px;
+      background: #0d0e11;
+    }
+
+    .admin-sort-pill {
+      min-width: 66px;
+      min-height: 29px;
+      border: 0;
+      border-radius: 6px;
+      background: transparent;
+      color: #7f8792;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .admin-sort-pill.active {
+      background: #e6e8eb;
+      color: #111316;
+    }
+
     .admin-bulkbar {
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
@@ -1366,6 +1405,21 @@
     .admin-bulkbar .button {
       min-height: 36px;
       font-size: 12px;
+    }
+
+    .admin-bulk-field,
+    .admin-bulk-values,
+    .admin-bulk-apply {
+      grid-column: 1 / -1;
+    }
+
+    .admin-bulk-values.is-disabled {
+      opacity: .55;
+      pointer-events: none;
+    }
+
+    .admin-bulk-values .admin-multiselect-options {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .admin-bulk-delete {
@@ -2302,10 +2356,24 @@
       </label>
       <button class="filter-title admin-filter-toggle" id="adminFilterToggle" type="button"><strong>관리자 필터</strong><span id="adminFilterCaret">접기</span></button>
       <div class="admin-filters" id="adminFilterMount"></div>
+      <div class="admin-list-tools">
+        <span>목록 정렬</span>
+        <div class="admin-sort-pills" id="adminSortButtons">
+          <button class="admin-sort-pill active" type="button" data-admin-sort="date-desc">최신순</button>
+          <button class="admin-sort-pill" type="button" data-admin-sort="title-asc">제목순</button>
+        </div>
+      </div>
       <div class="admin-bulkbar">
         <label class="admin-select-all"><input id="adminSelectAll" type="checkbox"><span id="adminSelectedCount">0개 선택</span></label>
-        <select id="adminBulkCategory" aria-label="선택한 글의 카테고리"><option value="">카테고리 선택</option><option>글</option><option>그림</option><option>기타</option></select>
-        <button class="button" id="adminBulkCategoryApply" type="button" disabled>카테고리 적용</button>
+        <select class="admin-bulk-field" id="adminBulkField" aria-label="일괄 수정할 항목">
+          <option value="">수정 항목 선택</option>
+          <option>카테고리</option><option>가격</option><option>성인</option><option>장르</option><option>키워드</option><option>공</option><option>수</option><option>시리즈여부</option><option>연재상태</option><option>스포일러</option>
+        </select>
+        <details class="admin-multiselect admin-bulk-values is-disabled" id="adminBulkValuePicker">
+          <summary><span id="adminBulkValueSummary">먼저 수정 항목을 선택하세요</span></summary>
+          <div class="admin-multiselect-options" id="adminBulkValueOptions"></div>
+        </details>
+        <button class="button primary admin-bulk-apply" id="adminBulkApply" type="button" disabled>선택값으로 일괄 교체</button>
         <button class="button danger admin-bulk-delete" id="adminBulkDelete" type="button" disabled>선택한 글 삭제</button>
       </div>
       <div class="admin-list" id="adminList"></div>
@@ -2617,6 +2685,19 @@
       "스포일러": TAG_GROUPS["스포일러"]
     };
 
+    const ADMIN_BULK_FIELDS = {
+      "카테고리": { options: TAG_GROUPS["카테고리"], multiple: false },
+      "가격": { options: TAG_GROUPS["가격"], multiple: false },
+      "성인": { options: TAG_GROUPS["성인"], multiple: false },
+      "장르": { options: TAG_GROUPS["장르"], multiple: true },
+      "키워드": { options: TAG_GROUPS["키워드"], multiple: true },
+      "공": { options: TAG_GROUPS["공"], multiple: true },
+      "수": { options: TAG_GROUPS["수"], multiple: true },
+      "시리즈여부": { options: ADMIN_TAG_GROUPS["시리즈여부"], multiple: false },
+      "연재상태": { options: ADMIN_TAG_GROUPS["연재상태"], multiple: false },
+      "스포일러": { options: TAG_GROUPS["스포일러"], multiple: true }
+    };
+
     const SAMPLE_POSTS = [
       {
         "_rowNumber": "sample-1",
@@ -2648,6 +2729,7 @@
       query: "",
       adminQuery: "",
       sort: "date-desc",
+      adminSort: "date-desc",
       randomScope: "current",
       randomPost: null,
       library: loadLibrary(),
@@ -2666,6 +2748,7 @@
       adminPassword: "",
       adminSelected: new Set(),
       adminVisiblePosts: [],
+      adminBulkValues: new Set(),
       seriesStats: new Map(),
       crawlRun: null
     };
@@ -2699,8 +2782,12 @@
       manualCrawlButton: $("#manualCrawlButton"),
       adminSelectAll: $("#adminSelectAll"),
       adminSelectedCount: $("#adminSelectedCount"),
-      adminBulkCategory: $("#adminBulkCategory"),
-      adminBulkCategoryApply: $("#adminBulkCategoryApply"),
+      adminSortButtons: $("#adminSortButtons"),
+      adminBulkField: $("#adminBulkField"),
+      adminBulkValuePicker: $("#adminBulkValuePicker"),
+      adminBulkValueSummary: $("#adminBulkValueSummary"),
+      adminBulkValueOptions: $("#adminBulkValueOptions"),
+      adminBulkApply: $("#adminBulkApply"),
       adminBulkDelete: $("#adminBulkDelete"),
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
@@ -3491,7 +3578,11 @@
         .filter((post) => matchesPost(post, state.adminActive, query))
         .slice()
         .sort((a, b) => {
-          return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
+          if (state.adminSort === "title-asc") {
+            return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
+          }
+          const dateDiff = (Date.parse(normalize(b["날짜"])) || 0) - (Date.parse(normalize(a["날짜"])) || 0);
+          return dateDiff || normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
         });
       state.adminVisiblePosts = posts;
       updateAdminBulkControls();
@@ -3552,8 +3643,104 @@
       els.adminSelectedCount.textContent = `${count}개 선택`;
       els.adminSelectAll.checked = Boolean(visibleKeys.length && visibleSelected === visibleKeys.length);
       els.adminSelectAll.indeterminate = visibleSelected > 0 && visibleSelected < visibleKeys.length;
-      els.adminBulkCategoryApply.disabled = count === 0 || !normalize(els.adminBulkCategory.value);
+      els.adminBulkApply.disabled = count === 0
+        || !normalize(els.adminBulkField.value)
+        || state.adminBulkValues.size === 0;
       els.adminBulkDelete.disabled = count === 0;
+    }
+
+    function selectedAdminBulkValues() {
+      const field = normalize(els.adminBulkField.value);
+      const config = ADMIN_BULK_FIELDS[field];
+      if (!config) return [];
+      return config.options.filter((value) => state.adminBulkValues.has(value));
+    }
+
+    function updateAdminBulkValueSummary() {
+      const field = normalize(els.adminBulkField.value);
+      const values = selectedAdminBulkValues();
+      if (!field) {
+        els.adminBulkValueSummary.textContent = "먼저 수정 항목을 선택하세요";
+      } else {
+        els.adminBulkValueSummary.textContent = values.length ? values.join(", ") : "적용할 값 선택";
+      }
+      updateAdminBulkControls();
+    }
+
+    function buildAdminBulkValueOptions() {
+      const field = normalize(els.adminBulkField.value);
+      const config = ADMIN_BULK_FIELDS[field];
+      state.adminBulkValues.clear();
+      els.adminBulkValueOptions.innerHTML = "";
+      els.adminBulkValuePicker.open = false;
+      els.adminBulkValuePicker.classList.toggle("is-disabled", !config);
+
+      if (!config) {
+        updateAdminBulkValueSummary();
+        return;
+      }
+
+      const clear = document.createElement("button");
+      clear.type = "button";
+      clear.className = "admin-multiselect-clear";
+      clear.textContent = "선택 초기화";
+      clear.addEventListener("click", () => {
+        state.adminBulkValues.clear();
+        els.adminBulkValueOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => input.checked = false);
+        updateAdminBulkValueSummary();
+      });
+      els.adminBulkValueOptions.appendChild(clear);
+
+      config.options.forEach((option) => {
+        const label = document.createElement("label");
+        label.className = "admin-multiselect-option";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.value = option;
+        checkbox.addEventListener("change", () => {
+          if (!config.multiple) {
+            state.adminBulkValues.clear();
+            els.adminBulkValueOptions.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+              input.checked = input === checkbox && checkbox.checked;
+            });
+          }
+          checkbox.checked ? state.adminBulkValues.add(option) : state.adminBulkValues.delete(option);
+          updateAdminBulkValueSummary();
+        });
+        const text = document.createElement("span");
+        text.textContent = option;
+        label.append(checkbox, text);
+        els.adminBulkValueOptions.appendChild(label);
+      });
+      updateAdminBulkValueSummary();
+    }
+
+    function postWithBulkValue(post, field, values) {
+      const updated = { ...post };
+      const first = values[0] || "";
+      const joined = values.join(", ");
+      if (field === "카테고리") updated["카테고리"] = first;
+      if (field === "가격") updated["유료"] = first === "유료" ? "O" : "X";
+      if (field === "성인") updated["성인"] = first === "성인" ? "O" : "X";
+      if (["장르", "키워드", "공", "수"].includes(field)) updated[field] = field === "장르" ? withoutRps(joined) : joined;
+      if (field === "스포일러") updated["엔딩"] = joined;
+      if (field === "시리즈여부") {
+        updated["시리즈"] = first === "시리즈" ? "Y" : "";
+        if (first === "단편") {
+          updated["연재상태"] = "";
+          updated["시리즈명"] = "";
+          updated["시리즈회차"] = "";
+        }
+      }
+      if (field === "연재상태") {
+        updated["연재상태"] = first === "단편" ? "" : first;
+        updated["시리즈"] = first === "단편" ? "" : "Y";
+        if (first === "단편") {
+          updated["시리즈명"] = "";
+          updated["시리즈회차"] = "";
+        }
+      }
+      return updated;
     }
 
     function escapeHtml(value) {
@@ -4400,29 +4587,33 @@
       }
     }
 
-    async function bulkUpdateCategory() {
+    async function bulkUpdateFilters() {
       const posts = selectedAdminPosts();
-      const category = normalize(els.adminBulkCategory.value);
-      if (!posts.length || !category) return;
-      if (!confirm(`선택한 ${posts.length}개 글의 카테고리를 '${category}'(으)로 바꿀까요?`)) return;
+      const field = normalize(els.adminBulkField.value);
+      const values = selectedAdminBulkValues();
+      if (!posts.length || !field || !values.length) return;
+      const valueLabel = values.join(", ");
+      if (!confirm(`선택한 ${posts.length}개 글의 ${field} 항목을 '${valueLabel}'(으)로 교체할까요?`)) return;
+      const updatedPosts = posts.map((post) => postWithBulkValue(post, field, values));
 
-      els.status.textContent = "선택한 글의 카테고리를 변경하는 중입니다.";
+      els.status.textContent = `선택한 글의 ${field} 항목을 변경하는 중입니다.`;
       try {
         if (!hasSupabaseConfig() && !CONFIG.ADMIN_API_URL) {
-          posts.forEach((post) => upsertLocal({ ...post, "카테고리": category }));
-          state.posts = state.posts.map((post) => state.adminSelected.has(adminPostKey(post)) ? { ...post, "카테고리": category } : post);
+          updatedPosts.forEach(upsertLocal);
+          const updatedByKey = new Map(updatedPosts.map((post) => [adminPostKey(post), post]));
+          state.posts = state.posts.map((post) => updatedByKey.get(adminPostKey(post)) || post);
           state.adminSelected.clear();
           render();
-          els.status.textContent = "선택한 글의 카테고리를 이 브라우저에서 변경했습니다.";
+          els.status.textContent = `선택한 글의 ${field} 항목을 이 브라우저에서 변경했습니다.`;
           return;
         }
-        for (let index = 0; index < posts.length; index += 1) {
-          els.status.textContent = `카테고리 변경 중 ${index + 1}/${posts.length}`;
-          await sendAdminAction("update", { ...posts[index], "카테고리": category });
+        for (let index = 0; index < updatedPosts.length; index += 1) {
+          els.status.textContent = `${field} 변경 중 ${index + 1}/${updatedPosts.length}`;
+          await sendAdminAction("update", updatedPosts[index]);
         }
         state.adminSelected.clear();
         await loadData();
-        els.status.textContent = `${posts.length}개 글의 카테고리를 Supabase에 반영했습니다.`;
+        els.status.textContent = `${posts.length}개 글의 ${field} 항목을 Supabase에 반영했습니다.`;
       } catch (error) {
         els.status.textContent = `일괄 수정에 실패했습니다: ${error.message}`;
         alert(`일괄 수정에 실패했습니다. ${error.message}`);
@@ -4545,8 +4736,15 @@
       });
       renderAdminList();
     });
-    els.adminBulkCategory.addEventListener("change", updateAdminBulkControls);
-    els.adminBulkCategoryApply.addEventListener("click", bulkUpdateCategory);
+    els.adminSortButtons.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-admin-sort]");
+      if (!button) return;
+      state.adminSort = button.dataset.adminSort;
+      els.adminSortButtons.querySelectorAll("[data-admin-sort]").forEach((item) => item.classList.toggle("active", item === button));
+      renderAdminList();
+    });
+    els.adminBulkField.addEventListener("change", buildAdminBulkValueOptions);
+    els.adminBulkApply.addEventListener("click", bulkUpdateFilters);
     els.adminBulkDelete.addEventListener("click", bulkDeletePosts);
     els.adminToggle.addEventListener("click", toggleAdminMode);
     els.adminRefresh.addEventListener("click", refreshAdminData);
@@ -4629,6 +4827,7 @@
     });
 
     buildAdminMultiSelects();
+    buildAdminBulkValueOptions();
     loadData();
   </script>
 </body>
