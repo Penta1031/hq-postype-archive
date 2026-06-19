@@ -1228,16 +1228,26 @@
       margin-bottom: 12px;
     }
 
-    .admin-head-actions {
+    .admin-run-actions {
       display: grid;
       gap: 7px;
-      min-width: 118px;
+      margin-bottom: 10px;
     }
 
-    .admin-head-actions .button {
-      min-height: 34px;
+    .admin-secondary-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+    }
+
+    .admin-run-actions .button {
+      min-height: 38px;
       font-size: 12px;
       white-space: nowrap;
+    }
+
+    .admin-run-actions > .crawler-manual {
+      min-height: 43px;
     }
 
     .admin-head strong {
@@ -1319,6 +1329,65 @@
       max-width: 100%;
       min-width: 0;
       overflow-x: hidden;
+    }
+
+    .admin-bulkbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px;
+      margin: 0 0 12px;
+      padding: 10px;
+      border: 1px solid #262a31;
+      border-radius: 9px;
+      background: #101114;
+    }
+
+    .admin-select-all {
+      grid-column: 1 / -1;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      color: #b8bec7;
+      font-size: 12px;
+      cursor: pointer;
+    }
+
+    .admin-select-all input,
+    .admin-row-check input {
+      width: 17px;
+      height: 17px;
+      min-height: 0;
+      margin: 0;
+      accent-color: #8fe1d4;
+    }
+
+    .admin-bulkbar select,
+    .admin-bulkbar .button {
+      min-height: 36px;
+      font-size: 12px;
+    }
+
+    .admin-bulk-delete {
+      grid-column: 1 / -1;
+    }
+
+    .admin-list-row {
+      display: grid;
+      grid-template-columns: 30px minmax(0, 1fr);
+      align-items: stretch;
+      gap: 7px;
+      min-width: 0;
+    }
+
+    .admin-row-check {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border: 1px solid #292b30;
+      border-radius: 8px;
+      background: #151619;
+      cursor: pointer;
     }
 
     .crawler-admin {
@@ -1710,7 +1779,7 @@
     .library-actions {
       display: flex;
       align-items: center;
-      justify-content: space-between;
+      justify-content: flex-end;
       gap: 8px;
       margin-top: 12px;
     }
@@ -1727,18 +1796,17 @@
       cursor: pointer;
     }
 
-    .bookmark-action {
+    .post-tool-action {
       width: 31px;
       min-height: 31px;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      margin-left: auto;
       padding: 0;
       border-radius: 999px;
     }
 
-    .bookmark-action svg,
+    .post-tool-action svg,
     .bookmark-toggle svg {
       width: 16px;
       height: 16px;
@@ -1749,9 +1817,14 @@
       stroke-linejoin: round;
     }
 
-    .bookmark-action.active svg,
+    .post-tool-action.active svg,
     .bookmark-toggle.active svg {
       fill: currentColor;
+    }
+
+    .post-tool-action.note-action.active svg {
+      fill: none;
+      color: #8fe1d4;
     }
 
     .library-action.active {
@@ -2145,11 +2218,6 @@
         display: grid;
       }
 
-      .admin-head-actions {
-        grid-template-columns: 1fr 1fr;
-        min-width: 0;
-      }
-
       .random-dock {
         right: 18px;
         bottom: 18px;
@@ -2199,18 +2267,20 @@
       <div class="admin-head">
         <div>
           <strong>관리자 모드</strong>
-          <p class="admin-note">신규 글은 버튼 아래에, 기존 글은 목록 바로 아래에 편집창이 열립니다.</p>
+          <p class="admin-note">크롤링 실행과 데이터 관리 작업을 여기에서 처리할 수 있습니다.</p>
         </div>
-        <div class="admin-head-actions">
-          <button class="button" id="adminRefreshButton" type="button">새로고침</button>
-          <button class="button primary" id="newPostButton" type="button">+ 신규 글</button>
+      </div>
+      <div class="admin-run-actions">
+        <button class="button primary crawler-manual" id="manualCrawlButton" type="button">수동 크롤링 실행</button>
+        <div class="admin-secondary-actions">
+          <button class="button" id="adminRefreshButton" type="button">데이터 새로고침</button>
+          <button class="button" id="newPostButton" type="button">+ 글 수동 추가</button>
         </div>
       </div>
       <div class="crawler-admin" id="crawlerAdmin">
         <section class="crawler-section">
           <div class="crawler-section-head">
             <strong>크롤링 상태</strong>
-            <button class="button crawler-manual" id="manualCrawlButton" type="button">새 글 확인</button>
           </div>
           <div class="crawler-status-grid">
             <div class="crawler-stat"><span>마지막 실행</span><strong id="crawlLastRun">-</strong></div>
@@ -2218,13 +2288,6 @@
             <div class="crawler-stat"><span>신규 발견</span><strong id="crawlFoundCount">0</strong></div>
             <div class="crawler-stat"><span>실패</span><strong id="crawlFailedCount">0</strong></div>
           </div>
-        </section>
-        <section class="crawler-section">
-          <div class="crawler-section-head">
-            <strong>신규글</strong>
-            <span id="newPostsCount">0건</span>
-          </div>
-          <div class="review-list" id="newPostsList"></div>
         </section>
         <section class="crawler-section">
           <div class="crawler-section-head">
@@ -2239,6 +2302,12 @@
       </label>
       <button class="filter-title admin-filter-toggle" id="adminFilterToggle" type="button"><strong>관리자 필터</strong><span id="adminFilterCaret">접기</span></button>
       <div class="admin-filters" id="adminFilterMount"></div>
+      <div class="admin-bulkbar">
+        <label class="admin-select-all"><input id="adminSelectAll" type="checkbox"><span id="adminSelectedCount">0개 선택</span></label>
+        <select id="adminBulkCategory" aria-label="선택한 글의 카테고리"><option value="">카테고리 선택</option><option>글</option><option>그림</option><option>기타</option></select>
+        <button class="button" id="adminBulkCategoryApply" type="button" disabled>카테고리 적용</button>
+        <button class="button danger admin-bulk-delete" id="adminBulkDelete" type="button" disabled>선택한 글 삭제</button>
+      </div>
       <div class="admin-list" id="adminList"></div>
       <div class="admin-editor" id="adminEditor" hidden>
         <section class="admin-editor-card">
@@ -2480,7 +2549,19 @@
       <p class="summary"></p>
       <div class="tag-row"></div>
       <div class="library-actions">
-        <button class="library-action bookmark-action" type="button" aria-label="북마크">
+        <button class="library-action post-tool-action note-action" type="button" aria-label="메모" title="메모">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <path d="M14 2v6h6M8 13h8M8 17h5"></path>
+          </svg>
+        </button>
+        <button class="library-action post-tool-action excerpt-action" type="button" aria-label="발췌" title="발췌">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M3 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2H4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2h3c0 3-1 5-4 6v2z"></path>
+            <path d="M14 21c3 0 7-1 7-8V5c0-1.25-.75-2-2-2h-4c-1.25 0-2 .75-2 1.97V11c0 1.25.75 2 2 2h3c0 3-1 5-4 6v2z"></path>
+          </svg>
+        </button>
+        <button class="library-action post-tool-action bookmark-action" type="button" aria-label="북마크" title="북마크">
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M6 4.5A2.5 2.5 0 0 1 8.5 2h7A2.5 2.5 0 0 1 18 4.5v17l-6-3.5-6 3.5z"></path>
           </svg>
@@ -2583,6 +2664,8 @@
       excerptPinch: null,
       excerptDragPoint: null,
       adminPassword: "",
+      adminSelected: new Set(),
+      adminVisiblePosts: [],
       seriesStats: new Map(),
       crawlRun: null
     };
@@ -2611,11 +2694,14 @@
       crawlLastStatus: $("#crawlLastStatus"),
       crawlFoundCount: $("#crawlFoundCount"),
       crawlFailedCount: $("#crawlFailedCount"),
-      newPostsCount: $("#newPostsCount"),
-      newPostsList: $("#newPostsList"),
       aiReviewCount: $("#aiReviewCount"),
       aiReviewList: $("#aiReviewList"),
       manualCrawlButton: $("#manualCrawlButton"),
+      adminSelectAll: $("#adminSelectAll"),
+      adminSelectedCount: $("#adminSelectedCount"),
+      adminBulkCategory: $("#adminBulkCategory"),
+      adminBulkCategoryApply: $("#adminBulkCategoryApply"),
+      adminBulkDelete: $("#adminBulkDelete"),
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
       adminForm: $("#adminForm"),
@@ -3168,6 +3254,7 @@
       els.adminRefresh.textContent = "갱신 중";
       try {
         closeAdminEditor();
+        state.adminSelected.clear();
         await loadData();
         els.status.textContent = "관리자 데이터를 새로 불러왔습니다.";
       } catch (error) {
@@ -3360,9 +3447,7 @@
       els.crawlFailedCount.textContent = Number(run.failed_count || 0).toLocaleString("ko-KR");
       const pendingPosts = crawlerPosts();
       const reviewPosts = pendingPosts.filter(aiNeedsReview);
-      els.newPostsCount.textContent = `${pendingPosts.length}건`;
       els.aiReviewCount.textContent = `${reviewPosts.length}건`;
-      renderReviewList(els.newPostsList, pendingPosts.slice(0, 8), "승인 대기 중인 신규글이 없습니다.");
       renderReviewList(els.aiReviewList, reviewPosts.slice(0, 8), "AI 검수대기 글이 없습니다.");
     }
 
@@ -3399,6 +3484,8 @@
     function renderAdminList() {
       renderCrawlerAdmin();
       els.adminList.innerHTML = "";
+      const validKeys = new Set(state.posts.map(adminPostKey));
+      state.adminSelected = new Set([...state.adminSelected].filter((key) => validKeys.has(key)));
       const query = normalize(state.adminQuery).toLowerCase();
       const posts = state.posts
         .filter((post) => matchesPost(post, state.adminActive, query))
@@ -3406,6 +3493,8 @@
         .sort((a, b) => {
           return Date.parse(normalize(b["날짜"])) - Date.parse(normalize(a["날짜"]));
         });
+      state.adminVisiblePosts = posts;
+      updateAdminBulkControls();
       if (!state.posts.length) {
         els.adminList.innerHTML = `<div class="empty">아직 불러온 글이 없습니다.</div>`;
         return;
@@ -3415,6 +3504,21 @@
         return;
       }
       posts.forEach((post) => {
+        const row = document.createElement("div");
+        row.className = "admin-list-row";
+        const checkLabel = document.createElement("label");
+        checkLabel.className = "admin-row-check";
+        checkLabel.title = "글 선택";
+        const checkbox = document.createElement("input");
+        checkbox.type = "checkbox";
+        checkbox.setAttribute("aria-label", `${normalize(post["제목"]) || "제목 없음"} 선택`);
+        checkbox.checked = state.adminSelected.has(adminPostKey(post));
+        checkbox.addEventListener("change", () => {
+          const key = adminPostKey(post);
+          checkbox.checked ? state.adminSelected.add(key) : state.adminSelected.delete(key);
+          updateAdminBulkControls();
+        });
+        checkLabel.appendChild(checkbox);
         const button = document.createElement("button");
         button.className = "admin-item";
         button.type = "button";
@@ -3422,9 +3526,34 @@
           <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
           <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
-        button.addEventListener("click", () => fillAdminForm(post, button));
-        els.adminList.appendChild(button);
+        button.addEventListener("click", () => fillAdminForm(post, row));
+        row.append(checkLabel, button);
+        els.adminList.appendChild(row);
       });
+    }
+
+    function adminPostKey(post) {
+      const id = normalize(post._supabaseId);
+      return id ? `id:${id}` : `row:${normalize(post._rowNumber)}`;
+    }
+
+    function selectedAdminPosts() {
+      return state.posts.filter((post) => state.adminSelected.has(adminPostKey(post)));
+    }
+
+    function adminPostRef(post) {
+      return { _supabaseId: post._supabaseId, _rowNumber: post._rowNumber };
+    }
+
+    function updateAdminBulkControls() {
+      const count = state.adminSelected.size;
+      const visibleKeys = state.adminVisiblePosts.map(adminPostKey).filter(Boolean);
+      const visibleSelected = visibleKeys.filter((key) => state.adminSelected.has(key)).length;
+      els.adminSelectedCount.textContent = `${count}개 선택`;
+      els.adminSelectAll.checked = Boolean(visibleKeys.length && visibleSelected === visibleKeys.length);
+      els.adminSelectAll.indeterminate = visibleSelected > 0 && visibleSelected < visibleKeys.length;
+      els.adminBulkCategoryApply.disabled = count === 0 || !normalize(els.adminBulkCategory.value);
+      els.adminBulkDelete.disabled = count === 0;
     }
 
     function escapeHtml(value) {
@@ -3461,6 +3590,8 @@
       const badges = node.querySelector(".badges");
       const tagRow = node.querySelector(".tag-row");
       const edit = node.querySelector(".edit-button");
+      const noteButton = node.querySelector(".note-action");
+      const excerptButton = node.querySelector(".excerpt-action");
       const bookmarkButton = node.querySelector(".bookmark-action");
       const series = seriesInfo(post);
 
@@ -3482,11 +3613,13 @@
         splitTags(post[group]).forEach((tag) => tagRow.appendChild(makeTag(tag)));
       });
       renderEndingTags(post, tagRow);
-      renderLibraryButtons(post, bookmarkButton);
+      renderLibraryButtons(post, bookmarkButton, noteButton);
+      noteButton.addEventListener("click", () => openNoteModal(post));
+      excerptButton.addEventListener("click", () => openExcerptModal(post));
       bookmarkButton.addEventListener("click", () => {
         const entry = postLibraryEntry(post);
         updateLibraryEntry(post, { bookmarked: !entry.bookmarked, updatedAt: new Date().toISOString() });
-        renderLibraryButtons(post, bookmarkButton);
+        renderLibraryButtons(post, bookmarkButton, noteButton);
         renderLibraryList();
       });
       edit.addEventListener("click", () => fillAdminForm(post));
@@ -3497,10 +3630,17 @@
       return node;
     }
 
-    function renderLibraryButtons(post, bookmarkButton) {
+    function renderLibraryButtons(post, bookmarkButton, noteButton) {
       const entry = state.library[postKey(post)] || {};
       bookmarkButton.classList.toggle("active", Boolean(entry.bookmarked));
       bookmarkButton.setAttribute("aria-label", entry.bookmarked ? "북마크 해제" : "북마크");
+      bookmarkButton.title = entry.bookmarked ? "북마크 해제" : "북마크";
+      if (noteButton) {
+        const hasNote = Boolean(normalize(entry.note));
+        noteButton.classList.toggle("active", hasNote);
+        noteButton.setAttribute("aria-label", hasNote ? "메모 수정" : "메모");
+        noteButton.title = hasNote ? "메모 수정" : "메모";
+      }
     }
 
     function setLibraryView(view) {
@@ -4181,10 +4321,10 @@
       els.manualCrawlButton.disabled = true;
       const originalText = els.manualCrawlButton.textContent;
       els.manualCrawlButton.textContent = "실행 요청 중";
-      els.status.textContent = "GitHub Actions에 새 글 확인 실행을 요청하는 중입니다.";
+      els.status.textContent = "GitHub Actions에 수동 크롤링 실행을 요청하는 중입니다.";
       try {
         const result = await requestAdminFunction("run_crawler", {});
-        els.status.textContent = "새 글 확인 실행을 요청했습니다. 잠시 뒤 새로고침을 눌러 상태를 확인해 주세요.";
+        els.status.textContent = "수동 크롤링 실행을 요청했습니다. 잠시 뒤 데이터 새로고침을 눌러 상태를 확인해 주세요.";
         if (result.actionsUrl && confirm("GitHub Actions 실행 화면을 열까요?")) {
           window.open(result.actionsUrl, "_blank", "noopener");
         }
@@ -4257,6 +4397,66 @@
       } catch (error) {
         els.status.textContent = `삭제에 실패했습니다: ${error.message}`;
         alert(`삭제에 실패했습니다. ${error.message}`);
+      }
+    }
+
+    async function bulkUpdateCategory() {
+      const posts = selectedAdminPosts();
+      const category = normalize(els.adminBulkCategory.value);
+      if (!posts.length || !category) return;
+      if (!confirm(`선택한 ${posts.length}개 글의 카테고리를 '${category}'(으)로 바꿀까요?`)) return;
+
+      els.status.textContent = "선택한 글의 카테고리를 변경하는 중입니다.";
+      try {
+        if (!hasSupabaseConfig() && !CONFIG.ADMIN_API_URL) {
+          posts.forEach((post) => upsertLocal({ ...post, "카테고리": category }));
+          state.posts = state.posts.map((post) => state.adminSelected.has(adminPostKey(post)) ? { ...post, "카테고리": category } : post);
+          state.adminSelected.clear();
+          render();
+          els.status.textContent = "선택한 글의 카테고리를 이 브라우저에서 변경했습니다.";
+          return;
+        }
+        for (let index = 0; index < posts.length; index += 1) {
+          els.status.textContent = `카테고리 변경 중 ${index + 1}/${posts.length}`;
+          await sendAdminAction("update", { ...posts[index], "카테고리": category });
+        }
+        state.adminSelected.clear();
+        await loadData();
+        els.status.textContent = `${posts.length}개 글의 카테고리를 Supabase에 반영했습니다.`;
+      } catch (error) {
+        els.status.textContent = `일괄 수정에 실패했습니다: ${error.message}`;
+        alert(`일괄 수정에 실패했습니다. ${error.message}`);
+      }
+    }
+
+    async function bulkDeletePosts() {
+      const posts = selectedAdminPosts();
+      if (!posts.length) return;
+      if (!confirm(`선택한 ${posts.length}개 글을 정말 삭제할까요?`)) return;
+
+      els.status.textContent = "선택한 글을 삭제하는 중입니다.";
+      try {
+        if (!hasSupabaseConfig() && !CONFIG.ADMIN_API_URL) {
+          const selectedRows = new Set(posts.map((post) => normalize(post._rowNumber)));
+          const locals = localPosts().filter((post) => !selectedRows.has(normalize(post._rowNumber)));
+          selectedRows.forEach((rowNumber) => locals.unshift({ _rowNumber: rowNumber, _deleted: true }));
+          saveLocalPosts(locals);
+          state.posts = state.posts.filter((post) => !state.adminSelected.has(adminPostKey(post)));
+          state.adminSelected.clear();
+          render();
+          els.status.textContent = "선택한 글을 이 브라우저에서 삭제했습니다.";
+          return;
+        }
+        for (let index = 0; index < posts.length; index += 1) {
+          els.status.textContent = `선택한 글 삭제 중 ${index + 1}/${posts.length}`;
+          await sendAdminAction("delete", adminPostRef(posts[index]));
+        }
+        state.adminSelected.clear();
+        await loadData();
+        els.status.textContent = `${posts.length}개 글을 Supabase에서 삭제 처리했습니다.`;
+      } catch (error) {
+        els.status.textContent = `일괄 삭제에 실패했습니다: ${error.message}`;
+        alert(`일괄 삭제에 실패했습니다. ${error.message}`);
       }
     }
 
@@ -4338,6 +4538,16 @@
       els.adminFilterMount.classList.toggle("is-collapsed");
       els.adminFilterCaret.textContent = els.adminFilterMount.classList.contains("is-collapsed") ? "펼치기" : "접기";
     });
+    els.adminSelectAll.addEventListener("change", () => {
+      state.adminVisiblePosts.forEach((post) => {
+        const key = adminPostKey(post);
+        els.adminSelectAll.checked ? state.adminSelected.add(key) : state.adminSelected.delete(key);
+      });
+      renderAdminList();
+    });
+    els.adminBulkCategory.addEventListener("change", updateAdminBulkControls);
+    els.adminBulkCategoryApply.addEventListener("click", bulkUpdateCategory);
+    els.adminBulkDelete.addEventListener("click", bulkDeletePosts);
     els.adminToggle.addEventListener("click", toggleAdminMode);
     els.adminRefresh.addEventListener("click", refreshAdminData);
     els.newPost.addEventListener("click", openNewPostForm);

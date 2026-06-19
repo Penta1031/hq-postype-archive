@@ -19,17 +19,49 @@ export async function collectPostLinks(context: BrowserContext, sourceUrl: strin
   try {
     await page.goto(sourceUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
     await settleAndScroll(page);
-    const hrefs = await page.locator("a[href]").evaluateAll((links) =>
-      links.map((link) => (link as HTMLAnchorElement).href)
+    const candidates = await page.locator("a[href]").evaluateAll((links) =>
+      links.map((link) => {
+        const anchor = link as HTMLAnchorElement;
+        let cardText = (anchor.innerText || anchor.textContent || "").trim();
+        let parent = anchor.parentElement;
+        for (let depth = 0; depth < 5 && parent; depth += 1, parent = parent.parentElement) {
+          const text = (parent.innerText || "").trim();
+          if (text.length >= cardText.length && text.length <= 1600) cardText = text;
+          if (parent.matches("article, li")) break;
+        }
+        const sectionText = (anchor.closest("section")?.textContent || "").trim();
+        return {
+          href: anchor.href,
+          contextText: [cardText, sectionText.length <= 2500 ? sectionText : ""].filter(Boolean).join("\n"),
+        };
+      })
     );
-    const postLinks = hrefs
-      .map((href) => normalizePostUrl(href, sourceUrl))
-      .filter((href) => href && /\/post\/\d+/.test(href))
-      .map((url): PostLink => ({ url, postypePostId: postypePostIdFromUrl(url), sourceUrl }));
+    const postLinks: PostLink[] = [];
+    for (const candidate of candidates) {
+      const url = normalizePostUrl(candidate.href, sourceUrl);
+      if (!url || !/\/post\/\d+/.test(url) || isPromotionalCandidate(url, candidate.contextText)) continue;
+      postLinks.push({ url, postypePostId: postypePostIdFromUrl(url), sourceUrl });
+    }
     return uniqueBy(postLinks, (item) => item.url);
   } finally {
     await page.close();
   }
+}
+
+const PROMOTION_MARKERS = /(?:^|\s)광고(?:\s|$)|프로모션|포스타입\s*포인트|포인트\s*충전|보너스\s*코인|세계관\s*메이커|오픈\s*채널\s*랭킹|공식\s*커뮤니티|재방문\s*많은\s*리퀘스트|좋아서\s*또\s*왔어요/iu;
+
+function isPromotionalCandidate(url: string, contextText: string) {
+  const pathname = new URL(url).pathname.toLowerCase();
+  if (/\/@(?:postype|postype_official)(?:\/|$)/.test(pathname)) return true;
+  return PROMOTION_MARKERS.test(contextText);
+}
+
+export function isExcludedPost(post: ExtractedPost) {
+  const pathname = new URL(post.link).pathname.toLowerCase();
+  if (/\/@(?:postype|postype_official)(?:\/|$)/.test(pathname)) return true;
+  const author = cleanAuthor(post.author).toLowerCase();
+  if (["포스타입", "postype"].includes(author)) return true;
+  return PROMOTION_MARKERS.test([post.title, post.author, post.tags.join(" ")].join("\n"));
 }
 
 async function settleAndScroll(page: Page) {

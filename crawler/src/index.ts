@@ -1,6 +1,6 @@
 import { classificationRow, classifyPost, reviewRequired } from "./classify.js";
 import { sendDiscord } from "./discord.js";
-import { collectPostLinks, createPostypeContext, extractPost } from "./postype.js";
+import { collectPostLinks, createPostypeContext, extractPost, isExcludedPost } from "./postype.js";
 import { createRun, finishRun, getEnabledSources, getExistingArchive, insertArchiveRow, markSourceChecked, updateArchiveRow } from "./supabase.js";
 import type { RunSummary } from "./types.js";
 import { truthyEnv, uniqueBy } from "./utils.js";
@@ -55,6 +55,10 @@ async function main() {
     for (const link of newLinks) {
       const post = await extractPost(context, link);
       try {
+        if (isExcludedPost(post)) {
+          summary.foundCount = Math.max(0, summary.foundCount - 1);
+          continue;
+        }
         if (post.crawlStatus !== "success") {
           await insertArchiveRow(post, { ai_status: "skipped" });
           summary.failedCount += 1;
