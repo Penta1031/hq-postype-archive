@@ -4,11 +4,7 @@
 
 ## 이용 안내
 
-아카이브 목록과 일부 분류 기능은 자동화되어 있으며, 자료 정리 목적 외에는 사용하지 않습니다.
-
-일부 기능에 AI를 사용하고 있지만, 수집한 자료를 정리하고 검색하기 쉽게 만드는 용도로만 활용합니다.
-
-목록에서 내리고 싶은 글이 있거나 오류, 문의사항이 있다면 디엠, 스핀, 또는 사이트 하단 문의로 편하게 연락해 주세요.
+오류나 문의사항은 디엠 혹은 [큐리어스](https://curious.quizby.me/Penta_1031/m)로 문의 부탁드립니다.
 
 ## 데이터 연결
 
@@ -23,59 +19,20 @@ SUPABASE_PUBLIC_VIEW: "postype_archive_public"
 
 샘플 포스트만 보이면 Supabase 연결이 실패한 상태입니다. 화면에 표시되는 상태 문구를 확인한 뒤 URL과 anon key를 다시 확인하세요.
 
-## 자동 크롤링 MVP
-
-`supabase/schema.sql`을 Supabase SQL Editor에서 실행한 뒤 `postype_sources`에 크롤링할 포스타입 소스 URL을 넣어 주세요.
-
-GitHub Actions Secret:
-
-- `SUPABASE_URL`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `OPENAI_API_KEY` 또는 `GEMINI_API_KEY`
-- `POSTYPE_AUTH_STATE`
-- `DISCORD_WEBHOOK_URL`
-
-GitHub Actions Variable:
-
-- `ADMIN_PAGE_URL`
-- `SEND_DISCORD_WHEN_EMPTY` 기본값 `false`
-- `POSTYPE_SOURCE_URLS` DB 소스가 비어 있을 때만 쓰는 쉼표 구분 fallback
-- `AI_PROVIDER` 기본값 `openai`, Gemini를 쓰면 `gemini`
-- `AI_FALLBACK_PROVIDER` Gemini 실패 시 OpenAI로 재시도하려면 `openai`
-- `OPENAI_MODEL` 기본값 `gpt-4.1-mini`
-- `GEMINI_MODEL` 기본값 `gemini-3.5-flash`
-- `GEMINI_MAX_ATTEMPTS` Gemini 일시 오류 재시도 횟수, 기본값 `4`
-- `AI_REVIEW_CONFIDENCE_THRESHOLD` 기본값 `0.72`
-
-`POSTYPE_AUTH_STATE`는 Playwright `storageState` JSON 또는 base64 JSON을 넣습니다. 로그인/성인글/구매글은 해당 계정이 정상 열람 가능한 범위에서만 수집되며, 접근 불가 글은 `crawl_status`로 실패 기록만 남깁니다.
-
-관리자 화면의 “수동 크롤링 실행” 버튼은 `config.js`의 `MANUAL_CRAWL_URL` 또는 `GITHUB_REPOSITORY`를 설정하면 GitHub Actions 수동 실행 화면으로 연결됩니다.
-
-“글 수동 추가”에서는 포스타입 링크만 붙여 넣고 “링크로 불러오기 + AI 분류”를 누를 수 있습니다. GitHub Actions가 로그인 세션으로 글을 읽고 AI 분류한 뒤 Supabase에 자동 저장하며, 완료까지 보통 1~3분 걸립니다. 포스타입 공식·바라바라·광고·프로모션·추천 채널 영역의 글은 수집 대상에서 제외합니다.
-
-관리자 화면에서 “수동 크롤링 실행” 버튼으로 GitHub Actions를 직접 실행하려면 Supabase Edge Function `postype-admin`에 아래 Secret을 추가합니다.
-
-- `GITHUB_WORKFLOW_TOKEN` GitHub fine-grained token 또는 classic PAT. Actions workflow 실행 권한 필요
-- `GITHUB_REPOSITORY` 예: `Penta1031/hq-postype-archive`
-- `GITHUB_WORKFLOW_ID` 기본값 `postype-sync.yml`
-- `GITHUB_WORKFLOW_REF` 기본값 `main`
-- `ADMIN_ALLOWED_ORIGIN` 관리자 페이지 주소. 예: `https://hq-postype-archive.vercel.app`
-- `ADMIN_SESSION_SECRET` 관리자 임시 로그인 표 서명용 긴 무작위 문자열
-
 ## 보안 적용
 
-`supabase/security-hardening.sql`을 Supabase SQL Editor에서 한 번 실행하면 공개 검색기는 검색에 필요한 열만 읽고, AI 원본 응답·크롤링 오류·수집 출처 등은 관리자 로그인 후에만 읽습니다. 기존 데이터는 삭제되지 않습니다.
+`supabase/security-hardening.sql`을 Supabase SQL Editor에서 한 번 실행하면 공개 검색기는 검색에 필요한 열만 읽고, 내부 관리 정보는 관리자 로그인 후에만 읽습니다. 기존 데이터는 삭제되지 않습니다.
 
-`supabase/add-filter-config.sql`을 한 번 실행하면 관리자 화면에서 장르·키워드·공·수 필터 단어를 추가하거나 목록에서 삭제할 수 있습니다. 변경한 목록은 검색 화면과 다음 AI 분류에 함께 적용됩니다.
+`supabase/add-filter-config.sql`을 한 번 실행하면 관리자 화면에서 장르·키워드·공·수 필터 단어를 추가하거나 목록에서 삭제할 수 있습니다. 변경한 목록은 검색 화면에 반영됩니다.
 
-신규 글이 시리즈로 분류되면 같은 `series_name`의 장르·키워드·공·수 값을 자동으로 통일합니다. 관리자 검수 회차가 있으면 그 값을 우선하며, 관리자 화면에서 시리즈 글 하나를 수정해도 같은 시리즈 전체에 네 필드가 함께 반영됩니다.
+작가가 시리즈 글을 등록하거나 수정하면 같은 `series_name`의 장르·키워드·공·수 값이 함께 반영됩니다.
 
 관리자 로그인은 실패 횟수를 제한하며, 성공 후 발급되는 임시 로그인 표는 30분 동안만 브라우저 메모리에 보관됩니다. Vercel 배포에서는 `vercel.json`의 보안 헤더도 자동 적용됩니다.
 # 작가 업로드 채널
 
 관리자는 모바일 관리자 모드의 `작가 계정·키 관리`에서 작가별 계정을 만들고 전용 키를 발급·재발급·정지할 수 있습니다. 키 원문은 DB에 저장하지 않고 SHA-256 해시만 저장하므로, 분실한 키는 조회하지 않고 새로 발급합니다.
 
-작가는 `작가 업로드`에서 작가명과 전용 키로 로그인합니다. 등록된 본인 포스타입 채널의 글만 신청할 수 있고, 본인 신청만 수정·숨김 삭제할 수 있습니다. 신청은 관리자 승인 전까지 공개 검색기에 나오지 않습니다.
+작가는 `작가 업로드`에서 작가명과 전용 키로 로그인합니다. 등록된 본인 포스타입 채널의 글만 직접 등록할 수 있고, 기존에 관리자가 등록한 같은 작가명의 글까지 한번에 조회·수정·삭제할 수 있습니다. `posty.pe` 축약 링크도 지원합니다.
 
 최초 설치 시 `supabase/add-author-submissions.sql`을 Supabase SQL Editor에서 한 번 실행하고 `postype-admin` Edge Function을 재배포합니다. 추가 Secret은 필요하지 않습니다.
 

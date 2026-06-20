@@ -1,9 +1,6 @@
 name: Postype Sync
 
 on:
-  schedule:
-    # KST 04:00 = UTC 19:00 on the previous day.
-    - cron: "0 19 * * *"
   workflow_dispatch:
     inputs:
       post_url:

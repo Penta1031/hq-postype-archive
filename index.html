@@ -1799,6 +1799,38 @@
       border-top: 1px solid var(--line);
     }
 
+    .author-filter-field {
+      display: grid;
+      gap: 6px;
+      align-content: start;
+    }
+
+    .author-filter-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .author-suggest-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      color: #9aa6b2;
+      font-size: 11px;
+      cursor: pointer;
+    }
+
+    .author-suggest-toggle input {
+      width: 16px;
+      height: 16px;
+      min-height: 0;
+      margin: 0;
+      accent-color: #8fe1d4;
+    }
+
+    .author-suggest-input[hidden] { display: none; }
+
     .author-verification {
       display: grid;
       gap: 10px;
@@ -2691,39 +2723,12 @@
         </div>
       </div>
       <div class="admin-run-actions">
-        <button class="button primary crawler-manual" id="manualCrawlButton" type="button">수동 크롤링 실행</button>
         <div class="admin-secondary-actions">
           <button class="button" id="adminRefreshButton" type="button">데이터 새로고침</button>
           <button class="button" id="newPostButton" type="button">+ 글 수동 추가</button>
-          <button class="button" id="adminUnifySeriesButton" type="button" style="grid-column: 1 / -1;">시리즈 필터 전체 통일</button>
         </div>
       </div>
       <div class="crawler-admin" id="crawlerAdmin">
-        <section class="crawler-section">
-          <div class="crawler-section-head">
-            <strong>크롤링 상태</strong>
-          </div>
-          <div class="crawler-status-grid">
-            <div class="crawler-stat"><span>마지막 실행</span><strong id="crawlLastRun">-</strong></div>
-            <div class="crawler-stat"><span>상태</span><strong id="crawlLastStatus">-</strong></div>
-            <div class="crawler-stat"><span>신규 발견</span><strong id="crawlFoundCount">0</strong></div>
-            <div class="crawler-stat"><span>실패</span><strong id="crawlFailedCount">0</strong></div>
-          </div>
-        </section>
-        <details class="crawler-section" id="newPostsSection">
-          <summary class="crawler-section-head">
-            <strong>신규 글</strong>
-            <span id="newPostCount">0건</span>
-          </summary>
-          <div class="new-post-list" id="newPostList"></div>
-        </details>
-        <details class="crawler-section" id="authorSubmissionsAdmin" open>
-          <summary class="crawler-section-head">
-            <strong>작가 업로드 신청</strong>
-            <span id="authorSubmissionCount">0건</span>
-          </summary>
-          <div class="author-submission-list" id="authorSubmissionList"></div>
-        </details>
         <details class="crawler-section" id="authorAccountsAdmin">
           <summary class="crawler-section-head">
             <strong>작가 계정·키 관리</strong>
@@ -2746,8 +2751,6 @@
       <label class="admin-search">
         <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
       </label>
-      <button class="filter-title admin-filter-toggle" id="adminFilterToggle" type="button"><strong>관리자 필터</strong><span id="adminFilterCaret">접기</span></button>
-      <div class="admin-filters" id="adminFilterMount"></div>
       <details class="admin-vocabulary" id="adminVocabulary">
         <summary>필터 단어 관리</summary>
         <div class="admin-vocabulary-body">
@@ -2759,13 +2762,14 @@
             <button class="button primary" id="adminVocabularyAdd" type="button">추가</button>
           </div>
           <div class="admin-vocabulary-options" id="adminVocabularyOptions"></div>
-          <p class="admin-vocabulary-note">목록에서 삭제해도 기존 글에 저장된 값은 유지되며, 다음 AI 분류부터 사용하지 않습니다.</p>
+          <p class="admin-vocabulary-note">목록에서 삭제해도 기존 글에 저장된 값은 그대로 유지됩니다.</p>
         </div>
       </details>
       <div class="admin-list-tools">
         <span>목록 정렬</span>
         <div class="admin-sort-pills" id="adminSortButtons">
           <button class="admin-sort-pill active" type="button" data-admin-sort="date-desc">최신순</button>
+          <button class="admin-sort-pill" type="button" data-admin-sort="title-asc">제목순</button>
         </div>
       </div>
       <div class="admin-bulkbar">
@@ -2794,10 +2798,6 @@
             <label><span class="label">제목</span><input name="제목" required></label>
             <label><span class="label">작가</span><input name="작가"></label>
             <label class="wide"><span class="label">링크</span><input name="링크" type="url" placeholder="https://www.postype.com/@.../post/..."></label>
-            <div class="wide admin-ai-import" id="adminAiImportBox">
-              <button class="button primary" id="adminAiImportButton" type="button">링크로 불러오기 + AI 분류</button>
-              <p class="admin-ai-import-note">링크만 입력하면 제목·작가·날짜·장르·키워드·공·수·시리즈 정보를 읽어 자동 저장합니다.</p>
-            </div>
             <label><span class="label">날짜</span><input name="날짜" type="date"></label>
             <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
             <label><span class="label">유료</span><select name="유료"><option value="X">무료</option><option value="O">유료</option></select></label>
@@ -2838,13 +2838,7 @@
             <label><span class="label">연재상태</span><select name="연재상태"><option value="">미표기</option><option>단편</option><option>연재중</option><option>완결</option></select></label>
             <label><span class="label">시리즈명</span><input name="시리즈명" placeholder="시리즈명"></label>
             <label><span class="label">시리즈회차</span><input name="시리즈회차" placeholder="1, 2, 上, 下"></label>
-            <label class="wide"><span class="label">상태근거</span><input name="상태근거" placeholder="완결표기, 반복제목 등"></label>
             <label><span class="label">스포일러</span><input name="엔딩" placeholder="해피엔딩"></label>
-            <label><span class="label">AI 상태</span><select name="AI상태"><option value="pending">대기</option><option value="classified">분류완료</option><option value="review_required">검수대기</option><option value="approved">승인</option><option value="failed">실패</option><option value="skipped">건너뜀</option></select></label>
-            <label><span class="label">AI 신뢰도</span><input name="AI신뢰도" type="number" min="0" max="1" step="0.01"></label>
-            <label class="wide"><span class="label">AI 근거</span><input name="AI근거" placeholder="AI 판단 근거 메모"></label>
-            <label><span class="label">관리자 검수</span><select name="관리자검수"><option value="">미검수</option><option value="Y">승인</option></select></label>
-            <label class="wide"><span class="label">수집 출처</span><input name="수집출처" type="url"></label>
             <div class="wide top-actions">
               <button class="button primary" type="submit">저장</button>
               <button class="button danger" id="deletePost" type="button">삭제</button>
@@ -2857,9 +2851,7 @@
             <details class="guide panel">
                 <summary>이용 가이드</summary>
                 <div class="guide-body">
-                    <p>일부 분류 기능은 AI를 통해 자동화하고 있으며, 자료 정리 목적 외에는 절대 사용하지 않습니다.</p>
-                    <p>혹시 목록에서 글을 내리고 싶으시다면 관리자(@Penta_1031)에게 편하게 요청해주세요.</p>
-                    <p>오류나 문의사항은 디엠 혹은 에스크로 문의 부탁드립니다.</p>
+                    <p>오류나 문의사항은 디엠 혹은 <a href="https://curious.quizby.me/Penta_1031/m" target="_blank" rel="noreferrer">큐리어스</a>로 문의 부탁드립니다.</p>
                 </div>
             </details>
 
@@ -2868,7 +2860,7 @@
                 <div class="contact-body">
                     <div class="contact-links">
                         <a href="https://x.com/Penta_1031" target="_blank" rel="noreferrer">트위터 @Penta_1031</a>
-                        <a href="https://asked.kr/Penta_1031" target="_blank" rel="noreferrer">에스크</a>
+                        <a href="https://curious.quizby.me/Penta_1031/m" target="_blank" rel="noreferrer">큐리어스</a>
                     </div>
                 </div>
             </details>
@@ -2971,7 +2963,7 @@
       <div class="modal-head">
         <div>
           <h2 id="authorUploadTitle">작가 업로드</h2>
-          <p class="author-upload-intro">관리자가 발급한 작가별 전용 키로 로그인합니다. 등록된 본인 채널의 글만 신청하고 관리할 수 있습니다.</p>
+          <p class="author-upload-intro">관리자가 발급한 작가별 전용 키로 로그인합니다. 등록된 본인 채널의 글만 직접 등록·수정·삭제할 수 있습니다.</p>
           <p class="author-upload-intro" id="authorUploadStatus" role="status" aria-live="polite"></p>
         </div>
         <button class="modal-close" id="authorUploadClose" type="button" aria-label="닫기">×</button>
@@ -2992,9 +2984,9 @@
           <button class="button" id="authorLogout" type="button">로그아웃</button>
         </div>
       <form id="authorUploadForm" class="modal-grid" style="margin-top: 14px;">
-        <input type="hidden" name="submission_id">
+        <input type="hidden" name="archive_id">
         <label><span class="label">작품 제목</span><input name="title" maxlength="200" required></label>
-        <label><span class="label">포스타입 글 링크</span><input name="post_url" type="url" placeholder="https://www.postype.com/@.../post/..." required></label>
+        <label><span class="label">포스타입 글 링크</span><input name="post_url" type="url" placeholder="postype.com 또는 posty.pe 링크" required></label>
         <div class="modal-grid two">
           <label><span class="label">게시일</span><input name="published_date" type="date"></label>
           <label><span class="label">카테고리</span><select name="category"><option>글</option><option>그림</option><option>기타</option></select></label>
@@ -3008,15 +3000,16 @@
           <label><span class="label">연재상태</span><select name="serialization_status"><option>연재중</option><option>완결</option></select></label>
         </div>
         <div class="modal-grid two">
-          <div><span class="label">장르</span><input type="hidden" name="genres"><details class="author-selector" data-author-selector="장르"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
-          <div><span class="label">키워드</span><input type="hidden" name="keywords"><details class="author-selector" data-author-selector="키워드"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
-          <div><span class="label">공</span><input type="hidden" name="top_tags"><details class="author-selector" data-author-selector="공"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
-          <div><span class="label">수</span><input type="hidden" name="bottom_tags"><details class="author-selector" data-author-selector="수"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
+          <div class="author-filter-field"><div class="author-filter-head"><span class="label">장르</span><label class="author-suggest-toggle"><input type="checkbox" data-author-suggest-toggle="suggested_genres"><span>새 단어 제안</span></label></div><input type="hidden" name="genres"><details class="author-selector" data-author-selector="장르"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details><input class="author-suggest-input" name="suggested_genres" placeholder="쉼표로 구분" hidden></div>
+          <div class="author-filter-field"><div class="author-filter-head"><span class="label">키워드</span><label class="author-suggest-toggle"><input type="checkbox" data-author-suggest-toggle="suggested_keywords"><span>새 단어 제안</span></label></div><input type="hidden" name="keywords"><details class="author-selector" data-author-selector="키워드"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details><input class="author-suggest-input" name="suggested_keywords" placeholder="쉼표로 구분" hidden></div>
+          <div class="author-filter-field"><div class="author-filter-head"><span class="label">공</span><label class="author-suggest-toggle"><input type="checkbox" data-author-suggest-toggle="suggested_top_tags"><span>새 단어 제안</span></label></div><input type="hidden" name="top_tags"><details class="author-selector" data-author-selector="공"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details><input class="author-suggest-input" name="suggested_top_tags" placeholder="쉼표로 구분" hidden></div>
+          <div class="author-filter-field"><div class="author-filter-head"><span class="label">수</span><label class="author-suggest-toggle"><input type="checkbox" data-author-suggest-toggle="suggested_bottom_tags"><span>새 단어 제안</span></label></div><input type="hidden" name="bottom_tags"><details class="author-selector" data-author-selector="수"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details><input class="author-suggest-input" name="suggested_bottom_tags" placeholder="쉼표로 구분" hidden></div>
           <div><span class="label">스포일러</span><input type="hidden" name="endings"><details class="author-selector" data-author-selector="스포일러"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
         </div>
+        <p class="author-upload-intro">제안한 새 단어는 해당 글에 바로 저장됩니다. 전체 필터 목록에는 관리자가 필터 단어 관리에서 추가합니다.</p>
         <label class="author-honeypot" aria-hidden="true">웹사이트<input name="website" tabindex="-1" autocomplete="off"></label>
         <div class="random-result-actions">
-          <button class="button primary" id="authorCreateSubmission" type="submit">관리자 승인 요청</button>
+          <button class="button primary" id="authorCreateSubmission" type="submit">글 등록</button>
           <button class="button" id="authorCancelEdit" type="button">수정 취소</button>
         </div>
       </form>
@@ -3136,17 +3129,12 @@
       SUPABASE_TABLE: "postype_archive",
       SUPABASE_PUBLIC_VIEW: "postype_archive_public",
       ADMIN_FUNCTION_URL: "",
-      ADMIN_PAGE_URL: "",
-      MANUAL_CRAWL_URL: "",
-      GITHUB_REPOSITORY: "",
       SHOW_UNREVIEWED_POSTS: true,
-      AI_REVIEW_CONFIDENCE_THRESHOLD: 0.72,
       LOCAL_CSV_URL: "data/postype_archive_series_columns_limited.csv",
       ADMIN_API_URL: ""
     };
     Object.assign(CONFIG, window.POSTYPE_CONFIG || {});
     const LIBRARY_STORAGE_KEY = "hq-postype-library-v1";
-    const DISMISSED_NEW_POSTS_KEY = "hq-postype-dismissed-new-posts-v1";
 
     const TAG_GROUPS = {
       "카테고리": ["글", "그림", "기타"],
@@ -3215,7 +3203,6 @@
     const state = {
       posts: [],
       active: {},
-      adminActive: {},
       query: "",
       adminQuery: "",
       sort: "date-desc",
@@ -3240,9 +3227,6 @@
       adminVisiblePosts: [],
       adminBulkValues: new Set(),
       seriesStats: new Map(),
-      crawlRun: null,
-      dismissedNewPosts: loadDismissedNewPosts(),
-      authorSubmissions: [],
       authors: [],
       authorToken: "",
       authorProfile: null,
@@ -3270,22 +3254,12 @@
       adminLoginCancel: $("#adminLoginCancel"),
       adminPasswordInput: $("#adminPasswordInput"),
       adminSearch: $("#adminSearchInput"),
-      adminFilterToggle: $("#adminFilterToggle"),
-      adminFilterCaret: $("#adminFilterCaret"),
-      adminFilterMount: $("#adminFilterMount"),
       adminVocabularyGroup: $("#adminVocabularyGroup"),
       adminVocabularyInput: $("#adminVocabularyInput"),
       adminVocabularyAdd: $("#adminVocabularyAdd"),
       adminVocabularyOptions: $("#adminVocabularyOptions"),
       adminList: $("#adminList"),
-      crawlLastRun: $("#crawlLastRun"),
-      crawlLastStatus: $("#crawlLastStatus"),
-      crawlFoundCount: $("#crawlFoundCount"),
-      crawlFailedCount: $("#crawlFailedCount"),
-      newPostCount: $("#newPostCount"),
-      newPostList: $("#newPostList"),
       adminToastStack: $("#adminToastStack"),
-      manualCrawlButton: $("#manualCrawlButton"),
       adminSelectAll: $("#adminSelectAll"),
       adminSelectedCount: $("#adminSelectedCount"),
       adminSortButtons: $("#adminSortButtons"),
@@ -3298,10 +3272,7 @@
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
       adminForm: $("#adminForm"),
-      adminAiImportBox: $("#adminAiImportBox"),
-      adminAiImportButton: $("#adminAiImportButton"),
       adminRefresh: $("#adminRefreshButton"),
-      adminUnifySeries: $("#adminUnifySeriesButton"),
       newPost: $("#newPostButton"),
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
@@ -3321,8 +3292,6 @@
       authorSeriesFields: $("#authorSeriesFields"),
       authorCancelEdit: $("#authorCancelEdit"),
       authorOwnSubmissionList: $("#authorOwnSubmissionList"),
-      authorSubmissionCount: $("#authorSubmissionCount"),
-      authorSubmissionList: $("#authorSubmissionList"),
       authorAccountForm: $("#authorAccountForm"),
       authorAccountCount: $("#authorAccountCount"),
       authorAccountList: $("#authorAccountList"),
@@ -3410,6 +3379,7 @@
     function isPostypePostUrl(value) {
       try {
         const url = new URL(value);
+        if (url.hostname === "posty.pe" || url.hostname.endsWith(".posty.pe")) return Boolean(url.pathname.replace(/\//g, ""));
         const isPostype = url.hostname === "postype.com" || url.hostname.endsWith(".postype.com");
         return isPostype && /\/post\/\d+/.test(url.pathname);
       } catch {
@@ -3701,38 +3671,21 @@
         link: normalize(post["링크"]) || null,
         is_paid: postFlag(post["유료"]),
         is_adult: postFlag(post["성인"]),
-        preview: normalize(post["미리보기"]),
         category: normalize(post["카테고리"]),
         genres: withoutRps(post["장르"]),
         keywords: normalize(post["키워드"]),
         top_tags: normalize(post["공"]),
         bottom_tags: normalize(post["수"]),
         endings: normalize(post["엔딩"]),
-        ai_suggested_genres: normalize(post["AI제안장르"]),
-        ai_suggested_keywords: normalize(post["AI제안키워드"]),
-        ai_suggested_top: normalize(post["AI제안공"]),
-        ai_suggested_bottom: normalize(post["AI제안수"]),
-        ai_suggested_endings: normalize(post["AI제안엔딩"]),
-        summary: normalize(post["요약"]),
-        body_extract: normalize(post["본문추출"]),
-        ai_raw_response: normalize(post["AI원본응답"]),
-        ai_confidence: normalize(post["AI신뢰도"]) || null,
-        ai_processed_at: normalize(post["AI처리일시"]),
-        ai_status: normalize(post["AI상태"]),
-        ai_note: normalize(post["AI근거"]),
-        cleanup_note: normalize(post["정리메모"]),
         is_series: postFlag(post["시리즈"]),
         series_name: normalize(post["시리즈명"]),
         series_volume: normalize(post["시리즈회차"]),
         serialization_status: normalize(post["연재상태"]),
-        status_reason: normalize(post["상태근거"]),
-        series_columns_unified: postFlag(post["시리즈열통일"]),
-        series_columns_unified_note: normalize(post["시리즈열통일메모"]),
-        tag_limit_applied: postFlag(post["장르키워드5개제한"]),
-        tag_limit_note: normalize(post["장르키워드5개제한메모"]),
-        admin_reviewed: postFlag(post["관리자검수"]),
-        admin_reviewed_at: postFlag(post["관리자검수"]) ? new Date().toISOString() : null,
-        source_url: normalize(post["수집출처"]) || null
+        ...(action === "create" ? {
+          admin_reviewed: true,
+          admin_reviewed_at: new Date().toISOString(),
+          source_url: "admin_manual"
+        } : {})
       };
     }
 
@@ -3760,36 +3713,17 @@
       }
     }
 
-    async function loadCrawlStatus() {
-      if (!hasSupabaseConfig()) {
-        state.crawlRun = null;
-        return;
-      }
-      try {
-        const rows = await requestSupabase("crawl_runs_public?select=*&order=started_at.desc&limit=1", { headers: supabaseHeaders() });
-        state.crawlRun = rows && rows[0] ? rows[0] : null;
-      } catch (_) {
-        state.crawlRun = null;
-      }
-    }
-
     async function loadAuthorSubmissions() {
       if (!state.adminToken) {
-        state.authorSubmissions = [];
         state.authors = [];
         return;
       }
       try {
-        const [submissionResult, authorResult] = await Promise.all([
-          requestAdminFunction("list_author_submissions"),
-          requestAdminFunction("list_authors"),
-        ]);
-        state.authorSubmissions = Array.isArray(submissionResult.rows) ? submissionResult.rows : [];
+        const authorResult = await requestAdminFunction("list_authors");
         state.authors = Array.isArray(authorResult.rows) ? authorResult.rows : [];
       } catch (error) {
-        state.authorSubmissions = [];
         state.authors = [];
-        showAdminResult(`작가 신청 목록을 불러오지 못했습니다: ${error.message}`, "error");
+        showAdminResult(`작가 계정 목록을 불러오지 못했습니다: ${error.message}`, "error");
       }
     }
 
@@ -3868,20 +3802,6 @@
     function saveLocalPosts(posts) {
       localStorage.setItem("hq-postype-local-posts", JSON.stringify(posts));
     }
-
-    function loadDismissedNewPosts() {
-      try {
-        const values = JSON.parse(localStorage.getItem(DISMISSED_NEW_POSTS_KEY) || "[]");
-        return new Set(Array.isArray(values) ? values.map(normalize).filter(Boolean) : []);
-      } catch {
-        return new Set();
-      }
-    }
-
-    function saveDismissedNewPosts() {
-      localStorage.setItem(DISMISSED_NEW_POSTS_KEY, JSON.stringify([...state.dismissedNewPosts]));
-    }
-
 
     function loadLibrary() {
       try {
@@ -3964,9 +3884,7 @@
         updateSeriesStats();
         els.status.textContent = `${error.message} 지금은 샘플/로컬 데이터로 표시합니다.`;
       }
-      await loadCrawlStatus();
       buildFilters();
-      buildAdminFilters();
       buildAdminMultiSelects();
       buildAuthorSubmissionSelectors();
       buildAdminBulkValueOptions();
@@ -4021,41 +3939,6 @@
         });
         box.append(label, chips);
         els.filterMount.appendChild(box);
-      });
-    }
-
-    function buildAdminFilters() {
-      els.adminFilterMount.innerHTML = "";
-      Object.entries(ADMIN_TAG_GROUPS).forEach(([group, options]) => {
-        const box = document.createElement("div");
-        box.className = "admin-filter-group";
-        box.dataset.group = group;
-
-        const label = document.createElement("span");
-        label.className = "admin-filter-label";
-        label.textContent = group;
-
-        const chips = document.createElement("div");
-        chips.className = "admin-filter-chips";
-
-        options.forEach((option) => {
-          const button = document.createElement("button");
-          button.className = "chip";
-          button.type = "button";
-          button.textContent = option;
-          button.dataset.group = group;
-          button.dataset.option = option;
-          button.addEventListener("click", () => {
-            state.adminActive[group] ||= new Set();
-            state.adminActive[group].has(option) ? state.adminActive[group].delete(option) : state.adminActive[group].add(option);
-            button.classList.toggle("active");
-            renderAdminList();
-          });
-          chips.appendChild(button);
-        });
-
-        box.append(label, chips);
-        els.adminFilterMount.appendChild(box);
       });
     }
 
@@ -4188,137 +4071,6 @@
       });
     }
 
-    function crawlMarker(post) {
-      return Boolean(normalize(post._crawlStatus) || normalize(post._postypePostId) || normalize(post["수집출처"]));
-    }
-
-    function isReviewed(post) {
-      return postFlag(post["관리자검수"]);
-    }
-
-    function newPostNoticeKey(post) {
-      return adminPostKey(post) || postKey(post);
-    }
-
-    function recentCrawlerPosts() {
-      const cutoff = Date.now() - (14 * 24 * 60 * 60 * 1000);
-      return state.posts
-        .filter((post) => {
-          if (!crawlMarker(post) || normalize(post._crawlStatus) !== "success") return false;
-          const discovered = Date.parse(normalize(post._discoveredAt || post._crawledAt));
-          if (!Number.isFinite(discovered) || discovered < cutoff) return false;
-          return !state.dismissedNewPosts.has(newPostNoticeKey(post));
-        })
-        .slice()
-        .sort((a, b) => {
-          const ad = Date.parse(normalize(a._discoveredAt || a._crawledAt)) || 0;
-          const bd = Date.parse(normalize(b._discoveredAt || b._crawledAt)) || 0;
-          return bd - ad;
-        })
-        .slice(0, 50);
-    }
-
-    function manualCrawlUrl() {
-      if (normalize(CONFIG.MANUAL_CRAWL_URL)) return normalize(CONFIG.MANUAL_CRAWL_URL);
-      if (normalize(CONFIG.GITHUB_REPOSITORY)) {
-        return `https://github.com/${normalize(CONFIG.GITHUB_REPOSITORY)}/actions/workflows/postype-sync.yml`;
-      }
-      return normalize(CONFIG.ADMIN_PAGE_URL) || "#";
-    }
-
-    function renderCrawlerAdmin() {
-      if (!els.crawlLastRun) return;
-      const run = state.crawlRun || {};
-      els.crawlLastRun.textContent = formatDateTime(run.finished_at || run.started_at);
-      els.crawlLastStatus.textContent = run.status === "success" ? "성공" : run.status === "failed" ? "실패" : (run.status || "-");
-      els.crawlFoundCount.textContent = Number(run.found_count || 0).toLocaleString("ko-KR");
-      els.crawlFailedCount.textContent = Number(run.failed_count || 0).toLocaleString("ko-KR");
-      renderNewPostList();
-      renderAuthorSubmissionAdmin();
-      renderAuthorAccounts();
-    }
-
-    function renderNewPostList() {
-      const posts = recentCrawlerPosts();
-      els.newPostCount.textContent = `${posts.length}건`;
-      els.newPostList.innerHTML = "";
-      if (!posts.length) {
-        els.newPostList.innerHTML = `<div class="empty">최근 14일 동안 확인할 신규 글이 없습니다.</div>`;
-        return;
-      }
-      posts.forEach((post) => {
-        const item = document.createElement("div");
-        item.className = "new-post-item";
-        const open = document.createElement("button");
-        open.className = "new-post-open";
-        open.type = "button";
-        open.innerHTML = `
-          <span class="new-post-time">${escapeHtml(formatDateTime(post._discoveredAt || post._crawledAt))} 크롤링</span>
-          <span class="new-post-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
-          <span class="new-post-meta">${escapeHtml([normalize(post["작가"]), isReviewed(post) ? "관리자 확인 완료" : "미확인"].filter(Boolean).join(" · "))}</span>
-        `;
-        open.addEventListener("click", () => {
-          fillAdminForm(post, item);
-          showAdminResult("신규 글의 수정 화면을 열었습니다.", "info");
-        });
-        const dismiss = document.createElement("button");
-        dismiss.className = "new-post-dismiss";
-        dismiss.type = "button";
-        dismiss.textContent = "×";
-        dismiss.title = "신규 글 목록에서 숨기기";
-        dismiss.setAttribute("aria-label", `${normalize(post["제목"]) || "신규 글"} 목록에서 숨기기`);
-        dismiss.addEventListener("click", () => {
-          state.dismissedNewPosts.add(newPostNoticeKey(post));
-          saveDismissedNewPosts();
-          renderNewPostList();
-          showAdminResult("신규 글 목록에서 숨겼습니다. Supabase 데이터는 그대로 유지됩니다.");
-        });
-        item.append(open, dismiss);
-        els.newPostList.appendChild(item);
-      });
-    }
-
-    function submissionAuthorName(submission) {
-      const author = submission.postype_authors;
-      return normalize(Array.isArray(author) ? author[0] && author[0].display_name : author && author.display_name) || "작가 미상";
-    }
-
-    function renderAuthorSubmissionAdmin() {
-      if (!els.authorSubmissionList) return;
-      const submissions = state.authorSubmissions.slice().sort((a, b) => {
-        const pendingDiff = Number(b.status === "pending_review") - Number(a.status === "pending_review");
-        return pendingDiff || (Date.parse(b.created_at) || 0) - (Date.parse(a.created_at) || 0);
-      });
-      const pendingCount = submissions.filter((item) => item.status === "pending_review").length;
-      els.authorSubmissionCount.textContent = `${pendingCount}건 대기`;
-      els.authorSubmissionList.innerHTML = "";
-      if (!submissions.length) {
-        els.authorSubmissionList.innerHTML = '<div class="empty">작가 업로드 신청이 없습니다.</div>';
-        return;
-      }
-      submissions.slice(0, 50).forEach((submission) => {
-        const card = document.createElement("article");
-        card.className = "author-submission-card";
-        const tags = [submission.genres, submission.keywords, submission.top_tags, submission.bottom_tags].map(normalize).filter(Boolean).join(" · ");
-        card.innerHTML = `
-          <a href="${escapeHtml(normalize(submission.post_url))}" target="_blank" rel="noreferrer">${escapeHtml(normalize(submission.title) || "제목 없음")}</a>
-          <p class="author-submission-meta">${escapeHtml(`${submissionAuthorName(submission)} · ${authorStatusLabel(submission.status)} · ${formatDateTime(submission.created_at)}`)}</p>
-          <p class="author-submission-meta">${escapeHtml(tags || "필터 정보 없음")}</p>
-          ${submission.review_note ? `<p class="author-submission-meta">${escapeHtml(submission.review_note)}</p>` : ""}
-          <div class="author-submission-actions">
-            <button class="button primary" type="button" data-action="approve">승인·공개</button>
-            <button class="button danger" type="button" data-action="reject">반려</button>
-          </div>
-        `;
-        const pending = submission.status === "pending_review";
-        card.querySelector('[data-action="approve"]').disabled = !pending;
-        card.querySelector('[data-action="reject"]').disabled = !pending;
-        card.querySelector('[data-action="approve"]').addEventListener("click", () => approveAuthorSubmission(submission));
-        card.querySelector('[data-action="reject"]').addEventListener("click", () => rejectAuthorSubmission(submission));
-        els.authorSubmissionList.appendChild(card);
-      });
-    }
-
     function renderAuthorAccounts() {
       if (!els.authorAccountList) return;
       els.authorAccountCount.textContent = `${state.authors.length}명`;
@@ -4411,39 +4163,19 @@
       }
     }
 
-    async function approveAuthorSubmission(submission) {
-      if (!confirm(`'${normalize(submission.title)}' 신청을 승인해 검색기에 공개할까요?`)) return;
-      try {
-        await requestAdminFunction("approve_author_submission", { submission_id: submission.id });
-        await loadData();
-        showAdminResult("작가 신청을 승인하고 검색기에 공개했습니다.");
-      } catch (error) {
-        showAdminResult(`작가 신청 승인에 실패했습니다: ${error.message}`, "error");
-      }
-    }
-
-    async function rejectAuthorSubmission(submission) {
-      const note = prompt("작가에게 보여줄 반려 사유를 입력해 주세요.", normalize(submission.review_note));
-      if (note === null) return;
-      try {
-        await requestAdminFunction("reject_author_submission", { submission_id: submission.id, review_note: note });
-        await loadData();
-        showAdminResult("작가 신청을 반려했습니다.");
-      } catch (error) {
-        showAdminResult(`작가 신청 반려에 실패했습니다: ${error.message}`, "error");
-      }
-    }
-
     function renderAdminList() {
-      renderCrawlerAdmin();
+      renderAuthorAccounts();
       els.adminList.innerHTML = "";
       const validKeys = new Set(state.posts.map(adminPostKey));
       state.adminSelected = new Set([...state.adminSelected].filter((key) => validKeys.has(key)));
       const query = normalize(state.adminQuery).toLowerCase();
       const posts = state.posts
-        .filter((post) => matchesPost(post, state.adminActive, query))
+        .filter((post) => !query || searchText(post).includes(query))
         .slice()
         .sort((a, b) => {
+          if (state.adminSort === "title-asc") {
+            return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
+          }
           const dateDiff = (Date.parse(normalize(b["날짜"])) || 0) - (Date.parse(normalize(a["날짜"])) || 0);
           return dateDiff || normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
         });
@@ -5281,6 +5013,22 @@
         const mount = details.querySelector(".author-selector-options");
         const hidden = details.parentElement.querySelector('input[type="hidden"]');
         const selected = new Set(splitTags(hidden.value));
+        const suggestionFields = {
+          "장르": "suggested_genres",
+          "키워드": "suggested_keywords",
+          "공": "suggested_top_tags",
+          "수": "suggested_bottom_tags"
+        };
+        const suggestionField = suggestionFields[group];
+        if (suggestionField) {
+          const options = new Set(TAG_GROUPS[group] || []);
+          const unknown = [...selected].filter((value) => !options.has(value));
+          const input = els.authorUploadForm.elements[suggestionField];
+          const toggle = els.authorUploadForm.querySelector(`[data-author-suggest-toggle="${suggestionField}"]`);
+          input.value = unknown.join(", ");
+          toggle.checked = unknown.length > 0;
+          setAuthorSuggestionVisibility(toggle);
+        }
         mount.innerHTML = "";
 
         const clear = document.createElement("button");
@@ -5314,6 +5062,27 @@
       els.authorSeriesFields.hidden = els.authorIsSeries.value !== "true";
     }
 
+    function setAuthorSuggestionVisibility(toggle) {
+      const input = els.authorUploadForm.elements[toggle.dataset.authorSuggestToggle];
+      if (!input) return;
+      input.hidden = !toggle.checked;
+      if (!toggle.checked) input.value = "";
+    }
+
+    function mergeAuthorSuggestions(payload) {
+      const fields = {
+        suggested_genres: "genres",
+        suggested_keywords: "keywords",
+        suggested_top_tags: "top_tags",
+        suggested_bottom_tags: "bottom_tags"
+      };
+      Object.entries(fields).forEach(([suggestionField, targetField]) => {
+        const merged = [...new Set([...splitTags(payload[targetField]), ...splitTags(payload[suggestionField])])];
+        payload[targetField] = targetField === "genres" ? withoutRps(merged.join(", ")) : merged.join(", ");
+        delete payload[suggestionField];
+      });
+    }
+
     function openAuthorUploadModal() {
       buildAuthorSubmissionSelectors();
       setAuthorSeriesVisibility();
@@ -5344,8 +5113,12 @@
     function resetAuthorSubmissionForm() {
       els.authorUploadForm.reset();
       els.authorUploadForm.querySelectorAll('input[type="hidden"]').forEach((input) => input.value = "");
+      els.authorUploadForm.querySelectorAll("[data-author-suggest-toggle]").forEach((toggle) => {
+        toggle.checked = false;
+        setAuthorSuggestionVisibility(toggle);
+      });
       els.authorCancelEdit.hidden = true;
-      $("#authorCreateSubmission").textContent = "관리자 승인 요청";
+      $("#authorCreateSubmission").textContent = "글 등록";
       buildAuthorSubmissionSelectors();
       setAuthorSeriesVisibility();
     }
@@ -5395,14 +5168,14 @@
     }
 
     function authorStatusLabel(status) {
-      return ({ pending_review: "관리자 승인대기", approved: "공개 완료", rejected: "반려", withdrawn: "숨김 삭제" })[status] || status;
+      return ({ published: "공개 중", approved: "공개 중", withdrawn: "숨김 삭제" })[status] || "공개 중";
     }
 
     function renderAuthorOwnSubmissions() {
       if (!els.authorOwnSubmissionList) return;
       els.authorOwnSubmissionList.innerHTML = "";
       if (!state.authorOwnSubmissions.length) {
-        els.authorOwnSubmissionList.innerHTML = '<div class="empty">아직 신청한 글이 없습니다.</div>';
+        els.authorOwnSubmissionList.innerHTML = '<div class="empty">등록된 본인 글이 없습니다.</div>';
         return;
       }
       state.authorOwnSubmissions.forEach((submission) => {
@@ -5413,15 +5186,11 @@
           <strong>${escapeHtml(normalize(submission.title) || "제목 없음")}</strong>
           <p class="author-submission-meta">${escapeHtml(`${authorStatusLabel(submission.status)} · ${formatDateTime(submission.updated_at || submission.created_at)}`)}</p>
           <p class="author-submission-meta">${escapeHtml(tags || "필터 정보 없음")}</p>
-          ${submission.review_note ? `<p class="author-submission-meta">${escapeHtml(submission.review_note)}</p>` : ""}
           <div class="author-submission-actions">
             <button class="button" type="button" data-action="edit">수정</button>
             <button class="button danger" type="button" data-action="delete">숨김 삭제</button>
           </div>
         `;
-        const inactive = submission.status === "withdrawn";
-        card.querySelector('[data-action="edit"]').disabled = inactive;
-        card.querySelector('[data-action="delete"]').disabled = inactive;
         card.querySelector('[data-action="edit"]').addEventListener("click", () => fillAuthorSubmissionForm(submission));
         card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteAuthorSubmission(submission));
         els.authorOwnSubmissionList.appendChild(card);
@@ -5429,20 +5198,21 @@
     }
 
     function fillAuthorSubmissionForm(submission) {
+      resetAuthorSubmissionForm();
       [...els.authorUploadForm.elements].forEach((field) => {
         if (!field.name) return;
         field.value = normalize(submission[field.name]);
       });
-      els.authorUploadForm.elements["submission_id"].value = normalize(submission.id);
+      els.authorUploadForm.elements["archive_id"].value = normalize(submission.archive_id);
       els.authorUploadForm.elements["is_paid"].value = String(Boolean(submission.is_paid));
       els.authorUploadForm.elements["is_adult"].value = String(Boolean(submission.is_adult));
       els.authorUploadForm.elements["is_series"].value = String(Boolean(submission.is_series));
       els.authorCancelEdit.hidden = false;
-      $("#authorCreateSubmission").textContent = "수정 저장·재승인 요청";
+      $("#authorCreateSubmission").textContent = "수정 저장";
       buildAuthorSubmissionSelectors();
       setAuthorSeriesVisibility();
       els.authorUploadForm.scrollIntoView({ behavior: "smooth", block: "start" });
-      showAuthorResult("신청 글 수정 화면을 불러왔습니다. 저장하면 다시 승인대기가 됩니다.", "info");
+      showAuthorResult("글 수정 화면을 불러왔습니다.", "info");
     }
 
     async function submitAuthorPost(event) {
@@ -5450,6 +5220,7 @@
       if (!state.authorToken) return;
       const payload = {};
       new FormData(els.authorUploadForm).forEach((value, key) => payload[key] = normalize(value));
+      mergeAuthorSuggestions(payload);
       if (!isPostypePostUrl(payload.post_url)) {
         showAuthorResult("올바른 포스타입 글 링크를 입력해 주세요.", "error");
         return;
@@ -5460,28 +5231,28 @@
       }
       const button = $("#authorCreateSubmission");
       button.disabled = true;
-      const editing = Boolean(payload.submission_id);
-      button.textContent = editing ? "수정 저장 중" : "승인 요청 중";
+      const editing = Boolean(payload.archive_id);
+      button.textContent = editing ? "수정 저장 중" : "등록 중";
       try {
-        await requestAdminFunction(editing ? "author_update_submission" : "author_submit", payload, state.authorToken);
+        await requestAdminFunction(editing ? "author_update_archive" : "author_submit", payload, state.authorToken);
         resetAuthorSubmissionForm();
         await loadAuthorOwnSubmissions();
-        showAuthorResult(editing ? "수정 내용을 저장했고 다시 관리자 승인대기로 전환했습니다." : "글 신청을 접수했습니다. 관리자 승인 후 공개됩니다.");
+        showAuthorResult(editing ? "수정 내용을 저장했습니다." : "글을 등록했습니다. 검색기에 바로 공개됩니다.");
       } catch (error) {
         showAuthorResult(`작가 글 신청에 실패했습니다: ${error.message}`, "error");
       } finally {
         button.disabled = false;
-        button.textContent = "관리자 승인 요청";
+        button.textContent = "글 등록";
       }
     }
 
     async function deleteAuthorSubmission(submission) {
-      if (!confirm(`'${normalize(submission.title)}' 신청을 숨김 삭제할까요? 공개 중인 글도 즉시 검색기에서 내려갑니다.`)) return;
+      if (!confirm(`'${normalize(submission.title)}'을(를) 검색기에서 삭제할까요?`)) return;
       try {
-        await requestAdminFunction("author_delete_submission", { submission_id: submission.id }, state.authorToken);
+        await requestAdminFunction("author_delete_archive", { archive_id: submission.archive_id }, state.authorToken);
         resetAuthorSubmissionForm();
         await loadAuthorOwnSubmissions();
-        showAuthorResult("신청 글을 숨김 삭제했습니다.");
+        showAuthorResult("글을 검색기에서 삭제했습니다.");
       } catch (error) {
         showAuthorResult(`신청 글 삭제에 실패했습니다: ${error.message}`, "error");
       }
@@ -5492,7 +5263,6 @@
       placeAdminEditor(anchor);
       els.adminEditorTitle.textContent = "글 수정";
       els.deletePost.hidden = false;
-      els.adminAiImportBox.hidden = true;
       els.adminEditor.hidden = false;
       [...els.adminForm.elements].forEach((field) => {
         if (!field.name) return;
@@ -5509,7 +5279,6 @@
       els.adminForm.reset();
       els.adminEditorTitle.textContent = "신규 글 추가";
       els.deletePost.hidden = true;
-      els.adminAiImportBox.hidden = false;
       els.adminForm.elements["_rowNumber"].value = "";
       syncAdminMultiSelectsFromForm();
       syncStandaloneStatus();
@@ -5595,99 +5364,6 @@
         body: JSON.stringify({ action, payload })
       });
       return { ok: true, opaque: true };
-    }
-
-    async function runCrawlerNow() {
-      if (!els.manualCrawlButton) return;
-      els.manualCrawlButton.disabled = true;
-      const originalText = els.manualCrawlButton.textContent;
-      els.manualCrawlButton.textContent = "실행 요청 중";
-      els.status.textContent = "GitHub Actions에 수동 크롤링 실행을 요청하는 중입니다.";
-      try {
-        const result = await requestAdminFunction("run_crawler", {});
-        showAdminResult("수동 크롤링 실행 요청이 접수됐습니다. 잠시 뒤 데이터 새로고침으로 결과를 확인해 주세요.");
-        if (result.actionsUrl && confirm("GitHub Actions 실행 화면을 열까요?")) {
-          window.open(result.actionsUrl, "_blank", "noopener");
-        }
-      } catch (error) {
-        const link = manualCrawlUrl();
-        showAdminResult(`수동 실행 요청에 실패했습니다: ${error.message}`, "error");
-        if (link && link !== "#" && confirm("자동 요청에 실패했습니다. GitHub Actions 화면을 열까요?")) {
-          window.open(link, "_blank", "noopener");
-        } else {
-          alert(`수동 실행 요청에 실패했습니다. ${error.message}`);
-        }
-      } finally {
-        els.manualCrawlButton.disabled = false;
-        els.manualCrawlButton.textContent = originalText;
-      }
-    }
-
-    async function importPostWithAi() {
-      const linkField = els.adminForm.elements["링크"];
-      const link = canonicalPostUrl(linkField.value);
-      if (!link || !isPostypePostUrl(link)) {
-        showAdminResult("포스타입 글 링크 형식을 확인해 주세요.", "error");
-        alert("포스타입 글 링크를 정확히 붙여 넣어 주세요.");
-        linkField.focus();
-        return;
-      }
-
-      const existing = state.posts.find((post) => canonicalPostUrl(post["링크"]) === link);
-      if (existing && !["failed", "pending", "review_required"].includes(normalize(existing["AI상태"]))) {
-        showAdminResult("이미 목록에 저장된 글이라 추가하지 않았습니다.", "info");
-        alert("이미 목록에 저장된 글입니다. 목록에서 해당 글의 수정 버튼을 이용해 주세요.");
-        return;
-      }
-
-      els.adminAiImportButton.disabled = true;
-      const originalText = els.adminAiImportButton.textContent;
-      els.adminAiImportButton.textContent = "AI 분류 요청 중";
-      els.status.textContent = "링크를 GitHub Actions로 보내는 중입니다.";
-      try {
-        await requestAdminFunction("run_crawler", { post_url: link });
-        closeAdminEditor();
-        showAdminResult("링크를 접수해 AI 분류를 시작했습니다. 완료까지 약 1~3분 걸립니다.", "info");
-        const imported = await waitForImportedPost(link);
-        showAdminResult(
-          imported
-            ? `AI 분류와 저장이 완료됐습니다: ${normalize(imported["제목"]) || "새 글"}`
-            : "요청은 접수됐지만 아직 글이 보이지 않습니다. Actions 결과 확인 후 데이터 새로고침을 눌러 주세요.",
-          imported ? "success" : "info"
-        );
-      } catch (error) {
-        showAdminResult(`링크 AI 분류 요청에 실패했습니다: ${error.message}`, "error");
-        alert(`링크 AI 분류 요청에 실패했습니다. ${error.message}`);
-      } finally {
-        els.adminAiImportButton.disabled = false;
-        els.adminAiImportButton.textContent = originalText;
-      }
-    }
-
-    async function waitForImportedPost(link) {
-      for (let attempt = 0; attempt < 18; attempt += 1) {
-        await new Promise((resolve) => setTimeout(resolve, 10000));
-        await loadData();
-        const post = state.posts.find((item) => canonicalPostUrl(item["링크"]) === link);
-        if (post && !["pending", ""].includes(normalize(post["AI상태"]))) return post;
-      }
-      return null;
-    }
-
-    async function unifyAllSeriesNow() {
-      if (!confirm("모든 시리즈의 장르·키워드·공·수를 같은 시리즈끼리 통일할까요? AI 비용은 들지 않습니다.")) return;
-      els.adminUnifySeries.disabled = true;
-      els.status.textContent = "시리즈 필터를 통일하는 중입니다.";
-      try {
-        const result = await requestAdminFunction("unify_all_series", {});
-        await loadData();
-        showAdminResult(`${Number(result.seriesCount || 0)}개 시리즈, ${Number(result.updatedRows || 0)}개 글의 필터를 통일했습니다.`);
-      } catch (error) {
-        showAdminResult(`시리즈 필터 통일에 실패했습니다: ${error.message}`, "error");
-        alert(`시리즈 필터 통일에 실패했습니다. ${error.message}`);
-      } finally {
-        els.adminUnifySeries.disabled = false;
-      }
     }
 
     async function savePost(event) {
@@ -5887,10 +5563,6 @@
       state.adminQuery = event.target.value;
       renderAdminList();
     });
-    els.adminFilterToggle.addEventListener("click", () => {
-      els.adminFilterMount.classList.toggle("is-collapsed");
-      els.adminFilterCaret.textContent = els.adminFilterMount.classList.contains("is-collapsed") ? "펼치기" : "접기";
-    });
     els.adminSelectAll.addEventListener("change", () => {
       state.adminVisiblePosts.forEach((post) => {
         const key = adminPostKey(post);
@@ -5918,10 +5590,7 @@
     });
     els.adminToggle.addEventListener("click", toggleAdminMode);
     els.adminRefresh.addEventListener("click", refreshAdminData);
-    els.adminUnifySeries.addEventListener("click", unifyAllSeriesNow);
     els.newPost.addEventListener("click", openNewPostForm);
-    els.manualCrawlButton.addEventListener("click", runCrawlerNow);
-    els.adminAiImportButton.addEventListener("click", importPostWithAi);
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
     els.adminForm.elements["시리즈"].addEventListener("change", syncStandaloneStatus);
@@ -5956,6 +5625,9 @@
     els.authorUploadForm.addEventListener("submit", submitAuthorPost);
     els.authorCancelEdit.addEventListener("click", resetAuthorSubmissionForm);
     els.authorIsSeries.addEventListener("change", setAuthorSeriesVisibility);
+    els.authorUploadForm.querySelectorAll("[data-author-suggest-toggle]").forEach((toggle) => {
+      toggle.addEventListener("change", () => setAuthorSuggestionVisibility(toggle));
+    });
     els.authorAccountForm.addEventListener("submit", createAuthorAccount);
     els.authorIssuedKeyCopy.addEventListener("click", copyIssuedAuthorKey);
     els.libraryClose.addEventListener("click", closeLibraryModal);

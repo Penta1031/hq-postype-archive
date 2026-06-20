@@ -10,11 +10,7 @@ window.POSTYPE_CONFIG = {
   SUPABASE_TABLE: "postype_archive",
   SUPABASE_PUBLIC_VIEW: "postype_archive_public",
   ADMIN_FUNCTION_URL: "",
-  ADMIN_PAGE_URL: "",
-  MANUAL_CRAWL_URL: "",
-  GITHUB_REPOSITORY: "",
   SHOW_UNREVIEWED_POSTS: true,
-  AI_REVIEW_CONFIDENCE_THRESHOLD: 0.72,
 
   // Supabase 연결이 비어 있을 때만 로컬 CSV를 읽습니다.
   LOCAL_CSV_URL: "data/postype_archive_series_columns_limited.csv"
