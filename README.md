@@ -48,13 +48,12 @@ GitHub Actions Variable:
 - `AI_REVIEW_CONFIDENCE_THRESHOLD` 기본값 `0.72`
 - `UPDATE_VIEW_COUNTS` 기존 글의 최신 조회수 갱신 여부, 기본값 `true`
 - `VIEW_COUNT_CONCURRENCY` 조회수 확인 동시 실행 수, 기본값 `2`
-- `POSTYPE_TARGET_TERMS` 수집할 인물명 쉼표 구분. 기본값 `이승협,유회승,승협,회승`
 
 `POSTYPE_AUTH_STATE`는 Playwright `storageState` JSON 또는 base64 JSON을 넣습니다. 로그인/성인글/구매글은 해당 계정이 정상 열람 가능한 범위에서만 수집되며, 접근 불가 글은 `crawl_status`로 실패 기록만 남깁니다.
 
 관리자 화면의 “수동 크롤링 실행” 버튼은 `config.js`의 `MANUAL_CRAWL_URL` 또는 `GITHUB_REPOSITORY`를 설정하면 GitHub Actions 수동 실행 화면으로 연결됩니다.
 
-“글 수동 추가”에서는 포스타입 링크만 붙여 넣고 “링크로 불러오기 + AI 분류”를 누를 수 있습니다. GitHub Actions가 로그인 세션으로 글을 읽고 AI 분류한 뒤 Supabase에 자동 저장하며, 완료까지 보통 1~3분 걸립니다. 제목·본문·태그에 `POSTYPE_TARGET_TERMS` 중 하나도 없는 글은 저장하지 않습니다.
+“글 수동 추가”에서는 포스타입 링크만 붙여 넣고 “링크로 불러오기 + AI 분류”를 누를 수 있습니다. GitHub Actions가 로그인 세션으로 글을 읽고 AI 분류한 뒤 Supabase에 자동 저장하며, 완료까지 보통 1~3분 걸립니다. 포스타입 공식·바라바라·광고·프로모션·추천 채널 영역의 글은 수집 대상에서 제외합니다.
 
 관리자 화면에서 “수동 크롤링 실행” 버튼으로 GitHub Actions를 직접 실행하려면 Supabase Edge Function `postype-admin`에 아래 Secret을 추가합니다.
 

@@ -9,7 +9,6 @@ type ProcessTarget = {
   url: string;
   postypePostId: number | null;
   sourceUrl: string;
-  targetMatched?: boolean;
   existingId?: number;
 };
 
@@ -174,7 +173,6 @@ function manualPostLink(rawUrl: string): ProcessTarget {
     url,
     postypePostId: postypePostIdFromUrl(url),
     sourceUrl: "manual-admin",
-    targetMatched: true,
   };
 }
 

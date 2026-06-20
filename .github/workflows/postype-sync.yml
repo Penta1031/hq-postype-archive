@@ -61,5 +61,4 @@ jobs:
           RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'true' }}
           UPDATE_VIEW_COUNTS: ${{ vars.UPDATE_VIEW_COUNTS || 'true' }}
           VIEW_COUNT_CONCURRENCY: ${{ vars.VIEW_COUNT_CONCURRENCY || '2' }}
-          POSTYPE_TARGET_TERMS: ${{ vars.POSTYPE_TARGET_TERMS || '이승협,유회승,승협,회승' }}
           MANUAL_POST_URL: ${{ inputs.post_url || '' }}

@@ -1578,6 +1578,122 @@
       font-weight: 550;
     }
 
+    details.crawler-section > summary {
+      list-style: none;
+      cursor: pointer;
+    }
+
+    details.crawler-section > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    details.crawler-section > summary::after {
+      content: "⌄";
+      color: #7d8792;
+      font-size: 15px;
+    }
+
+    details.crawler-section[open] > summary::after {
+      transform: rotate(180deg);
+    }
+
+    .new-post-list {
+      display: grid;
+      gap: 7px;
+      margin-top: 7px;
+    }
+
+    .new-post-item {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 34px;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .new-post-open,
+    .new-post-dismiss {
+      border: 1px solid #292b30;
+      border-radius: 8px;
+      background: #151619;
+      color: #e8e9ec;
+      cursor: pointer;
+    }
+
+    .new-post-open {
+      min-width: 0;
+      padding: 9px 10px;
+      text-align: left;
+    }
+
+    .new-post-time,
+    .new-post-meta {
+      display: block;
+      color: #77818d;
+      font-size: 11px;
+    }
+
+    .new-post-title {
+      display: block;
+      margin: 3px 0;
+      overflow-wrap: anywhere;
+      color: #f3f4f5;
+      font-size: 13px;
+      font-weight: 550;
+    }
+
+    .new-post-dismiss {
+      min-height: 34px;
+      font-size: 18px;
+    }
+
+    .admin-toast-stack {
+      position: fixed;
+      top: 12px;
+      left: 50%;
+      z-index: 150;
+      width: min(calc(100vw - 24px), 560px);
+      display: grid;
+      gap: 7px;
+      transform: translateX(-50%);
+      pointer-events: none;
+    }
+
+    .admin-toast {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 28px;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 11px;
+      border: 1px solid #356456;
+      border-radius: 8px;
+      background: #101816;
+      color: #e9f7f2;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, .28);
+      font-size: 12px;
+      line-height: 1.5;
+      pointer-events: auto;
+    }
+
+    .admin-toast.error {
+      border-color: #75434a;
+      background: #1b1113;
+      color: #ffdfe3;
+    }
+
+    .admin-toast.info {
+      border-color: #38576d;
+      background: #10171c;
+      color: #e0f1ff;
+    }
+
+    .admin-toast button {
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font-size: 18px;
+      cursor: pointer;
+    }
+
     .review-list {
       display: grid;
       gap: 7px;
@@ -2452,13 +2568,13 @@
             <div class="crawler-stat"><span>실패</span><strong id="crawlFailedCount">0</strong></div>
           </div>
         </section>
-        <section class="crawler-section">
-          <div class="crawler-section-head">
-            <strong>AI 검수대기</strong>
-            <span id="aiReviewCount">0건</span>
-          </div>
-          <div class="review-list" id="aiReviewList"></div>
-        </section>
+        <details class="crawler-section" id="newPostsSection">
+          <summary class="crawler-section-head">
+            <strong>신규 글</strong>
+            <span id="newPostCount">0건</span>
+          </summary>
+          <div class="new-post-list" id="newPostList"></div>
+        </details>
       </div>
       <label class="admin-search">
         <input id="adminSearchInput" type="search" placeholder="관리자 목록에서 제목 · 작가 검색">
@@ -2514,7 +2630,7 @@
             <label class="wide"><span class="label">링크</span><input name="링크" type="url" placeholder="https://www.postype.com/@.../post/..."></label>
             <div class="wide admin-ai-import" id="adminAiImportBox">
               <button class="button primary" id="adminAiImportButton" type="button">링크로 불러오기 + AI 분류</button>
-              <p class="admin-ai-import-note">링크만 입력하면 제목·작가·날짜·장르·키워드·공·수·시리즈 정보를 읽어 자동 저장합니다. 승협 또는 회승 관련 글만 추가됩니다.</p>
+              <p class="admin-ai-import-note">링크만 입력하면 제목·작가·날짜·장르·키워드·공·수·시리즈 정보를 읽어 자동 저장합니다.</p>
             </div>
             <label><span class="label">날짜</span><input name="날짜" type="date"></label>
             <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
@@ -2625,6 +2741,7 @@
       </section>
     </section>
   </main>
+  <div class="admin-toast-stack" id="adminToastStack" aria-live="polite" aria-atomic="true"></div>
   <div class="random-dock">
     <button class="random-toggle" id="randomToggle" type="button">랜덤 추천</button>
     <div class="random-panel" id="randomPanel" hidden>
@@ -2806,6 +2923,7 @@
     };
     Object.assign(CONFIG, window.POSTYPE_CONFIG || {});
     const LIBRARY_STORAGE_KEY = "hq-postype-library-v1";
+    const DISMISSED_NEW_POSTS_KEY = "hq-postype-dismissed-new-posts-v1";
 
     const TAG_GROUPS = {
       "카테고리": ["글", "그림", "기타"],
@@ -2899,7 +3017,8 @@
       adminVisiblePosts: [],
       adminBulkValues: new Set(),
       seriesStats: new Map(),
-      crawlRun: null
+      crawlRun: null,
+      dismissedNewPosts: loadDismissedNewPosts()
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -2935,8 +3054,9 @@
       crawlLastStatus: $("#crawlLastStatus"),
       crawlFoundCount: $("#crawlFoundCount"),
       crawlFailedCount: $("#crawlFailedCount"),
-      aiReviewCount: $("#aiReviewCount"),
-      aiReviewList: $("#aiReviewList"),
+      newPostCount: $("#newPostCount"),
+      newPostList: $("#newPostList"),
+      adminToastStack: $("#adminToastStack"),
       manualCrawlButton: $("#manualCrawlButton"),
       adminSelectAll: $("#adminSelectAll"),
       adminSelectedCount: $("#adminSelectedCount"),
@@ -3000,6 +3120,28 @@
 
     function normalize(value) {
       return String(value ?? "").trim();
+    }
+
+    function showAdminResult(message, type = "success") {
+      const text = normalize(message);
+      if (!text) return;
+      els.status.textContent = text;
+      if (!els.adminToastStack) return;
+      const toast = document.createElement("div");
+      toast.className = `admin-toast ${type}`;
+      const content = document.createElement("span");
+      content.textContent = text;
+      const close = document.createElement("button");
+      close.type = "button";
+      close.textContent = "×";
+      close.setAttribute("aria-label", "알림 닫기");
+      close.addEventListener("click", () => toast.remove());
+      toast.append(content, close);
+      els.adminToastStack.prepend(toast);
+      while (els.adminToastStack.children.length > 3) {
+        els.adminToastStack.lastElementChild.remove();
+      }
+      setTimeout(() => toast.remove(), type === "error" ? 9000 : 5500);
     }
 
     function canonicalPostUrl(value) {
@@ -3457,6 +3599,19 @@
       localStorage.setItem("hq-postype-local-posts", JSON.stringify(posts));
     }
 
+    function loadDismissedNewPosts() {
+      try {
+        const values = JSON.parse(localStorage.getItem(DISMISSED_NEW_POSTS_KEY) || "[]");
+        return new Set(Array.isArray(values) ? values.map(normalize).filter(Boolean) : []);
+      } catch {
+        return new Set();
+      }
+    }
+
+    function saveDismissedNewPosts() {
+      localStorage.setItem(DISMISSED_NEW_POSTS_KEY, JSON.stringify([...state.dismissedNewPosts]));
+    }
+
     function loadLibrary() {
       try {
         const data = JSON.parse(localStorage.getItem(LIBRARY_STORAGE_KEY) || "{}");
@@ -3555,9 +3710,9 @@
         closeAdminEditor();
         state.adminSelected.clear();
         await loadData();
-        els.status.textContent = "관리자 데이터를 새로 불러왔습니다.";
+        showAdminResult("관리자 데이터를 새로 불러왔습니다.");
       } catch (error) {
-        els.status.textContent = `새로고침에 실패했습니다: ${error.message}`;
+        showAdminResult(`새로고침에 실패했습니다: ${error.message}`, "error");
         alert(`새로고침에 실패했습니다. ${error.message}`);
       } finally {
         els.adminRefresh.disabled = false;
@@ -3660,9 +3815,9 @@
         await sendAdminAction("save_filter_options", { group, options });
         TAG_GROUPS[group].splice(0, TAG_GROUPS[group].length, ...options);
         await loadData();
-        els.status.textContent = `${group} 필터 단어를 저장했습니다.`;
+        showAdminResult(`${group} 필터 단어를 저장했습니다.`);
       } catch (error) {
-        els.status.textContent = `필터 단어 저장에 실패했습니다: ${error.message}`;
+        showAdminResult(`필터 단어 저장에 실패했습니다: ${error.message}`, "error");
         alert(`필터 단어 저장에 실패했습니다. ${error.message}`);
       } finally {
         els.adminVocabularyAdd.disabled = false;
@@ -3776,29 +3931,26 @@
       return postFlag(post["관리자검수"]);
     }
 
-    function aiConfidence(post) {
-      const value = Number(normalize(post["AI신뢰도"]));
-      return Number.isFinite(value) ? value : null;
+    function newPostNoticeKey(post) {
+      return adminPostKey(post) || postKey(post);
     }
 
-    function aiNeedsReview(post) {
-      if (!crawlMarker(post) || isReviewed(post)) return false;
-      if (normalize(post._crawlStatus) && normalize(post._crawlStatus) !== "success") return false;
-      if (["skipped", "approved"].includes(normalize(post["AI상태"]))) return false;
-      if (normalize(post["AI상태"]) === "review_required") return true;
-      const confidence = aiConfidence(post);
-      return confidence !== null && confidence < Number(CONFIG.AI_REVIEW_CONFIDENCE_THRESHOLD || 0.72);
-    }
-
-    function crawlerPosts() {
+    function recentCrawlerPosts() {
+      const cutoff = Date.now() - (14 * 24 * 60 * 60 * 1000);
       return state.posts
-        .filter((post) => crawlMarker(post) && !isReviewed(post))
+        .filter((post) => {
+          if (!crawlMarker(post) || normalize(post._crawlStatus) !== "success") return false;
+          const discovered = Date.parse(normalize(post._discoveredAt || post._crawledAt));
+          if (!Number.isFinite(discovered) || discovered < cutoff) return false;
+          return !state.dismissedNewPosts.has(newPostNoticeKey(post));
+        })
         .slice()
         .sort((a, b) => {
-          const ad = Date.parse(normalize(a._discoveredAt || a._crawledAt || a["날짜"])) || 0;
-          const bd = Date.parse(normalize(b._discoveredAt || b._crawledAt || b["날짜"])) || 0;
+          const ad = Date.parse(normalize(a._discoveredAt || a._crawledAt)) || 0;
+          const bd = Date.parse(normalize(b._discoveredAt || b._crawledAt)) || 0;
           return bd - ad;
-        });
+        })
+        .slice(0, 50);
     }
 
     function manualCrawlUrl() {
@@ -3816,39 +3968,46 @@
       els.crawlLastStatus.textContent = run.status === "success" ? "성공" : run.status === "failed" ? "실패" : (run.status || "-");
       els.crawlFoundCount.textContent = Number(run.found_count || 0).toLocaleString("ko-KR");
       els.crawlFailedCount.textContent = Number(run.failed_count || 0).toLocaleString("ko-KR");
-      const pendingPosts = crawlerPosts();
-      const reviewPosts = pendingPosts.filter(aiNeedsReview);
-      els.aiReviewCount.textContent = `${reviewPosts.length}건`;
-      renderReviewList(els.aiReviewList, reviewPosts.slice(0, 8), "AI 검수대기 글이 없습니다.");
+      renderNewPostList();
     }
 
-    function renderReviewList(container, posts, emptyText) {
-      container.innerHTML = "";
+    function renderNewPostList() {
+      const posts = recentCrawlerPosts();
+      els.newPostCount.textContent = `${posts.length}건`;
+      els.newPostList.innerHTML = "";
       if (!posts.length) {
-        container.innerHTML = `<div class="empty">${escapeHtml(emptyText)}</div>`;
+        els.newPostList.innerHTML = `<div class="empty">최근 14일 동안 확인할 신규 글이 없습니다.</div>`;
         return;
       }
       posts.forEach((post) => {
-        const item = document.createElement("article");
-        item.className = "review-item";
-        const confidence = aiConfidence(post);
-        const meta = [
-          normalize(post["작가"]),
-          normalize(post["AI상태"]) || normalize(post._crawlStatus),
-          confidence === null ? "" : `신뢰도 ${confidence.toFixed(2)}`,
-          normalize(post["AI근거"])
-        ].filter(Boolean).join(" · ");
-        item.innerHTML = `
-          <div class="review-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</div>
-          <div class="review-meta">${escapeHtml(meta || "검수 정보 없음")}</div>
-          <div class="review-actions">
-            <button class="button primary" type="button" data-action="approve">승인</button>
-            <button class="button" type="button" data-action="edit">수정</button>
-          </div>
+        const item = document.createElement("div");
+        item.className = "new-post-item";
+        const open = document.createElement("button");
+        open.className = "new-post-open";
+        open.type = "button";
+        open.innerHTML = `
+          <span class="new-post-time">${escapeHtml(formatDateTime(post._discoveredAt || post._crawledAt))} 크롤링</span>
+          <span class="new-post-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
+          <span class="new-post-meta">${escapeHtml([normalize(post["작가"]), isReviewed(post) ? "관리자 확인 완료" : "미확인"].filter(Boolean).join(" · "))}</span>
         `;
-        item.querySelector('[data-action="approve"]').addEventListener("click", () => approvePost(post));
-        item.querySelector('[data-action="edit"]').addEventListener("click", () => fillAdminForm(post, item));
-        container.appendChild(item);
+        open.addEventListener("click", () => {
+          fillAdminForm(post, item);
+          showAdminResult("신규 글의 수정 화면을 열었습니다.", "info");
+        });
+        const dismiss = document.createElement("button");
+        dismiss.className = "new-post-dismiss";
+        dismiss.type = "button";
+        dismiss.textContent = "×";
+        dismiss.title = "신규 글 목록에서 숨기기";
+        dismiss.setAttribute("aria-label", `${normalize(post["제목"]) || "신규 글"} 목록에서 숨기기`);
+        dismiss.addEventListener("click", () => {
+          state.dismissedNewPosts.add(newPostNoticeKey(post));
+          saveDismissedNewPosts();
+          renderNewPostList();
+          showAdminResult("신규 글 목록에서 숨겼습니다. Supabase 데이터는 그대로 유지됩니다.");
+        });
+        item.append(open, dismiss);
+        els.newPostList.appendChild(item);
       });
     }
 
@@ -4786,29 +4945,6 @@
       return { ok: true, opaque: true };
     }
 
-    async function approvePost(post) {
-      if (!confirm("이 글을 승인 처리할까요?")) return;
-      els.status.textContent = "검수 승인 내용을 반영하는 중입니다.";
-      try {
-        const result = await sendAdminAction("approve", {
-          _rowNumber: post._rowNumber,
-          _supabaseId: post._supabaseId
-        });
-        if (result && result.localOnly) {
-          post["관리자검수"] = "Y";
-          post["AI상태"] = "approved";
-          render();
-          els.status.textContent = "이 브라우저에서 승인 처리했습니다.";
-          return;
-        }
-        await loadData();
-        els.status.textContent = "검수 승인 내용을 Supabase에 반영했습니다.";
-      } catch (error) {
-        els.status.textContent = `승인에 실패했습니다: ${error.message}`;
-        alert(`승인에 실패했습니다. ${error.message}`);
-      }
-    }
-
     async function runCrawlerNow() {
       if (!els.manualCrawlButton) return;
       els.manualCrawlButton.disabled = true;
@@ -4817,13 +4953,13 @@
       els.status.textContent = "GitHub Actions에 수동 크롤링 실행을 요청하는 중입니다.";
       try {
         const result = await requestAdminFunction("run_crawler", {});
-        els.status.textContent = "수동 크롤링 실행을 요청했습니다. 잠시 뒤 데이터 새로고침을 눌러 상태를 확인해 주세요.";
+        showAdminResult("수동 크롤링 실행 요청이 접수됐습니다. 잠시 뒤 데이터 새로고침으로 결과를 확인해 주세요.");
         if (result.actionsUrl && confirm("GitHub Actions 실행 화면을 열까요?")) {
           window.open(result.actionsUrl, "_blank", "noopener");
         }
       } catch (error) {
         const link = manualCrawlUrl();
-        els.status.textContent = `수동 실행 요청에 실패했습니다: ${error.message}`;
+        showAdminResult(`수동 실행 요청에 실패했습니다: ${error.message}`, "error");
         if (link && link !== "#" && confirm("자동 요청에 실패했습니다. GitHub Actions 화면을 열까요?")) {
           window.open(link, "_blank", "noopener");
         } else {
@@ -4839,6 +4975,7 @@
       const linkField = els.adminForm.elements["링크"];
       const link = canonicalPostUrl(linkField.value);
       if (!link || !isPostypePostUrl(link)) {
+        showAdminResult("포스타입 글 링크 형식을 확인해 주세요.", "error");
         alert("포스타입 글 링크를 정확히 붙여 넣어 주세요.");
         linkField.focus();
         return;
@@ -4846,6 +4983,7 @@
 
       const existing = state.posts.find((post) => canonicalPostUrl(post["링크"]) === link);
       if (existing && !["failed", "pending", "review_required"].includes(normalize(existing["AI상태"]))) {
+        showAdminResult("이미 목록에 저장된 글이라 추가하지 않았습니다.", "info");
         alert("이미 목록에 저장된 글입니다. 목록에서 해당 글의 수정 버튼을 이용해 주세요.");
         return;
       }
@@ -4857,13 +4995,16 @@
       try {
         await requestAdminFunction("run_crawler", { post_url: link });
         closeAdminEditor();
-        els.status.textContent = "AI 분류를 시작했습니다. 완료될 때까지 약 1~3분 기다려 주세요.";
+        showAdminResult("링크를 접수해 AI 분류를 시작했습니다. 완료까지 약 1~3분 걸립니다.", "info");
         const imported = await waitForImportedPost(link);
-        els.status.textContent = imported
-          ? `AI 분류가 끝났습니다: ${normalize(imported["제목"]) || "새 글"}`
-          : "실행은 요청했지만 아직 글이 보이지 않습니다. Actions 결과를 확인한 뒤 데이터 새로고침을 눌러 주세요.";
+        showAdminResult(
+          imported
+            ? `AI 분류와 저장이 완료됐습니다: ${normalize(imported["제목"]) || "새 글"}`
+            : "요청은 접수됐지만 아직 글이 보이지 않습니다. Actions 결과 확인 후 데이터 새로고침을 눌러 주세요.",
+          imported ? "success" : "info"
+        );
       } catch (error) {
-        els.status.textContent = `링크 AI 분류 요청에 실패했습니다: ${error.message}`;
+        showAdminResult(`링크 AI 분류 요청에 실패했습니다: ${error.message}`, "error");
         alert(`링크 AI 분류 요청에 실패했습니다. ${error.message}`);
       } finally {
         els.adminAiImportButton.disabled = false;
@@ -4888,9 +5029,9 @@
       try {
         const result = await requestAdminFunction("unify_all_series", {});
         await loadData();
-        els.status.textContent = `${Number(result.seriesCount || 0)}개 시리즈, ${Number(result.updatedRows || 0)}개 글의 필터를 통일했습니다.`;
+        showAdminResult(`${Number(result.seriesCount || 0)}개 시리즈, ${Number(result.updatedRows || 0)}개 글의 필터를 통일했습니다.`);
       } catch (error) {
-        els.status.textContent = `시리즈 필터 통일에 실패했습니다: ${error.message}`;
+        showAdminResult(`시리즈 필터 통일에 실패했습니다: ${error.message}`, "error");
         alert(`시리즈 필터 통일에 실패했습니다. ${error.message}`);
       } finally {
         els.adminUnifySeries.disabled = false;
@@ -4901,6 +5042,7 @@
       event.preventDefault();
       const data = formData();
       const action = data._rowNumber && !data._rowNumber.startsWith("local-") ? "update" : "create";
+      const actionLabel = action === "create" ? "신규 글 추가" : "글 수정";
       els.status.textContent = "저장 내용을 Supabase에 반영하는 중입니다.";
       try {
         const result = await sendAdminAction(action, data);
@@ -4909,14 +5051,14 @@
           state.posts = mergeSheetAndLocal(state.posts);
           render();
           closeAdminEditor();
-          els.status.textContent = "저장 내용을 이 브라우저에만 반영했습니다.";
+          showAdminResult(`${actionLabel}이 이 브라우저에 반영됐습니다.`);
           return;
         }
         closeAdminEditor();
         await loadData();
-        els.status.textContent = "저장 내용을 Supabase에 반영했습니다.";
+        showAdminResult(`${actionLabel}이 Supabase에 반영됐습니다.`);
       } catch (error) {
-        els.status.textContent = `저장에 실패했습니다: ${error.message}`;
+        showAdminResult(`${actionLabel}에 실패했습니다: ${error.message}`, "error");
         alert(`저장에 실패했습니다. ${error.message}`);
       }
     }
@@ -4943,14 +5085,14 @@
           state.posts = mergeSheetAndLocal(state.posts.filter((post) => post._rowNumber !== rowNumber));
           render();
           closeAdminEditor();
-          els.status.textContent = "삭제 내용을 이 브라우저에만 반영했습니다.";
+          showAdminResult("글 삭제가 이 브라우저에 반영됐습니다.");
           return;
         }
         closeAdminEditor();
         await loadData();
-        els.status.textContent = "삭제 내용을 Supabase에 반영했습니다.";
+        showAdminResult("글 삭제가 Supabase에 반영됐습니다.");
       } catch (error) {
-        els.status.textContent = `삭제에 실패했습니다: ${error.message}`;
+        showAdminResult(`삭제에 실패했습니다: ${error.message}`, "error");
         alert(`삭제에 실패했습니다. ${error.message}`);
       }
     }
@@ -4972,7 +5114,7 @@
           state.posts = state.posts.map((post) => updatedByKey.get(adminPostKey(post)) || post);
           state.adminSelected.clear();
           render();
-          els.status.textContent = `선택한 글의 ${field} 항목을 이 브라우저에서 변경했습니다.`;
+          showAdminResult(`${posts.length}개 글의 ${field} 항목을 이 브라우저에서 변경했습니다.`);
           return;
         }
         for (let index = 0; index < updatedPosts.length; index += 1) {
@@ -4981,9 +5123,9 @@
         }
         state.adminSelected.clear();
         await loadData();
-        els.status.textContent = `${posts.length}개 글의 ${field} 항목을 Supabase에 반영했습니다.`;
+        showAdminResult(`${posts.length}개 글의 ${field} 항목을 Supabase에 반영했습니다.`);
       } catch (error) {
-        els.status.textContent = `일괄 수정에 실패했습니다: ${error.message}`;
+        showAdminResult(`일괄 수정에 실패했습니다: ${error.message}`, "error");
         alert(`일괄 수정에 실패했습니다. ${error.message}`);
       }
     }
@@ -5003,7 +5145,7 @@
           state.posts = state.posts.filter((post) => !state.adminSelected.has(adminPostKey(post)));
           state.adminSelected.clear();
           render();
-          els.status.textContent = "선택한 글을 이 브라우저에서 삭제했습니다.";
+          showAdminResult(`${posts.length}개 글을 이 브라우저에서 삭제했습니다.`);
           return;
         }
         for (let index = 0; index < posts.length; index += 1) {
@@ -5012,9 +5154,9 @@
         }
         state.adminSelected.clear();
         await loadData();
-        els.status.textContent = `${posts.length}개 글을 Supabase에서 삭제 처리했습니다.`;
+        showAdminResult(`${posts.length}개 글을 Supabase에서 삭제 처리했습니다.`);
       } catch (error) {
-        els.status.textContent = `일괄 삭제에 실패했습니다: ${error.message}`;
+        showAdminResult(`일괄 삭제에 실패했습니다: ${error.message}`, "error");
         alert(`일괄 삭제에 실패했습니다. ${error.message}`);
       }
     }

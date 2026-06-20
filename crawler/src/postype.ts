@@ -3,8 +3,6 @@ import { chromium } from "playwright";
 import { compactText, normalizePostUrl, parseAuthState, postypePostIdFromUrl, todayIsoDate, uniqueBy } from "./utils.js";
 import type { ExtractedPost, PostLink } from "./types.js";
 
-const DEFAULT_TARGET_TERMS = ["이승협", "유회승", "승협", "회승"];
-
 export async function createPostypeContext() {
   const authState = process.env.POSTYPE_AUTH_STATE ? parseAuthState(process.env.POSTYPE_AUTH_STATE) : undefined;
   const browser = await chromium.launch({ headless: true });
@@ -42,12 +40,7 @@ export async function collectPostLinks(context: BrowserContext, sourceUrl: strin
     for (const candidate of candidates) {
       const url = normalizePostUrl(candidate.href, sourceUrl);
       if (!url || !/\/post\/\d+/.test(url) || isPromotionalCandidate(url, candidate.contextText)) continue;
-      postLinks.push({
-        url,
-        postypePostId: postypePostIdFromUrl(url),
-        sourceUrl,
-        targetMatched: matchesTargetText(candidate.contextText),
-      });
+      postLinks.push({ url, postypePostId: postypePostIdFromUrl(url), sourceUrl });
     }
     return uniqueBy(postLinks, (item) => item.url);
   } finally {
@@ -55,45 +48,21 @@ export async function collectPostLinks(context: BrowserContext, sourceUrl: strin
   }
 }
 
-const PROMOTION_MARKERS = /(?:^|\s)광고(?:\s|$)|프로모션|포스타입\s*포인트|포인트\s*충전|보너스\s*코인|세계관\s*메이커|오픈\s*채널\s*랭킹|공식\s*커뮤니티|재방문\s*많은\s*리퀘스트|좋아서\s*또\s*왔어요/iu;
+const PROMOTION_MARKERS = /(?:^|\s)광고(?:\s|$)|프로모션|포스타입\s*(?:공식|이벤트|프로모션|포인트)|포인트\s*충전|보너스\s*코인|세계관\s*메이커|오픈\s*채널\s*랭킹|공식\s*커뮤니티|재방문\s*많은\s*리퀘스트|좋아서\s*또\s*왔어요|바라바라/iu;
+const FEED_SECTION_MARKERS = /이\s*채널(?:의)?\s*(?:글|포스트|인기글|추천)|채널\s*(?:추천|랭킹)|추천\s*(?:글|포스트|작품)|함께\s*보면\s*좋은\s*글|이런\s*글은\s*어때요|지금\s*뜨는\s*글|실시간\s*인기/iu;
 
 function isPromotionalCandidate(url: string, contextText: string) {
   const pathname = new URL(url).pathname.toLowerCase();
-  if (/\/@(?:postype|postype_official)(?:\/|$)/.test(pathname)) return true;
-  return PROMOTION_MARKERS.test(contextText);
+  if (/\/@(?:postype|postype_official|barabara[^/]*)(?:\/|$)/.test(pathname)) return true;
+  return PROMOTION_MARKERS.test(contextText) || FEED_SECTION_MARKERS.test(contextText);
 }
 
 export function isExcludedPost(post: ExtractedPost) {
-  if (!isTargetPost(post)) return true;
   const pathname = new URL(post.link).pathname.toLowerCase();
-  if (/\/@(?:postype|postype_official)(?:\/|$)/.test(pathname)) return true;
+  if (/\/@(?:postype|postype_official|barabara[^/]*)(?:\/|$)/.test(pathname)) return true;
   const author = cleanAuthor(post.author).toLowerCase();
-  if (["포스타입", "postype"].includes(author)) return true;
+  if (["포스타입", "postype"].includes(author) || author.includes("바라바라")) return true;
   return PROMOTION_MARKERS.test([post.title, post.author, post.tags.join(" ")].join("\n"));
-}
-
-export function isTargetPost(post: ExtractedPost) {
-  if (post.crawlStatus !== "success") return Boolean(post.targetMatched);
-  return matchesTargetText([
-    post.title,
-    post.author,
-    post.tags.join(" "),
-    post.bodyText,
-  ].join("\n"));
-}
-
-function matchesTargetText(value: string) {
-  const configured = (process.env.POSTYPE_TARGET_TERMS || "")
-    .split(/[,，、\n]/)
-    .map((term) => normalizeTargetText(term))
-    .filter(Boolean);
-  const terms = configured.length ? configured : DEFAULT_TARGET_TERMS.map(normalizeTargetText);
-  const searchable = normalizeTargetText(value);
-  return terms.some((term) => searchable.includes(term));
-}
-
-function normalizeTargetText(value: string) {
-  return value.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
 }
 
 async function settleAndScroll(page: Page) {
@@ -152,7 +121,6 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       viewCount,
       crawlStatus: "success",
       crawlError: null,
-      targetMatched: link.targetMatched,
     };
   } catch (error) {
     return deniedPost(link, "error", error instanceof Error ? error.message : String(error));
@@ -301,7 +269,6 @@ function deniedPost(link: PostLink, status: ExtractedPost["crawlStatus"], messag
     viewCount: null,
     crawlStatus: status,
     crawlError: message,
-    targetMatched: link.targetMatched,
   };
 }
 
