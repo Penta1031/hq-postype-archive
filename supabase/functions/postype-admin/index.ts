@@ -10,9 +10,11 @@ const corsHeaders = {
 const tableName = Deno.env.get("POSTYPE_TABLE") || "postype_archive";
 const encoder = new TextEncoder();
 const failedLogins = new Map<string, { count: number; resetAt: number }>();
+const publicSubmissionWindows = new Map<string, { count: number; resetAt: number }>();
 const loginWindowMs = 15 * 60 * 1000;
 const maxLoginFailures = 5;
 const adminSessionMs = 30 * 60 * 1000;
+const authorSessionMs = 2 * 60 * 60 * 1000;
 const editableFilterGroups = new Set(["장르", "키워드", "공", "수"]);
 
 const K = {
@@ -92,6 +94,17 @@ function recordLoginFailure(key: string) {
   current.count += 1;
 }
 
+function publicSubmissionRateLimited(key: string) {
+  const now = Date.now();
+  const current = publicSubmissionWindows.get(key);
+  if (!current || now >= current.resetAt) {
+    publicSubmissionWindows.set(key, { count: 1, resetAt: now + 60 * 60 * 1000 });
+    return false;
+  }
+  current.count += 1;
+  return current.count > 8;
+}
+
 async function secureTextEqual(left: string, right: string) {
   const [leftHash, rightHash] = await Promise.all([
     crypto.subtle.digest("SHA-256", encoder.encode(left)),
@@ -124,23 +137,52 @@ async function sessionSignature(payload: string, secret: string) {
 }
 
 async function issueAdminSession(secret: string) {
-  const payload = base64Url(encoder.encode(JSON.stringify({ exp: Date.now() + adminSessionMs })));
+  const payload = base64Url(encoder.encode(JSON.stringify({ exp: Date.now() + adminSessionMs, role: "admin" })));
   return `${payload}.${await sessionSignature(payload, secret)}`;
 }
 
-async function validAdminSession(token: string, secret: string) {
+async function issueAuthorSession(secret: string, authorId: string) {
+  const payload = base64Url(encoder.encode(JSON.stringify({
+    exp: Date.now() + authorSessionMs,
+    role: "author",
+    authorId,
+  })));
+  return `${payload}.${await sessionSignature(payload, secret)}`;
+}
+
+async function parseSignedSession(token: string, secret: string) {
   const [payload, signature, extra] = token.split(".");
-  if (!payload || !signature || extra) return false;
+  if (!payload || !signature || extra) return null;
   const expected = await sessionSignature(payload, secret);
-  if (!(await secureTextEqual(signature, expected))) return false;
+  if (!(await secureTextEqual(signature, expected))) return null;
   try {
     const normalized = payload.replace(/-/g, "+").replace(/_/g, "/");
     const decoded = atob(normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "="));
-    const data = JSON.parse(decoded) as { exp?: number };
-    return Number.isFinite(data.exp) && Number(data.exp) > Date.now();
+    const data = JSON.parse(decoded) as { exp?: number; role?: string; authorId?: string };
+    return Number.isFinite(data.exp) && Number(data.exp) > Date.now() ? data : null;
   } catch {
-    return false;
+    return null;
   }
+}
+
+async function validAdminSession(token: string, secret: string) {
+  const data = await parseSignedSession(token, secret);
+  return data?.role === "admin";
+}
+
+async function validAuthorSession(token: string, secret: string) {
+  const data = await parseSignedSession(token, secret);
+  return data?.role === "author" && cleanSubmissionId(data.authorId) ? data : null;
+}
+
+async function hashAuthorKey(value: string) {
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", encoder.encode(value)));
+  return [...digest].map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function generateAuthorKey() {
+  const value = crypto.randomUUID().replace(/-/g, "").slice(0, 16).toUpperCase();
+  return `HQ-${value.slice(0, 4)}-${value.slice(4, 8)}-${value.slice(8, 12)}-${value.slice(12, 16)}`;
 }
 
 function text(value: unknown) {
@@ -175,6 +217,76 @@ function cleanFilterOptions(group: string, value: unknown) {
   let options = [...new Set(value.map((item) => text(item)).filter((item) => item && item.length <= 40))].slice(0, 120);
   if (group === "장르") options = options.filter((item) => item.toUpperCase() !== "RPS");
   return options;
+}
+
+function cleanTagText(value: unknown, limit = 12) {
+  return [...new Set(text(value)
+    .split(/[,，、/|·\n]/)
+    .map((item) => item.trim())
+    .filter((item) => item && item.length <= 40))]
+    .slice(0, limit)
+    .join(", ");
+}
+
+function cleanSubmissionId(value: unknown) {
+  const id = text(value);
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(id) ? id : "";
+}
+
+function postIdFromUrl(value: string) {
+  const match = value.match(/\/post\/(\d+)/);
+  return match ? Number(match[1]) : null;
+}
+
+function cleanDate(value: unknown) {
+  const date = text(value);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
+}
+
+function authorSubmissionRow(payload: Record<string, unknown>, authorId: string) {
+  const postUrl = cleanPostypePostUrl(payload.post_url);
+  const title = text(payload.title).slice(0, 200);
+  if (!postUrl || !title) throw new Error("포스타입 글 링크와 작품 제목을 입력해 주세요.");
+  const isSeries = flag(payload.is_series);
+  return {
+    author_id: authorId,
+    status: "pending_review",
+    post_url: postUrl,
+    postype_post_id: postIdFromUrl(postUrl),
+    title,
+    published_date: cleanDate(payload.published_date),
+    category: ["글", "그림", "기타"].includes(text(payload.category)) ? text(payload.category) : "글",
+    is_paid: flag(payload.is_paid),
+    is_adult: flag(payload.is_adult),
+    genres: withoutRps(cleanTagText(payload.genres, 8)),
+    keywords: cleanTagText(payload.keywords, 12),
+    top_tags: cleanTagText(payload.top_tags, 8),
+    bottom_tags: cleanTagText(payload.bottom_tags, 8),
+    endings: cleanTagText(payload.endings, 4),
+    is_series: isSeries,
+    series_name: isSeries ? text(payload.series_name).slice(0, 160) : null,
+    series_volume: isSeries ? text(payload.series_volume).slice(0, 40) : null,
+    serialization_status: isSeries && ["연재중", "완결"].includes(text(payload.serialization_status))
+      ? text(payload.serialization_status)
+      : isSeries ? "연재중" : "단편",
+    review_note: null,
+    reviewed_at: null,
+  };
+}
+
+function authorOwnsPostUrl(channelUrlValue: unknown, postUrlValue: unknown) {
+  try {
+    const channelUrl = new URL(text(channelUrlValue));
+    const postUrl = new URL(text(postUrlValue));
+    const channelPath = channelUrl.pathname.replace(/\/$/, "");
+    const channelHost = channelUrl.hostname.replace(/^www\./i, "");
+    const postHost = postUrl.hostname.replace(/^www\./i, "");
+    return channelHost === postHost
+      && /^\/@[^/]+$/i.test(channelPath)
+      && postUrl.pathname.startsWith(`${channelPath}/post/`);
+  } catch {
+    return false;
+  }
 }
 
 function postToRow(payload: Record<string, unknown>, action: string) {
@@ -245,6 +357,20 @@ function cleanPostypePostUrl(value: unknown) {
   }
 }
 
+function cleanPostypeChannelUrl(value: unknown) {
+  const raw = text(value);
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    const isPostype = url.hostname === "postype.com" || url.hostname.endsWith(".postype.com");
+    const pathname = url.pathname.replace(/\/$/, "");
+    if (!isPostype || !/^\/@[^/]+$/i.test(pathname)) return "";
+    return `${url.protocol}//${url.host}${pathname}`;
+  } catch {
+    return "";
+  }
+}
+
 async function dispatchCrawlerWorkflow(postUrl = "") {
   const token = Deno.env.get("GITHUB_WORKFLOW_TOKEN") || Deno.env.get("GITHUB_ACTIONS_TOKEN");
   const repository = Deno.env.get("GITHUB_REPOSITORY");
@@ -302,6 +428,87 @@ async function rest(path: string, init: RequestInit = {}) {
   const responseText = await response.text();
   if (!response.ok) throw new Error(responseText || response.statusText);
   return responseText ? JSON.parse(responseText) : null;
+}
+
+async function findAuthorSubmission(id: string) {
+  const rows = await rest(`postype_author_submissions?select=*&id=eq.${encodeURIComponent(id)}&limit=1`);
+  return Array.isArray(rows) && rows[0] ? rows[0] as Record<string, unknown> : null;
+}
+
+async function findAuthor(id: string) {
+  const rows = await rest(`postype_authors?select=id,display_name,postype_channel_url,key_hash,enabled,last_login_at,created_at,updated_at&id=eq.${encodeURIComponent(id)}&limit=1`);
+  return Array.isArray(rows) && rows[0] ? rows[0] as Record<string, unknown> : null;
+}
+
+function archiveRowFromSubmission(submission: Record<string, unknown>, authorName: string) {
+  const id = text(submission.id);
+  return {
+    source_row_number: `author-submission-${id}`,
+    postype_post_id: Number(submission.postype_post_id) || null,
+    title: text(submission.title) || "제목 없음",
+    author: authorName,
+    published_date: cleanDate(submission.published_date),
+    link: text(submission.post_url),
+    is_paid: flag(submission.is_paid),
+    is_adult: flag(submission.is_adult),
+    category: text(submission.category) || "글",
+    genres: withoutRps(submission.genres),
+    keywords: cleanTagText(submission.keywords, 12),
+    top_tags: cleanTagText(submission.top_tags, 8),
+    bottom_tags: cleanTagText(submission.bottom_tags, 8),
+    endings: cleanTagText(submission.endings, 4),
+    is_series: flag(submission.is_series),
+    series_name: text(submission.series_name) || null,
+    series_volume: text(submission.series_volume) || null,
+    serialization_status: text(submission.serialization_status) || (flag(submission.is_series) ? "연재중" : "단편"),
+    status_reason: "작가 전용 키 로그인 후 본인 입력",
+    discovered_at: new Date().toISOString(),
+    crawled_at: new Date().toISOString(),
+    crawl_status: "success",
+    ai_status: "approved",
+    ai_note: "작가 전용 키 신청 후 관리자 승인",
+    admin_reviewed: true,
+    admin_reviewed_at: new Date().toISOString(),
+    source_url: "author_submission",
+    deleted_at: null,
+  };
+}
+
+async function approveAuthorSubmission(id: string) {
+  const submission = await findAuthorSubmission(id);
+  if (!submission || text(submission.status) !== "pending_review") {
+    throw new Error("검수대기 신청만 승인할 수 있습니다.");
+  }
+  const author = await findAuthor(text(submission.author_id));
+  if (!author || !flag(author.enabled)) throw new Error("활성 작가 계정을 찾지 못했습니다.");
+  const row = archiveRowFromSubmission(submission, text(author.display_name));
+  const existing = await rest(`${encodeURIComponent(tableName)}?select=id&link=eq.${encodeURIComponent(text(row.link))}&limit=1`);
+  let archiveRows;
+  if (Array.isArray(existing) && existing[0]) {
+    archiveRows = await rest(`${encodeURIComponent(tableName)}?id=eq.${encodeURIComponent(text(existing[0].id))}`, {
+      method: "PATCH",
+      body: JSON.stringify(row),
+    });
+  } else {
+    archiveRows = await rest(encodeURIComponent(tableName), {
+      method: "POST",
+      body: JSON.stringify(row),
+    });
+  }
+  const archiveId = Array.isArray(archiveRows) && archiveRows[0] ? archiveRows[0].id : null;
+  await rest(`postype_author_submissions?id=eq.${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      status: "approved",
+      reviewed_at: new Date().toISOString(),
+      archived_post_id: archiveId,
+      review_note: "관리자 승인 완료",
+    }),
+  });
+  if (flag(submission.is_series) && text(submission.series_name)) {
+    await syncSeriesFilters(row);
+  }
+  return { archiveId };
 }
 
 async function syncSeriesFilters(row: Record<string, unknown>) {
@@ -385,6 +592,101 @@ Deno.serve(async (request) => {
     const token = text(body.token);
     const payload = (body.payload || {}) as Record<string, unknown>;
 
+    if (action === "author_login") {
+      const key = `author:${clientKey(request)}`;
+      if (loginIsBlocked(key)) return json({ ok: false, error: "로그인 시도가 너무 많습니다. 15분 뒤 다시 시도해 주세요." }, 429);
+      const displayName = text(payload.display_name).slice(0, 80);
+      const authorKey = text(payload.author_key);
+      const rows = displayName
+        ? await rest(`postype_authors?select=id,display_name,postype_channel_url,key_hash,enabled&display_name=eq.${encodeURIComponent(displayName)}&limit=1`)
+        : [];
+      const author = Array.isArray(rows) && rows[0] ? rows[0] as Record<string, unknown> : null;
+      const keyMatches = author && authorKey
+        ? await secureTextEqual(await hashAuthorKey(authorKey), text(author.key_hash))
+        : false;
+      if (!author || !flag(author.enabled) || !keyMatches) {
+        recordLoginFailure(key);
+        return json({ ok: false, error: "작가명 또는 작가 키가 올바르지 않습니다." }, 401);
+      }
+      failedLogins.delete(key);
+      await rest(`postype_authors?id=eq.${encodeURIComponent(text(author.id))}`, {
+        method: "PATCH",
+        body: JSON.stringify({ last_login_at: new Date().toISOString() }),
+      });
+      return json({
+        ok: true,
+        token: await issueAuthorSession(sessionSecret, text(author.id)),
+        expiresIn: authorSessionMs / 1000,
+        author: {
+          id: text(author.id),
+          displayName: text(author.display_name),
+          channelUrl: text(author.postype_channel_url),
+        },
+      });
+    }
+
+    const authorActions = ["author_list_own", "author_submit", "author_update_submission", "author_delete_submission"];
+    if (authorActions.includes(action)) {
+      const authorSession = await validAuthorSession(token, sessionSecret);
+      if (!authorSession?.authorId) return json({ ok: false, error: "작가 로그인이 만료됐습니다. 다시 로그인해 주세요." }, 401);
+      const author = await findAuthor(authorSession.authorId);
+      if (!author || !flag(author.enabled)) return json({ ok: false, error: "사용할 수 없는 작가 계정입니다." }, 403);
+
+      if (action === "author_list_own") {
+        const rows = await rest(`postype_author_submissions?select=*&author_id=eq.${encodeURIComponent(authorSession.authorId)}&order=created_at.desc&limit=100`);
+        return json({ ok: true, rows, author: { displayName: text(author.display_name), channelUrl: text(author.postype_channel_url) } });
+      }
+
+      if (action === "author_submit") {
+        if (text(payload.website)) return json({ ok: true, ignored: true });
+        if (publicSubmissionRateLimited(clientKey(request))) {
+          return json({ ok: false, error: "신청 횟수가 너무 많습니다. 한 시간 뒤 다시 시도해 주세요." }, 429);
+        }
+        const row = authorSubmissionRow(payload, authorSession.authorId);
+        if (!authorOwnsPostUrl(author.postype_channel_url, row.post_url)) {
+          return json({ ok: false, error: "등록된 본인 포스타입 채널의 글만 신청할 수 있습니다." }, 403);
+        }
+        const rows = await rest("postype_author_submissions", { method: "POST", body: JSON.stringify(row) });
+        return json({ ok: true, rows });
+      }
+
+      const id = cleanSubmissionId(payload.submission_id);
+      const submission = id ? await findAuthorSubmission(id) : null;
+      if (!submission || text(submission.author_id) !== authorSession.authorId) {
+        return json({ ok: false, error: "본인의 신청 글만 관리할 수 있습니다." }, 403);
+      }
+
+      if (action === "author_update_submission") {
+        const row = authorSubmissionRow(payload, authorSession.authorId);
+        if (!authorOwnsPostUrl(author.postype_channel_url, row.post_url)) {
+          return json({ ok: false, error: "등록된 본인 포스타입 채널의 글만 신청할 수 있습니다." }, 403);
+        }
+        if (submission.archived_post_id) {
+          await rest(`${encodeURIComponent(tableName)}?id=eq.${encodeURIComponent(text(submission.archived_post_id))}`, {
+            method: "PATCH",
+            body: JSON.stringify({ deleted_at: new Date().toISOString() }),
+          });
+        }
+        const rows = await rest(`postype_author_submissions?id=eq.${encodeURIComponent(id)}`, {
+          method: "PATCH",
+          body: JSON.stringify({ ...row, status: "pending_review", reviewed_at: null, review_note: null }),
+        });
+        return json({ ok: true, rows });
+      }
+
+      if (submission.archived_post_id) {
+        await rest(`${encodeURIComponent(tableName)}?id=eq.${encodeURIComponent(text(submission.archived_post_id))}`, {
+          method: "PATCH",
+          body: JSON.stringify({ deleted_at: new Date().toISOString() }),
+        });
+      }
+      await rest(`postype_author_submissions?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ status: "withdrawn", review_note: "작가가 직접 숨김 삭제", reviewed_at: new Date().toISOString() }),
+      });
+      return json({ ok: true });
+    }
+
     if (action === "auth") {
       const key = clientKey(request);
       if (loginIsBlocked(key)) {
@@ -402,8 +704,79 @@ Deno.serve(async (request) => {
       return json({ ok: false, error: "Admin session is missing or expired." }, 401);
     }
 
-    if (!["list", "create", "update", "delete", "approve", "run_crawler", "save_filter_options", "unify_all_series"].includes(action)) {
+    if (!["list", "create", "update", "delete", "approve", "run_crawler", "save_filter_options", "unify_all_series", "list_author_submissions", "approve_author_submission", "reject_author_submission", "list_authors", "create_author", "reset_author_key", "toggle_author"].includes(action)) {
       return json({ ok: false, error: "Unknown action." }, 400);
+    }
+
+    if (action === "list_authors") {
+      const rows = await rest("postype_authors?select=id,display_name,postype_channel_url,enabled,last_login_at,created_at,updated_at&order=display_name.asc");
+      return json({ ok: true, rows });
+    }
+
+    if (action === "create_author") {
+      const displayName = text(payload.display_name).slice(0, 80);
+      const channelUrl = cleanPostypeChannelUrl(payload.postype_channel_url);
+      if (!displayName || !channelUrl) return json({ ok: false, error: "작가명과 포스타입 채널 주소를 확인해 주세요." }, 400);
+      const authorKey = generateAuthorKey();
+      const rows = await rest("postype_authors", {
+        method: "POST",
+        body: JSON.stringify({
+          display_name: displayName,
+          postype_channel_url: channelUrl,
+          key_hash: await hashAuthorKey(authorKey),
+          enabled: true,
+        }),
+      });
+      return json({ ok: true, rows, authorKey });
+    }
+
+    if (action === "reset_author_key") {
+      const id = cleanSubmissionId(payload.author_id);
+      if (!id || !(await findAuthor(id))) return json({ ok: false, error: "작가 계정을 찾지 못했습니다." }, 404);
+      const authorKey = generateAuthorKey();
+      await rest(`postype_authors?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ key_hash: await hashAuthorKey(authorKey) }),
+      });
+      return json({ ok: true, authorKey });
+    }
+
+    if (action === "toggle_author") {
+      const id = cleanSubmissionId(payload.author_id);
+      const author = id ? await findAuthor(id) : null;
+      if (!author) return json({ ok: false, error: "작가 계정을 찾지 못했습니다." }, 404);
+      await rest(`postype_authors?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ enabled: !flag(author.enabled) }),
+      });
+      return json({ ok: true, enabled: !flag(author.enabled) });
+    }
+
+    if (action === "list_author_submissions") {
+      const rows = await rest("postype_author_submissions?select=id,author_id,status,post_url,postype_post_id,title,published_date,category,is_paid,is_adult,genres,keywords,top_tags,bottom_tags,endings,is_series,series_name,series_volume,serialization_status,review_note,reviewed_at,archived_post_id,created_at,updated_at,postype_authors(display_name,postype_channel_url)&order=created_at.desc&limit=100");
+      return json({ ok: true, rows });
+    }
+
+    if (action === "approve_author_submission") {
+      const id = cleanSubmissionId(payload.submission_id);
+      if (!id) return json({ ok: false, error: "신청 ID가 올바르지 않습니다." }, 400);
+      return json({ ok: true, ...(await approveAuthorSubmission(id)) });
+    }
+
+    if (action === "reject_author_submission") {
+      const id = cleanSubmissionId(payload.submission_id);
+      if (!id) return json({ ok: false, error: "신청 ID가 올바르지 않습니다." }, 400);
+      const submission = await findAuthorSubmission(id);
+      if (!submission) return json({ ok: false, error: "신청을 찾지 못했습니다." }, 404);
+      await rest(`postype_author_submissions?id=eq.${encodeURIComponent(id)}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          status: "rejected",
+          reviewed_at: new Date().toISOString(),
+          review_note: text(payload.review_note).slice(0, 500) || "관리자 반려",
+        }),
+      });
+      return json({ ok: true });
     }
 
     if (action === "list") {

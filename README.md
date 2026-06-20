@@ -46,12 +46,8 @@ GitHub Actions Variable:
 - `GEMINI_MODEL` 기본값 `gemini-3.5-flash`
 - `GEMINI_MAX_ATTEMPTS` Gemini 일시 오류 재시도 횟수, 기본값 `4`
 - `AI_REVIEW_CONFIDENCE_THRESHOLD` 기본값 `0.72`
-- `UPDATE_VIEW_COUNTS` 기존 글의 최신 조회수 갱신 여부, 기본값 `true`
-- `VIEW_COUNT_CONCURRENCY` 조회수 확인 동시 실행 수, 기본값 `2`
 
 `POSTYPE_AUTH_STATE`는 Playwright `storageState` JSON 또는 base64 JSON을 넣습니다. 로그인/성인글/구매글은 해당 계정이 정상 열람 가능한 범위에서만 수집되며, 접근 불가 글은 `crawl_status`로 실패 기록만 남깁니다.
-
-현재 아카이브에 남아 있는 글의 조회수만 갱신하려면 GitHub Actions의 `Run workflow`에서 `새 글 수집 없이 현재 남은 글의 조회수만 업데이트`를 체크해 실행합니다. `deleted_at`이 비어 있는 포스타입 링크만 처리하며 새 글 수집과 AI 분류는 실행하지 않습니다.
 
 관리자 화면의 “수동 크롤링 실행” 버튼은 `config.js`의 `MANUAL_CRAWL_URL` 또는 `GITHUB_REPOSITORY`를 설정하면 GitHub Actions 수동 실행 화면으로 연결됩니다.
 
@@ -75,3 +71,10 @@ GitHub Actions Variable:
 신규 글이 시리즈로 분류되면 같은 `series_name`의 장르·키워드·공·수 값을 자동으로 통일합니다. 관리자 검수 회차가 있으면 그 값을 우선하며, 관리자 화면에서 시리즈 글 하나를 수정해도 같은 시리즈 전체에 네 필드가 함께 반영됩니다.
 
 관리자 로그인은 실패 횟수를 제한하며, 성공 후 발급되는 임시 로그인 표는 30분 동안만 브라우저 메모리에 보관됩니다. Vercel 배포에서는 `vercel.json`의 보안 헤더도 자동 적용됩니다.
+# 작가 업로드 채널
+
+관리자는 모바일 관리자 모드의 `작가 계정·키 관리`에서 작가별 계정을 만들고 전용 키를 발급·재발급·정지할 수 있습니다. 키 원문은 DB에 저장하지 않고 SHA-256 해시만 저장하므로, 분실한 키는 조회하지 않고 새로 발급합니다.
+
+작가는 `작가 업로드`에서 작가명과 전용 키로 로그인합니다. 등록된 본인 포스타입 채널의 글만 신청할 수 있고, 본인 신청만 수정·숨김 삭제할 수 있습니다. 신청은 관리자 승인 전까지 공개 검색기에 나오지 않습니다.
+
+최초 설치 시 `supabase/add-author-submissions.sql`을 Supabase SQL Editor에서 한 번 실행하고 `postype-admin` Edge Function을 재배포합니다. 추가 Secret은 필요하지 않습니다.

@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>혚쾌 포타 검색기</title>
   <style>
+    @font-face {
+      font-family: "RIDIBatang";
+      src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_eight@1.0/RIDIBatang.woff") format("woff");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+
     :root {
       color-scheme: dark;
       --bg: #0b0d10;
@@ -34,6 +42,12 @@
 
     a { color: inherit; }
     button, input, select, textarea { font: inherit; }
+
+    .swatch[data-bg="purple-blue"] {
+      border-color: #7c67df;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5 52%, #0284c7);
+      color: #fff;
+    }
 
     .shell {
       width: min(1280px, calc(100% - 32px));
@@ -1694,6 +1708,133 @@
       cursor: pointer;
     }
 
+    .author-submission-list,
+    .author-selector-options {
+      display: grid;
+      gap: 7px;
+    }
+
+    .author-submission-card {
+      display: grid;
+      gap: 7px;
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid #292b30;
+      border-radius: 8px;
+      background: #151619;
+    }
+
+    .author-submission-card strong,
+    .author-submission-card a {
+      overflow-wrap: anywhere;
+      color: #f2f3f5;
+      font-size: 13px;
+    }
+
+    .author-submission-actions {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+
+    .author-issued-key {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px;
+      margin: 8px 0;
+      padding: 10px;
+      border: 1px solid #375066;
+      border-radius: 8px;
+      background: #0e151b;
+    }
+
+    .author-issued-key[hidden] { display: none; }
+
+    .author-issued-key strong,
+    .author-issued-key p {
+      grid-column: 1 / -1;
+      margin: 0;
+    }
+
+    .author-issued-key input {
+      min-width: 0;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .author-upload-intro,
+    .author-verification-note,
+    .author-submission-meta {
+      margin: 0;
+      color: #7f8995;
+      font-size: 11px;
+      line-height: 1.55;
+    }
+
+    .author-selector {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #08090b;
+    }
+
+    .author-selector summary {
+      min-height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 10px 12px;
+      list-style: none;
+      cursor: pointer;
+    }
+
+    .author-selector summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .author-selector-options {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-height: 220px;
+      overflow-y: auto;
+      padding: 9px;
+      border-top: 1px solid var(--line);
+    }
+
+    .author-verification {
+      display: grid;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 12px;
+      border: 1px solid #375066;
+      border-radius: 8px;
+      background: #0e151b;
+    }
+
+    .author-verification[hidden],
+    .author-series-fields[hidden] {
+      display: none;
+    }
+
+    .author-verification-code {
+      padding: 12px;
+      border: 1px dashed #6d75c9;
+      border-radius: 8px;
+      background: #111323;
+      color: #e7e8ff;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      letter-spacing: 0;
+    }
+
+    .author-honeypot {
+      position: absolute;
+      left: -9999px;
+      width: 1px;
+      height: 1px;
+      overflow: hidden;
+    }
+
     .review-list {
       display: grid;
       gap: 7px;
@@ -2531,6 +2672,7 @@
         <h1>혚쾌 포타 검색기</h1>
         <div class="brand-actions">
           <button class="button top-library-button" id="libraryToggle" type="button">내 서재</button>
+          <button class="button top-library-button" id="authorUploadToggle" type="button">작가 업로드</button>
           <button class="button lock-button" id="adminToggle" type="button" aria-label="관리자 모드">
             <svg viewBox="0 0 24 24" aria-hidden="true">
               <path d="M7 10V8a5 5 0 0 1 10 0v2"></path>
@@ -2574,6 +2716,31 @@
             <span id="newPostCount">0건</span>
           </summary>
           <div class="new-post-list" id="newPostList"></div>
+        </details>
+        <details class="crawler-section" id="authorSubmissionsAdmin" open>
+          <summary class="crawler-section-head">
+            <strong>작가 업로드 신청</strong>
+            <span id="authorSubmissionCount">0건</span>
+          </summary>
+          <div class="author-submission-list" id="authorSubmissionList"></div>
+        </details>
+        <details class="crawler-section" id="authorAccountsAdmin">
+          <summary class="crawler-section-head">
+            <strong>작가 계정·키 관리</strong>
+            <span id="authorAccountCount">0명</span>
+          </summary>
+          <form class="modal-grid" id="authorAccountForm" style="margin-top: 8px;">
+            <label><span class="label">작가명</span><input name="display_name" maxlength="80" required></label>
+            <label><span class="label">포스타입 채널 주소</span><input name="postype_channel_url" type="url" placeholder="https://www.postype.com/@작가채널" required></label>
+            <button class="button primary" type="submit">작가 키 발급</button>
+          </form>
+          <div class="author-issued-key" id="authorIssuedKeyBox" hidden>
+            <strong id="authorIssuedKeyTitle">작가 키</strong>
+            <p class="author-submission-meta">이 키는 지금만 보입니다. 작가에게 전달한 뒤 분실하면 새로 발급해 주세요.</p>
+            <input id="authorIssuedKeyValue" type="text" readonly aria-label="발급된 작가 키">
+            <button class="button" id="authorIssuedKeyCopy" type="button">키 복사</button>
+          </div>
+          <div class="author-submission-list" id="authorAccountList"></div>
         </details>
       </div>
       <label class="admin-search">
@@ -2799,6 +2966,65 @@
     </section>
   </div>
 
+  <div class="modal" id="authorUploadModal" hidden>
+    <section class="modal-card wide" role="dialog" aria-modal="true" aria-labelledby="authorUploadTitle">
+      <div class="modal-head">
+        <div>
+          <h2 id="authorUploadTitle">작가 업로드</h2>
+          <p class="author-upload-intro">관리자가 발급한 작가별 전용 키로 로그인합니다. 등록된 본인 채널의 글만 신청하고 관리할 수 있습니다.</p>
+          <p class="author-upload-intro" id="authorUploadStatus" role="status" aria-live="polite"></p>
+        </div>
+        <button class="modal-close" id="authorUploadClose" type="button" aria-label="닫기">×</button>
+      </div>
+      <section id="authorLoginPanel">
+        <form id="authorLoginForm" class="modal-grid">
+          <label><span class="label">작가명</span><input name="display_name" maxlength="80" autocomplete="username" required></label>
+          <label><span class="label">작가 키</span><input name="author_key" type="password" autocomplete="current-password" required></label>
+          <button class="button primary" type="submit">작가 업로드 채널 로그인</button>
+        </form>
+      </section>
+      <section id="authorWorkspace" hidden>
+        <div class="author-verification">
+          <div>
+            <strong id="authorWorkspaceName">작가</strong>
+            <p class="author-verification-note" id="authorWorkspaceChannel"></p>
+          </div>
+          <button class="button" id="authorLogout" type="button">로그아웃</button>
+        </div>
+      <form id="authorUploadForm" class="modal-grid" style="margin-top: 14px;">
+        <input type="hidden" name="submission_id">
+        <label><span class="label">작품 제목</span><input name="title" maxlength="200" required></label>
+        <label><span class="label">포스타입 글 링크</span><input name="post_url" type="url" placeholder="https://www.postype.com/@.../post/..." required></label>
+        <div class="modal-grid two">
+          <label><span class="label">게시일</span><input name="published_date" type="date"></label>
+          <label><span class="label">카테고리</span><select name="category"><option>글</option><option>그림</option><option>기타</option></select></label>
+          <label><span class="label">공개 범위</span><select name="is_adult"><option value="false">전연령</option><option value="true">성인</option></select></label>
+          <label><span class="label">가격</span><select name="is_paid"><option value="false">무료</option><option value="true">유료</option></select></label>
+          <label><span class="label">시리즈 여부</span><select name="is_series" id="authorIsSeries"><option value="false">단편</option><option value="true">시리즈</option></select></label>
+        </div>
+        <div class="modal-grid two author-series-fields" id="authorSeriesFields" hidden>
+          <label><span class="label">시리즈명</span><input name="series_name"></label>
+          <label><span class="label">회차</span><input name="series_volume" placeholder="1, 2, 上, 下"></label>
+          <label><span class="label">연재상태</span><select name="serialization_status"><option>연재중</option><option>완결</option></select></label>
+        </div>
+        <div class="modal-grid two">
+          <div><span class="label">장르</span><input type="hidden" name="genres"><details class="author-selector" data-author-selector="장르"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
+          <div><span class="label">키워드</span><input type="hidden" name="keywords"><details class="author-selector" data-author-selector="키워드"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
+          <div><span class="label">공</span><input type="hidden" name="top_tags"><details class="author-selector" data-author-selector="공"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
+          <div><span class="label">수</span><input type="hidden" name="bottom_tags"><details class="author-selector" data-author-selector="수"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
+          <div><span class="label">스포일러</span><input type="hidden" name="endings"><details class="author-selector" data-author-selector="스포일러"><summary><span>선택 없음</span></summary><div class="author-selector-options"></div></details></div>
+        </div>
+        <label class="author-honeypot" aria-hidden="true">웹사이트<input name="website" tabindex="-1" autocomplete="off"></label>
+        <div class="random-result-actions">
+          <button class="button primary" id="authorCreateSubmission" type="submit">관리자 승인 요청</button>
+          <button class="button" id="authorCancelEdit" type="button">수정 취소</button>
+        </div>
+      </form>
+        <div class="author-submission-list" id="authorOwnSubmissionList" style="margin-top: 14px;"></div>
+      </section>
+    </section>
+  </div>
+
   <div class="modal" id="noteModal" hidden>
     <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="noteTitle">
       <div class="modal-head">
@@ -2838,7 +3064,7 @@
           <label><span class="label">작가</span><input id="excerptAuthor"></label>
           <label><span class="label">발췌 텍스트</span><textarea id="excerptText" placeholder="텍스트를 복붙해 주세요."></textarea></label>
           <div class="modal-grid two">
-            <label><span class="label">글꼴</span><select id="excerptFont"><option value="Pretendard, system-ui, sans-serif">기본</option><option value="'Nanum Gothic', '나눔고딕', system-ui, sans-serif">나눔고딕</option><option value="'Nanum Myeongjo', '나눔명조', serif">나눔명조</option></select></label>
+            <label><span class="label">글꼴</span><select id="excerptFont"><option value="Pretendard, system-ui, sans-serif">기본</option><option value="'Nanum Gothic', '나눔고딕', system-ui, sans-serif">나눔고딕</option><option value="'Nanum Myeongjo', '나눔명조', serif">나눔명조</option><option value="'RIDIBatang', 'Nanum Myeongjo', serif">리디명조</option></select></label>
             <label><span class="label">글자크기 <span id="excerptFontSizeLabel">38</span></span><input id="excerptFontSize" type="range" min="26" max="58" value="38"></label>
           </div>
           <div class="modal-grid">
@@ -2846,6 +3072,7 @@
             <div class="swatches">
               <button class="swatch active" type="button" data-bg="dark">검정</button>
               <button class="swatch" type="button" data-bg="light">하양</button>
+              <button class="swatch" type="button" data-bg="purple-blue">보라·파랑</button>
             </div>
           </div>
           <div class="modal-grid">
@@ -3014,7 +3241,12 @@
       adminBulkValues: new Set(),
       seriesStats: new Map(),
       crawlRun: null,
-      dismissedNewPosts: loadDismissedNewPosts()
+      dismissedNewPosts: loadDismissedNewPosts(),
+      authorSubmissions: [],
+      authors: [],
+      authorToken: "",
+      authorProfile: null,
+      authorOwnSubmissions: []
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -3074,6 +3306,30 @@
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
       libraryToggle: $("#libraryToggle"),
+      authorUploadToggle: $("#authorUploadToggle"),
+      authorUploadModal: $("#authorUploadModal"),
+      authorUploadClose: $("#authorUploadClose"),
+      authorUploadStatus: $("#authorUploadStatus"),
+      authorLoginPanel: $("#authorLoginPanel"),
+      authorLoginForm: $("#authorLoginForm"),
+      authorWorkspace: $("#authorWorkspace"),
+      authorWorkspaceName: $("#authorWorkspaceName"),
+      authorWorkspaceChannel: $("#authorWorkspaceChannel"),
+      authorLogout: $("#authorLogout"),
+      authorUploadForm: $("#authorUploadForm"),
+      authorIsSeries: $("#authorIsSeries"),
+      authorSeriesFields: $("#authorSeriesFields"),
+      authorCancelEdit: $("#authorCancelEdit"),
+      authorOwnSubmissionList: $("#authorOwnSubmissionList"),
+      authorSubmissionCount: $("#authorSubmissionCount"),
+      authorSubmissionList: $("#authorSubmissionList"),
+      authorAccountForm: $("#authorAccountForm"),
+      authorAccountCount: $("#authorAccountCount"),
+      authorAccountList: $("#authorAccountList"),
+      authorIssuedKeyBox: $("#authorIssuedKeyBox"),
+      authorIssuedKeyTitle: $("#authorIssuedKeyTitle"),
+      authorIssuedKeyValue: $("#authorIssuedKeyValue"),
+      authorIssuedKeyCopy: $("#authorIssuedKeyCopy"),
       libraryModal: $("#libraryModal"),
       libraryTitle: $("#libraryTitle"),
       libraryClose: $("#libraryClose"),
@@ -3390,8 +3646,6 @@
         _crawlError: normalize(row.crawl_error),
         _aiClassifiedAt: normalize(row.ai_classified_at),
         _adminReviewedAt: normalize(row.admin_reviewed_at),
-        _viewCount: normalize(row.view_count),
-        _viewCountCheckedAt: normalize(row.view_count_checked_at),
         "제목": normalize(row.title),
         "작가": normalize(row.author),
         "날짜": normalize(row.published_date),
@@ -3519,6 +3773,26 @@
       }
     }
 
+    async function loadAuthorSubmissions() {
+      if (!state.adminToken) {
+        state.authorSubmissions = [];
+        state.authors = [];
+        return;
+      }
+      try {
+        const [submissionResult, authorResult] = await Promise.all([
+          requestAdminFunction("list_author_submissions"),
+          requestAdminFunction("list_authors"),
+        ]);
+        state.authorSubmissions = Array.isArray(submissionResult.rows) ? submissionResult.rows : [];
+        state.authors = Array.isArray(authorResult.rows) ? authorResult.rows : [];
+      } catch (error) {
+        state.authorSubmissions = [];
+        state.authors = [];
+        showAdminResult(`작가 신청 목록을 불러오지 못했습니다: ${error.message}`, "error");
+      }
+    }
+
     function parseCsv(text) {
       const rows = [];
       let row = [];
@@ -3608,6 +3882,7 @@
       localStorage.setItem(DISMISSED_NEW_POSTS_KEY, JSON.stringify([...state.dismissedNewPosts]));
     }
 
+
     function loadLibrary() {
       try {
         const data = JSON.parse(localStorage.getItem(LIBRARY_STORAGE_KEY) || "{}");
@@ -3681,6 +3956,7 @@
             await loadFilterConfig();
             const result = await loadRemotePosts();
             state.posts = mergeSheetAndLocal(result.posts);
+            await loadAuthorSubmissions();
             updateSeriesStats();
             els.status.textContent = "";
       } catch (error) {
@@ -3692,6 +3968,7 @@
       buildFilters();
       buildAdminFilters();
       buildAdminMultiSelects();
+      buildAuthorSubmissionSelectors();
       buildAdminBulkValueOptions();
       renderAdminVocabulary();
       render();
@@ -3911,13 +4188,6 @@
       });
     }
 
-    function viewCountLabel(post) {
-      const raw = normalize(post._viewCount);
-      if (!raw) return "";
-      const count = Number(raw);
-      return Number.isFinite(count) && count >= 0 ? `조회 ${Math.round(count).toLocaleString("ko-KR")}` : "";
-    }
-
     function crawlMarker(post) {
       return Boolean(normalize(post._crawlStatus) || normalize(post._postypePostId) || normalize(post["수집출처"]));
     }
@@ -3964,6 +4234,8 @@
       els.crawlFoundCount.textContent = Number(run.found_count || 0).toLocaleString("ko-KR");
       els.crawlFailedCount.textContent = Number(run.failed_count || 0).toLocaleString("ko-KR");
       renderNewPostList();
+      renderAuthorSubmissionAdmin();
+      renderAuthorAccounts();
     }
 
     function renderNewPostList() {
@@ -4004,6 +4276,162 @@
         item.append(open, dismiss);
         els.newPostList.appendChild(item);
       });
+    }
+
+    function submissionAuthorName(submission) {
+      const author = submission.postype_authors;
+      return normalize(Array.isArray(author) ? author[0] && author[0].display_name : author && author.display_name) || "작가 미상";
+    }
+
+    function renderAuthorSubmissionAdmin() {
+      if (!els.authorSubmissionList) return;
+      const submissions = state.authorSubmissions.slice().sort((a, b) => {
+        const pendingDiff = Number(b.status === "pending_review") - Number(a.status === "pending_review");
+        return pendingDiff || (Date.parse(b.created_at) || 0) - (Date.parse(a.created_at) || 0);
+      });
+      const pendingCount = submissions.filter((item) => item.status === "pending_review").length;
+      els.authorSubmissionCount.textContent = `${pendingCount}건 대기`;
+      els.authorSubmissionList.innerHTML = "";
+      if (!submissions.length) {
+        els.authorSubmissionList.innerHTML = '<div class="empty">작가 업로드 신청이 없습니다.</div>';
+        return;
+      }
+      submissions.slice(0, 50).forEach((submission) => {
+        const card = document.createElement("article");
+        card.className = "author-submission-card";
+        const tags = [submission.genres, submission.keywords, submission.top_tags, submission.bottom_tags].map(normalize).filter(Boolean).join(" · ");
+        card.innerHTML = `
+          <a href="${escapeHtml(normalize(submission.post_url))}" target="_blank" rel="noreferrer">${escapeHtml(normalize(submission.title) || "제목 없음")}</a>
+          <p class="author-submission-meta">${escapeHtml(`${submissionAuthorName(submission)} · ${authorStatusLabel(submission.status)} · ${formatDateTime(submission.created_at)}`)}</p>
+          <p class="author-submission-meta">${escapeHtml(tags || "필터 정보 없음")}</p>
+          ${submission.review_note ? `<p class="author-submission-meta">${escapeHtml(submission.review_note)}</p>` : ""}
+          <div class="author-submission-actions">
+            <button class="button primary" type="button" data-action="approve">승인·공개</button>
+            <button class="button danger" type="button" data-action="reject">반려</button>
+          </div>
+        `;
+        const pending = submission.status === "pending_review";
+        card.querySelector('[data-action="approve"]').disabled = !pending;
+        card.querySelector('[data-action="reject"]').disabled = !pending;
+        card.querySelector('[data-action="approve"]').addEventListener("click", () => approveAuthorSubmission(submission));
+        card.querySelector('[data-action="reject"]').addEventListener("click", () => rejectAuthorSubmission(submission));
+        els.authorSubmissionList.appendChild(card);
+      });
+    }
+
+    function renderAuthorAccounts() {
+      if (!els.authorAccountList) return;
+      els.authorAccountCount.textContent = `${state.authors.length}명`;
+      els.authorAccountList.innerHTML = "";
+      if (!state.authors.length) {
+        els.authorAccountList.innerHTML = '<div class="empty">등록된 작가 계정이 없습니다.</div>';
+        return;
+      }
+      state.authors.forEach((author) => {
+        const card = document.createElement("article");
+        card.className = "author-submission-card";
+        card.innerHTML = `
+          <strong>${escapeHtml(author.display_name)}</strong>
+          <a href="${escapeHtml(author.postype_channel_url)}" target="_blank" rel="noreferrer">${escapeHtml(author.postype_channel_url)}</a>
+          <p class="author-submission-meta">${author.enabled ? "사용중" : "정지됨"} · 최근 로그인 ${escapeHtml(formatDateTime(author.last_login_at))}</p>
+          <div class="author-submission-actions">
+            <button class="button" type="button" data-action="reset">키 재발급</button>
+            <button class="button ${author.enabled ? "danger" : "primary"}" type="button" data-action="toggle">${author.enabled ? "계정 정지" : "다시 활성화"}</button>
+          </div>
+        `;
+        card.querySelector('[data-action="reset"]').addEventListener("click", () => resetAuthorKey(author));
+        card.querySelector('[data-action="toggle"]').addEventListener("click", () => toggleAuthorAccount(author));
+        els.authorAccountList.appendChild(card);
+      });
+    }
+
+    async function showIssuedAuthorKey(authorName, authorKey) {
+      els.authorIssuedKeyTitle.textContent = `${authorName} 작가 키`;
+      els.authorIssuedKeyValue.value = authorKey;
+      els.authorIssuedKeyBox.hidden = false;
+      els.authorIssuedKeyValue.focus();
+      els.authorIssuedKeyValue.select();
+      try {
+        await navigator.clipboard.writeText(authorKey);
+        showAdminResult(`${authorName} 작가 키를 발급하고 복사했습니다.`);
+      } catch (_) {
+        showAdminResult(`${authorName} 작가 키를 발급했습니다. '키 복사'를 눌러 전달해 주세요.`, "info");
+      }
+    }
+
+    async function copyIssuedAuthorKey() {
+      const value = normalize(els.authorIssuedKeyValue.value);
+      if (!value) return;
+      try {
+        await navigator.clipboard.writeText(value);
+        showAdminResult("작가 키를 복사했습니다.");
+      } catch (_) {
+        els.authorIssuedKeyValue.focus();
+        els.authorIssuedKeyValue.select();
+        showAdminResult("키를 선택했습니다. 길게 눌러 복사해 주세요.", "info");
+      }
+    }
+
+    async function createAuthorAccount(event) {
+      event.preventDefault();
+      const payload = {};
+      new FormData(els.authorAccountForm).forEach((value, key) => payload[key] = normalize(value));
+      const button = els.authorAccountForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        const result = await requestAdminFunction("create_author", payload);
+        els.authorAccountForm.reset();
+        await showIssuedAuthorKey(payload.display_name, result.authorKey);
+        await loadData();
+      } catch (error) {
+        showAdminResult(`작가 계정 생성에 실패했습니다: ${error.message}`, "error");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    async function resetAuthorKey(author) {
+      if (!confirm(`${author.display_name} 작가의 기존 키를 폐기하고 새 키를 발급할까요?`)) return;
+      try {
+        const result = await requestAdminFunction("reset_author_key", { author_id: author.id });
+        await showIssuedAuthorKey(author.display_name, result.authorKey);
+      } catch (error) {
+        showAdminResult(`작가 키 재발급에 실패했습니다: ${error.message}`, "error");
+      }
+    }
+
+    async function toggleAuthorAccount(author) {
+      if (!confirm(`${author.display_name} 작가 계정을 ${author.enabled ? "정지" : "활성화"}할까요?`)) return;
+      try {
+        await requestAdminFunction("toggle_author", { author_id: author.id });
+        await loadData();
+        showAdminResult(`${author.display_name} 작가 계정 상태를 변경했습니다.`);
+      } catch (error) {
+        showAdminResult(`작가 계정 상태 변경에 실패했습니다: ${error.message}`, "error");
+      }
+    }
+
+    async function approveAuthorSubmission(submission) {
+      if (!confirm(`'${normalize(submission.title)}' 신청을 승인해 검색기에 공개할까요?`)) return;
+      try {
+        await requestAdminFunction("approve_author_submission", { submission_id: submission.id });
+        await loadData();
+        showAdminResult("작가 신청을 승인하고 검색기에 공개했습니다.");
+      } catch (error) {
+        showAdminResult(`작가 신청 승인에 실패했습니다: ${error.message}`, "error");
+      }
+    }
+
+    async function rejectAuthorSubmission(submission) {
+      const note = prompt("작가에게 보여줄 반려 사유를 입력해 주세요.", normalize(submission.review_note));
+      if (note === null) return;
+      try {
+        await requestAdminFunction("reject_author_submission", { submission_id: submission.id, review_note: note });
+        await loadData();
+        showAdminResult("작가 신청을 반려했습니다.");
+      } catch (error) {
+        showAdminResult(`작가 신청 반려에 실패했습니다: ${error.message}`, "error");
+      }
     }
 
     function renderAdminList() {
@@ -4050,7 +4478,7 @@
         button.type = "button";
         button.innerHTML = `
           <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
-          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"], viewCountLabel(post)].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
+          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
         button.addEventListener("click", () => fillAdminForm(post, row));
         row.append(checkLabel, button);
@@ -4220,7 +4648,7 @@
       title.textContent = normalize(post["제목"]) || "제목 없음";
       title.href = normalize(post["링크"]) || "#";
       title.addEventListener("click", () => updateLibraryEntry(post, { openedAt: new Date().toISOString() }));
-      meta.textContent = [post["날짜"], post["작가"], viewCountLabel(post)].map(normalize).filter(Boolean).join(" · ");
+      meta.textContent = [post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ");
 
       if (series.isSeries) {
         const statusText = seriesStatusText(post, series);
@@ -4630,7 +5058,8 @@
       const ctx = canvas.getContext("2d");
       const width = canvas.width;
       const height = canvas.height;
-      const dark = state.excerptBackground === "dark";
+      const dark = state.excerptBackground !== "light";
+      const purpleBlue = state.excerptBackground === "purple-blue";
       const baseBg = dark ? "#101114" : "#f7f5ef";
       const textColor = state.excerptTextColor === "black" ? "#202124" : "#f4f4f5";
       const subColor = state.excerptTextColor === "black" ? "rgba(32,33,36,.72)" : "rgba(244,244,245,.78)";
@@ -4638,7 +5067,15 @@
       const fontSize = Number(els.excerptFontSize.value) || 38;
 
       ctx.clearRect(0, 0, width, height);
-      ctx.fillStyle = baseBg;
+      if (purpleBlue) {
+        const backgroundGradient = ctx.createLinearGradient(0, 0, width, height);
+        backgroundGradient.addColorStop(0, "#7c3aed");
+        backgroundGradient.addColorStop(.52, "#4f46e5");
+        backgroundGradient.addColorStop(1, "#0284c7");
+        ctx.fillStyle = backgroundGradient;
+      } else {
+        ctx.fillStyle = baseBg;
+      }
       ctx.fillRect(0, 0, width, height);
 
       if (state.excerptImage) {
@@ -4829,6 +5266,225 @@
         });
       });
       syncAdminMultiSelectsFromForm();
+    }
+
+    function syncAuthorSelector(details) {
+      const hidden = details.parentElement.querySelector('input[type="hidden"]');
+      const values = [...details.querySelectorAll('input[type="checkbox"]:checked')].map((input) => input.value);
+      hidden.value = values.join(", ");
+      details.querySelector("summary span").textContent = values.length ? values.join(", ") : "선택 없음";
+    }
+
+    function buildAuthorSubmissionSelectors() {
+      document.querySelectorAll("[data-author-selector]").forEach((details) => {
+        const group = details.dataset.authorSelector;
+        const mount = details.querySelector(".author-selector-options");
+        const hidden = details.parentElement.querySelector('input[type="hidden"]');
+        const selected = new Set(splitTags(hidden.value));
+        mount.innerHTML = "";
+
+        const clear = document.createElement("button");
+        clear.className = "admin-multiselect-clear";
+        clear.type = "button";
+        clear.textContent = "선택 초기화";
+        clear.addEventListener("click", () => {
+          details.querySelectorAll('input[type="checkbox"]').forEach((input) => input.checked = false);
+          syncAuthorSelector(details);
+        });
+        mount.appendChild(clear);
+
+        (TAG_GROUPS[group] || []).forEach((option) => {
+          const label = document.createElement("label");
+          label.className = "admin-multiselect-option";
+          const checkbox = document.createElement("input");
+          checkbox.type = "checkbox";
+          checkbox.value = option;
+          checkbox.checked = selected.has(option);
+          checkbox.addEventListener("change", () => syncAuthorSelector(details));
+          const text = document.createElement("span");
+          text.textContent = option;
+          label.append(checkbox, text);
+          mount.appendChild(label);
+        });
+        syncAuthorSelector(details);
+      });
+    }
+
+    function setAuthorSeriesVisibility() {
+      els.authorSeriesFields.hidden = els.authorIsSeries.value !== "true";
+    }
+
+    function openAuthorUploadModal() {
+      buildAuthorSubmissionSelectors();
+      setAuthorSeriesVisibility();
+      syncAuthorWorkspace();
+      els.authorUploadModal.hidden = false;
+    }
+
+    function closeAuthorUploadModal() {
+      els.authorUploadModal.hidden = true;
+    }
+
+    function showAuthorResult(message, type = "success") {
+      els.authorUploadStatus.textContent = normalize(message);
+      els.authorUploadStatus.style.color = type === "error" ? "#fecdd3" : type === "info" ? "#a8b3bf" : "#a7f3d0";
+      showAdminResult(message, type);
+    }
+
+    function syncAuthorWorkspace() {
+      const loggedIn = Boolean(state.authorToken && state.authorProfile);
+      els.authorLoginPanel.hidden = loggedIn;
+      els.authorWorkspace.hidden = !loggedIn;
+      if (!loggedIn) return;
+      els.authorWorkspaceName.textContent = state.authorProfile.displayName;
+      els.authorWorkspaceChannel.textContent = state.authorProfile.channelUrl;
+      renderAuthorOwnSubmissions();
+    }
+
+    function resetAuthorSubmissionForm() {
+      els.authorUploadForm.reset();
+      els.authorUploadForm.querySelectorAll('input[type="hidden"]').forEach((input) => input.value = "");
+      els.authorCancelEdit.hidden = true;
+      $("#authorCreateSubmission").textContent = "관리자 승인 요청";
+      buildAuthorSubmissionSelectors();
+      setAuthorSeriesVisibility();
+    }
+
+    async function loginAuthor(event) {
+      event.preventDefault();
+      const payload = {};
+      new FormData(els.authorLoginForm).forEach((value, key) => payload[key] = normalize(value));
+      const button = els.authorLoginForm.querySelector('button[type="submit"]');
+      button.disabled = true;
+      try {
+        const result = await requestAdminFunction("author_login", payload);
+        state.authorToken = result.token;
+        state.authorProfile = result.author;
+        els.authorLoginForm.reset();
+        await loadAuthorOwnSubmissions();
+        resetAuthorSubmissionForm();
+        syncAuthorWorkspace();
+        showAuthorResult(`${result.author.displayName} 작가 계정으로 로그인했습니다.`);
+      } catch (error) {
+        showAuthorResult(`작가 로그인에 실패했습니다: ${error.message}`, "error");
+      } finally {
+        button.disabled = false;
+      }
+    }
+
+    function logoutAuthor() {
+      state.authorToken = "";
+      state.authorProfile = null;
+      state.authorOwnSubmissions = [];
+      resetAuthorSubmissionForm();
+      syncAuthorWorkspace();
+      showAuthorResult("작가 업로드 채널에서 로그아웃했습니다.", "info");
+    }
+
+    async function loadAuthorOwnSubmissions() {
+      if (!state.authorToken) return;
+      try {
+        const result = await requestAdminFunction("author_list_own", {}, state.authorToken);
+        state.authorOwnSubmissions = Array.isArray(result.rows) ? result.rows : [];
+        if (result.author) state.authorProfile = result.author;
+        renderAuthorOwnSubmissions();
+      } catch (error) {
+        logoutAuthor();
+        showAuthorResult(`작가 신청 목록을 불러오지 못했습니다: ${error.message}`, "error");
+      }
+    }
+
+    function authorStatusLabel(status) {
+      return ({ pending_review: "관리자 승인대기", approved: "공개 완료", rejected: "반려", withdrawn: "숨김 삭제" })[status] || status;
+    }
+
+    function renderAuthorOwnSubmissions() {
+      if (!els.authorOwnSubmissionList) return;
+      els.authorOwnSubmissionList.innerHTML = "";
+      if (!state.authorOwnSubmissions.length) {
+        els.authorOwnSubmissionList.innerHTML = '<div class="empty">아직 신청한 글이 없습니다.</div>';
+        return;
+      }
+      state.authorOwnSubmissions.forEach((submission) => {
+        const card = document.createElement("article");
+        card.className = "author-submission-card";
+        const tags = [submission.genres, submission.keywords, submission.top_tags, submission.bottom_tags].map(normalize).filter(Boolean).join(" · ");
+        card.innerHTML = `
+          <strong>${escapeHtml(normalize(submission.title) || "제목 없음")}</strong>
+          <p class="author-submission-meta">${escapeHtml(`${authorStatusLabel(submission.status)} · ${formatDateTime(submission.updated_at || submission.created_at)}`)}</p>
+          <p class="author-submission-meta">${escapeHtml(tags || "필터 정보 없음")}</p>
+          ${submission.review_note ? `<p class="author-submission-meta">${escapeHtml(submission.review_note)}</p>` : ""}
+          <div class="author-submission-actions">
+            <button class="button" type="button" data-action="edit">수정</button>
+            <button class="button danger" type="button" data-action="delete">숨김 삭제</button>
+          </div>
+        `;
+        const inactive = submission.status === "withdrawn";
+        card.querySelector('[data-action="edit"]').disabled = inactive;
+        card.querySelector('[data-action="delete"]').disabled = inactive;
+        card.querySelector('[data-action="edit"]').addEventListener("click", () => fillAuthorSubmissionForm(submission));
+        card.querySelector('[data-action="delete"]').addEventListener("click", () => deleteAuthorSubmission(submission));
+        els.authorOwnSubmissionList.appendChild(card);
+      });
+    }
+
+    function fillAuthorSubmissionForm(submission) {
+      [...els.authorUploadForm.elements].forEach((field) => {
+        if (!field.name) return;
+        field.value = normalize(submission[field.name]);
+      });
+      els.authorUploadForm.elements["submission_id"].value = normalize(submission.id);
+      els.authorUploadForm.elements["is_paid"].value = String(Boolean(submission.is_paid));
+      els.authorUploadForm.elements["is_adult"].value = String(Boolean(submission.is_adult));
+      els.authorUploadForm.elements["is_series"].value = String(Boolean(submission.is_series));
+      els.authorCancelEdit.hidden = false;
+      $("#authorCreateSubmission").textContent = "수정 저장·재승인 요청";
+      buildAuthorSubmissionSelectors();
+      setAuthorSeriesVisibility();
+      els.authorUploadForm.scrollIntoView({ behavior: "smooth", block: "start" });
+      showAuthorResult("신청 글 수정 화면을 불러왔습니다. 저장하면 다시 승인대기가 됩니다.", "info");
+    }
+
+    async function submitAuthorPost(event) {
+      event.preventDefault();
+      if (!state.authorToken) return;
+      const payload = {};
+      new FormData(els.authorUploadForm).forEach((value, key) => payload[key] = normalize(value));
+      if (!isPostypePostUrl(payload.post_url)) {
+        showAuthorResult("올바른 포스타입 글 링크를 입력해 주세요.", "error");
+        return;
+      }
+      if (!payload.genres || !payload.top_tags || !payload.bottom_tags) {
+        showAuthorResult("장르·공·수 항목을 각각 하나 이상 선택해 주세요.", "error");
+        return;
+      }
+      const button = $("#authorCreateSubmission");
+      button.disabled = true;
+      const editing = Boolean(payload.submission_id);
+      button.textContent = editing ? "수정 저장 중" : "승인 요청 중";
+      try {
+        await requestAdminFunction(editing ? "author_update_submission" : "author_submit", payload, state.authorToken);
+        resetAuthorSubmissionForm();
+        await loadAuthorOwnSubmissions();
+        showAuthorResult(editing ? "수정 내용을 저장했고 다시 관리자 승인대기로 전환했습니다." : "글 신청을 접수했습니다. 관리자 승인 후 공개됩니다.");
+      } catch (error) {
+        showAuthorResult(`작가 글 신청에 실패했습니다: ${error.message}`, "error");
+      } finally {
+        button.disabled = false;
+        button.textContent = "관리자 승인 요청";
+      }
+    }
+
+    async function deleteAuthorSubmission(submission) {
+      if (!confirm(`'${normalize(submission.title)}' 신청을 숨김 삭제할까요? 공개 중인 글도 즉시 검색기에서 내려갑니다.`)) return;
+      try {
+        await requestAdminFunction("author_delete_submission", { submission_id: submission.id }, state.authorToken);
+        resetAuthorSubmissionForm();
+        await loadAuthorOwnSubmissions();
+        showAuthorResult("신청 글을 숨김 삭제했습니다.");
+      } catch (error) {
+        showAuthorResult(`신청 글 삭제에 실패했습니다: ${error.message}`, "error");
+      }
     }
 
     function fillAdminForm(post, anchor) {
@@ -5286,6 +5942,18 @@
     els.adminLoginModal.addEventListener("click", (event) => {
       if (event.target === els.adminLoginModal) closeAdminLogin();
     });
+    els.authorUploadToggle.addEventListener("click", openAuthorUploadModal);
+    els.authorUploadClose.addEventListener("click", closeAuthorUploadModal);
+    els.authorUploadModal.addEventListener("click", (event) => {
+      if (event.target === els.authorUploadModal) closeAuthorUploadModal();
+    });
+    els.authorLoginForm.addEventListener("submit", loginAuthor);
+    els.authorLogout.addEventListener("click", logoutAuthor);
+    els.authorUploadForm.addEventListener("submit", submitAuthorPost);
+    els.authorCancelEdit.addEventListener("click", resetAuthorSubmissionForm);
+    els.authorIsSeries.addEventListener("change", setAuthorSeriesVisibility);
+    els.authorAccountForm.addEventListener("submit", createAuthorAccount);
+    els.authorIssuedKeyCopy.addEventListener("click", copyIssuedAuthorKey);
     els.libraryClose.addEventListener("click", closeLibraryModal);
     els.libraryModal.addEventListener("click", (event) => {
       if (event.target === els.libraryModal) closeLibraryModal();
@@ -5350,6 +6018,7 @@
 
     buildAdminMultiSelects();
     buildAdminBulkValueOptions();
+    resetAuthorSubmissionForm();
     loadData();
   </script>
 </body>

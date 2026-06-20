@@ -45,8 +45,6 @@ create table if not exists public.postype_archive (
   admin_reviewed boolean default false,
   admin_reviewed_at timestamptz,
   source_url text,
-  view_count bigint,
-  view_count_checked_at timestamptz,
   deleted_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -63,9 +61,7 @@ alter table public.postype_archive
   add column if not exists ai_classified_at timestamptz,
   add column if not exists admin_reviewed boolean default false,
   add column if not exists admin_reviewed_at timestamptz,
-  add column if not exists source_url text,
-  add column if not exists view_count bigint,
-  add column if not exists view_count_checked_at timestamptz;
+  add column if not exists source_url text;
 
 do $$
 begin
@@ -146,6 +142,54 @@ create table if not exists public.crawl_runs (
   created_at timestamptz not null default now()
 );
 
+create table if not exists public.postype_authors (
+  id uuid primary key default gen_random_uuid(),
+  display_name text not null unique,
+  postype_channel_url text not null unique,
+  key_hash text not null,
+  enabled boolean not null default true,
+  last_login_at timestamptz,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.postype_author_submissions (
+  id uuid primary key default gen_random_uuid(),
+  author_id uuid not null references public.postype_authors(id) on delete cascade,
+  status text not null default 'pending_review'
+    check (status in ('pending_review', 'approved', 'rejected', 'withdrawn')),
+  post_url text not null,
+  postype_post_id bigint,
+  title text not null,
+  published_date date,
+  category text not null default '글',
+  is_paid boolean not null default false,
+  is_adult boolean not null default false,
+  genres text,
+  keywords text,
+  top_tags text,
+  bottom_tags text,
+  endings text,
+  is_series boolean not null default false,
+  series_name text,
+  series_volume text,
+  serialization_status text,
+  review_note text,
+  reviewed_at timestamptz,
+  archived_post_id bigint references public.postype_archive(id) on delete set null,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+alter table public.postype_author_submissions
+  add column if not exists published_date date;
+
+create index if not exists postype_author_submissions_status_idx
+  on public.postype_author_submissions (status, created_at desc);
+
+create index if not exists postype_author_submissions_author_idx
+  on public.postype_author_submissions (author_id, created_at desc);
+
 create index if not exists crawl_runs_started_at_idx
   on public.crawl_runs (started_at desc);
 
@@ -174,10 +218,22 @@ create trigger set_postype_filter_config_updated_at
 before update on public.postype_filter_config
 for each row execute function public.set_updated_at();
 
+drop trigger if exists set_postype_author_submissions_updated_at on public.postype_author_submissions;
+create trigger set_postype_author_submissions_updated_at
+before update on public.postype_author_submissions
+for each row execute function public.set_updated_at();
+
+drop trigger if exists set_postype_authors_updated_at on public.postype_authors;
+create trigger set_postype_authors_updated_at
+before update on public.postype_authors
+for each row execute function public.set_updated_at();
+
 alter table public.postype_archive enable row level security;
 alter table public.postype_sources enable row level security;
 alter table public.postype_filter_config enable row level security;
 alter table public.crawl_runs enable row level security;
+alter table public.postype_authors enable row level security;
+alter table public.postype_author_submissions enable row level security;
 
 drop policy if exists "postype_archive_public_read" on public.postype_archive;
 drop policy if exists "crawl_runs_public_read" on public.crawl_runs;
@@ -192,6 +248,8 @@ revoke all on public.postype_archive from anon, authenticated;
 revoke all on public.postype_sources from anon, authenticated;
 revoke all on public.postype_filter_config from anon, authenticated;
 revoke all on public.crawl_runs from anon, authenticated;
+revoke all on public.postype_authors from anon, authenticated;
+revoke all on public.postype_author_submissions from anon, authenticated;
 
 -- The public site reads only these non-sensitive columns. The base table remains private.
 create or replace view public.postype_archive_public
@@ -216,9 +274,7 @@ select
   series_name,
   series_volume,
   serialization_status,
-  admin_reviewed,
-  view_count,
-  view_count_checked_at
+  admin_reviewed
 from public.postype_archive
 where deleted_at is null;
 

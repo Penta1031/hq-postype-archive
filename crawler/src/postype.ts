@@ -98,7 +98,6 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
     ], "content");
     const author = structured.author || await extractAuthor(page, title);
     const publishedDate = structured.publishedDate || await extractPublishedDate(page);
-    const viewCount = structured.viewCount ?? await extractVisibleViewCount(page);
     const tags = await page.locator("a[href*='tag'], a[href*='keyword'], a[href*='search']").evaluateAll((nodes) =>
       nodes
         .map((node) => (node.textContent || "").trim())
@@ -118,27 +117,11 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       tags: [...new Set(tags)],
       isAdult: /성인|19세|19금|adult/i.test(rawText),
       isPaid: /유료|구매|후원|멤버십|paid/i.test(rawText),
-      viewCount,
       crawlStatus: "success",
       crawlError: null,
     };
   } catch (error) {
     return deniedPost(link, "error", error instanceof Error ? error.message : String(error));
-  } finally {
-    await page.close();
-  }
-}
-
-export async function fetchViewCount(context: BrowserContext, url: string) {
-  const page = await context.newPage();
-  try {
-    const response = await page.goto(url, { waitUntil: "domcontentloaded", timeout: 30_000 });
-    if ((response?.status() || 0) >= 400) return null;
-    await page.waitForTimeout(700);
-    const structured = await extractStructuredMetadata(page);
-    return structured.viewCount ?? await extractVisibleViewCount(page);
-  } catch {
-    return null;
   } finally {
     await page.close();
   }
@@ -156,37 +139,12 @@ async function extractStructuredMetadata(page: Page) {
         title: String(post.headline || post.name || "").trim(),
         author: String(post.author?.name || "").trim(),
         publishedDate: String(post.datePublished || "").trim(),
-        viewCount: structuredViewCount(post),
       };
     } catch (_) {
       // Ignore unrelated or malformed structured-data blocks.
     }
   }
-  return { title: "", author: "", publishedDate: "", viewCount: null };
-}
-
-function structuredViewCount(post: Record<string, any>) {
-  const statistics = Array.isArray(post.interactionStatistic)
-    ? post.interactionStatistic
-    : post.interactionStatistic ? [post.interactionStatistic] : [];
-  const viewStatistic = statistics.find((item: Record<string, any>) => {
-    const interactionType = typeof item?.interactionType === "string"
-      ? item.interactionType
-      : String(item?.interactionType?.["@type"] || item?.interactionType?.name || "");
-    return /ViewAction|view/i.test(interactionType) || /조회|view/i.test(String(item?.name || ""));
-  });
-  const count = Number(viewStatistic?.userInteractionCount);
-  return Number.isFinite(count) && count >= 0 ? Math.round(count) : null;
-}
-
-async function extractVisibleViewCount(page: Page) {
-  const text = await page.locator("body").innerText({ timeout: 5000 }).catch(() => "");
-  const match = text.match(/조회(?:수)?\s*([\d,.]+)\s*(천|만)?/u);
-  if (!match) return null;
-  const number = Number(match[1].replace(/,/g, ""));
-  if (!Number.isFinite(number)) return null;
-  const multiplier = match[2] === "만" ? 10_000 : match[2] === "천" ? 1_000 : 1;
-  return Math.round(number * multiplier);
+  return { title: "", author: "", publishedDate: "" };
 }
 
 async function extractBodyText(page: Page) {
@@ -266,7 +224,6 @@ function deniedPost(link: PostLink, status: ExtractedPost["crawlStatus"], messag
     tags: [],
     isAdult: false,
     isPaid: status === "purchase_required",
-    viewCount: null,
     crawlStatus: status,
     crawlError: message,
   };

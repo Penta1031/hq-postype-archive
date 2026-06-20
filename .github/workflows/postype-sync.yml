@@ -10,11 +10,6 @@ on:
         description: "분류할 포스타입 글 링크 (비우면 전체 소스 확인)"
         required: false
         type: string
-      views_only:
-        description: "새 글 수집 없이 현재 남은 글의 조회수만 업데이트"
-        required: false
-        default: false
-        type: boolean
 
 permissions:
   contents: read
@@ -64,7 +59,4 @@ jobs:
           GEMINI_MAX_ATTEMPTS: ${{ vars.GEMINI_MAX_ATTEMPTS || '4' }}
           AI_REVIEW_CONFIDENCE_THRESHOLD: ${{ vars.AI_REVIEW_CONFIDENCE_THRESHOLD || '0.72' }}
           RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'true' }}
-          UPDATE_VIEW_COUNTS: ${{ vars.UPDATE_VIEW_COUNTS || 'true' }}
-          VIEW_COUNT_CONCURRENCY: ${{ vars.VIEW_COUNT_CONCURRENCY || '2' }}
           MANUAL_POST_URL: ${{ inputs.post_url || '' }}
-          VIEWS_ONLY: ${{ inputs.views_only || 'false' }}

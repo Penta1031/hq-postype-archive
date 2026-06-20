@@ -25,14 +25,8 @@ export type ExtractedPost = {
   tags: string[];
   isAdult: boolean;
   isPaid: boolean;
-  viewCount: number | null;
   crawlStatus: CrawlStatus;
   crawlError: string | null;
-};
-
-export type ViewRefreshTarget = {
-  id: number;
-  link: string;
 };
 
 export type Classification = {

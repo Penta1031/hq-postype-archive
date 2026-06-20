@@ -34,9 +34,7 @@ select
   series_name,
   series_volume,
   serialization_status,
-  admin_reviewed,
-  view_count,
-  view_count_checked_at
+  admin_reviewed
 from public.postype_archive
 where deleted_at is null;
 
