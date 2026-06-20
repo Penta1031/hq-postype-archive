@@ -1,0 +1,2 @@
+[functions.postype-admin]
+verify_jwt = false

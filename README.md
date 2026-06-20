@@ -78,3 +78,5 @@ GitHub Actions Variable:
 작가는 `작가 업로드`에서 작가명과 전용 키로 로그인합니다. 등록된 본인 포스타입 채널의 글만 신청할 수 있고, 본인 신청만 수정·숨김 삭제할 수 있습니다. 신청은 관리자 승인 전까지 공개 검색기에 나오지 않습니다.
 
 최초 설치 시 `supabase/add-author-submissions.sql`을 Supabase SQL Editor에서 한 번 실행하고 `postype-admin` Edge Function을 재배포합니다. 추가 Secret은 필요하지 않습니다.
+
+`postype-admin`은 자체 관리자·작가 인증을 사용하므로 `supabase/config.toml`에서 Supabase JWT 사전 검증을 끄도록 고정합니다. 수동 배포 시에는 `supabase.cmd functions deploy postype-admin --no-verify-jwt --project-ref aiuwbwtknaceghkzporx`를 사용합니다.

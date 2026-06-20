@@ -5555,7 +5555,11 @@
         if (!result.token) throw new Error("관리자 보안 함수가 아직 최신 버전으로 배포되지 않았습니다.");
         state.adminToken = result.token;
       } catch (error) {
-        alert(`비밀번호를 확인해 주세요. ${error.message}`);
+        const detail = normalize(error.message);
+        const connectionFailed = /failed to fetch|networkerror|load failed/i.test(detail);
+        alert(connectionFailed
+          ? "관리자 함수에 연결하지 못했습니다. Supabase Edge Function 배포와 CORS 설정을 확인해 주세요."
+          : `비밀번호를 확인해 주세요. ${detail}`);
         return;
       }
       document.body.classList.add("admin-on");
