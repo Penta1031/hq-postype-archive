@@ -1,5 +1,5 @@
 -- Run once in Supabase SQL Editor for this update.
--- Rows that still exist in postype_archive are restored and exposed.
+-- Rows that still exist in postype_archive are restored as private.
 -- Physically deleted rows must be re-imported from the CSV backup first.
 
 begin;
@@ -10,10 +10,10 @@ alter table public.postype_authors
 update public.postype_archive
 set
   deleted_at = null,
-  admin_reviewed = true,
-  admin_reviewed_at = coalesce(admin_reviewed_at, now())
+  admin_reviewed = false,
+  admin_reviewed_at = null
 where deleted_at is not null
-   or admin_reviewed is distinct from true;
+   or admin_reviewed is distinct from false;
 
 drop view if exists public.postype_archive_public;
 

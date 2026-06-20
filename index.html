@@ -1744,7 +1744,7 @@
 
     .author-issued-key {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 7px;
       margin: 8px 0;
       padding: 10px;
@@ -1768,7 +1768,7 @@
 
     .author-key-row {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: minmax(0, 1fr) auto auto;
       gap: 7px;
       margin-top: 8px;
     }
@@ -1776,6 +1776,22 @@
     .author-key-row input {
       min-width: 0;
       font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
+    .admin-link-control {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 40px;
+      gap: 7px;
+      align-items: stretch;
+    }
+
+    .admin-link-open {
+      display: grid;
+      place-items: center;
+      width: 40px;
+      min-width: 40px;
+      padding: 0;
+      text-decoration: none;
     }
 
     .author-upload-intro,
@@ -2814,6 +2830,7 @@
         </div>
       </div>
       <div class="admin-run-actions">
+        <button class="button primary crawler-manual" id="runCrawlerButton" type="button">수동 크롤링 실행</button>
         <div class="admin-secondary-actions">
           <button class="button" id="adminRefreshButton" type="button">데이터 새로고침</button>
           <button class="button" id="newPostButton" type="button">+ 글 수동 추가</button>
@@ -2830,10 +2847,9 @@
             <div class="crawler-stat"><span>상태</span><strong id="crawlerLastStatus">-</strong></div>
             <div class="crawler-stat"><span>신규 발견</span><strong id="crawlerFoundCount">0건</strong></div>
             <div class="crawler-stat"><span>추가 성공</span><strong id="crawlerInsertedCount">0건</strong></div>
-            <div class="crawler-stat"><span>신규 미노출</span><strong id="crawlerReviewCount">0건</strong></div>
+            <div class="crawler-stat"><span>신규 비공개</span><strong id="crawlerReviewCount">0건</strong></div>
             <div class="crawler-stat"><span>실패</span><strong id="crawlerFailedCount">0건</strong></div>
           </div>
-          <button class="button primary crawler-manual" id="runCrawlerButton" type="button">수동 크롤링 실행</button>
           <p class="admin-note" id="crawlerRunMessage" role="status" aria-live="polite"></p>
         </details>
         <details class="crawler-section" id="authorAccountsAdmin">
@@ -2849,7 +2865,8 @@
           <div class="author-issued-key" id="authorIssuedKeyBox" hidden>
             <strong id="authorIssuedKeyTitle">작가 키</strong>
             <p class="author-submission-meta">발급된 키는 관리자 모드에서 계속 확인하고 복사할 수 있습니다.</p>
-            <input id="authorIssuedKeyValue" type="text" readonly aria-label="발급된 작가 키">
+            <input id="authorIssuedKeyValue" type="password" readonly aria-label="발급된 작가 키">
+            <button class="button" id="authorIssuedKeyVisibility" type="button" aria-label="작가 키 보기">보기</button>
             <button class="button" id="authorIssuedKeyCopy" type="button">키 복사</button>
           </div>
           <div class="author-submission-list" id="authorAccountList"></div>
@@ -2904,7 +2921,13 @@
             <input type="hidden" name="_supabaseId">
             <label><span class="label">제목</span><input name="제목" required></label>
             <label><span class="label">작가</span><input name="작가"></label>
-            <label class="wide"><span class="label">링크</span><input name="링크" type="url" placeholder="https://www.postype.com/@.../post/..."></label>
+            <label class="wide">
+              <span class="label">링크</span>
+              <span class="admin-link-control">
+                <input name="링크" type="url" placeholder="https://www.postype.com/@.../post/...">
+                <a class="button admin-link-open" id="openPostLink" href="#" aria-label="포스타입 글 열기" title="포스타입 글 열기" hidden>↗</a>
+              </span>
+            </label>
             <label><span class="label">날짜</span><input name="날짜" type="date"></label>
             <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
             <label><span class="label">유료</span><select name="유료"><option value="X">무료</option><option value="O">유료</option></select></label>
@@ -2947,7 +2970,6 @@
             <label><span class="label">시리즈회차</span><input name="시리즈회차" placeholder="1, 2, 上, 下"></label>
             <label><span class="label">스포일러</span><input name="엔딩" placeholder="해피엔딩"></label>
             <div class="wide top-actions">
-              <a class="button" id="openPostLink" href="#" target="_blank" rel="noreferrer" hidden>글 읽으러 가기</a>
               <button class="button primary" type="submit">저장</button>
               <button class="button danger" id="deletePost" type="button">삭제</button>
             </div>
@@ -3305,7 +3327,7 @@
     const EDITABLE_FILTER_GROUPS = ["장르", "키워드", "공", "수"];
 
     const ADMIN_BULK_FIELDS = {
-      "노출상태": { options: ["노출", "미노출"], multiple: false },
+      "노출상태": { options: ["노출", "비공개"], multiple: false },
       "카테고리": { options: TAG_GROUPS["카테고리"], multiple: false },
       "가격": { options: TAG_GROUPS["가격"], multiple: false },
       "성인": { options: TAG_GROUPS["성인"], multiple: false },
@@ -3455,6 +3477,7 @@
       authorIssuedKeyBox: $("#authorIssuedKeyBox"),
       authorIssuedKeyTitle: $("#authorIssuedKeyTitle"),
       authorIssuedKeyValue: $("#authorIssuedKeyValue"),
+      authorIssuedKeyVisibility: $("#authorIssuedKeyVisibility"),
       authorIssuedKeyCopy: $("#authorIssuedKeyCopy"),
       libraryModal: $("#libraryModal"),
       libraryTitle: $("#libraryTitle"),
@@ -3889,7 +3912,10 @@
         state.crawlRun = crawlResult.run || null;
       } catch (error) {
         state.crawlRun = null;
-        showAdminResult(`크롤링 상태를 불러오지 못했습니다: ${error.message}`, "error");
+        const detail = /unknown action/i.test(error.message)
+          ? "관리자 함수가 이전 버전입니다. Supabase Edge Function을 재배포해 주세요."
+          : error.message;
+        showAdminResult(`크롤링 상태를 불러오지 못했습니다: ${detail}`, "error");
       }
       renderCrawlStatus();
     }
@@ -4270,8 +4296,11 @@
           els.crawlerRunMessage.innerHTML = `수동 크롤링을 요청했습니다. <a href="${escapeHtml(result.actionsUrl)}" target="_blank" rel="noreferrer">GitHub Actions에서 확인</a>`;
         }
       } catch (error) {
-        els.crawlerRunMessage.textContent = `크롤링 실행 요청에 실패했습니다: ${error.message}`;
-        showAdminResult(`크롤링 실행 요청에 실패했습니다: ${error.message}`, "error");
+        const detail = /unknown action/i.test(error.message)
+          ? "관리자 함수가 이전 버전입니다. Supabase Edge Function을 재배포해 주세요."
+          : error.message;
+        els.crawlerRunMessage.textContent = `크롤링 실행 요청에 실패했습니다: ${detail}`;
+        showAdminResult(`크롤링 실행 요청에 실패했습니다: ${detail}`, "error");
       } finally {
         els.crawlerRun.disabled = false;
       }
@@ -4294,7 +4323,8 @@
           <a href="${escapeHtml(author.postype_channel_url)}" target="_blank" rel="noreferrer">${escapeHtml(author.postype_channel_url)}</a>
           <p class="author-submission-meta">${author.enabled ? "사용중" : "정지됨"} · 최근 로그인 ${escapeHtml(formatDateTime(author.last_login_at))}</p>
           <div class="author-key-row">
-            <input type="text" value="${escapeHtml(savedKey)}" placeholder="재발급 후 표시됩니다" readonly aria-label="${escapeHtml(author.display_name)} 작가 키">
+            <input data-key-input type="password" value="${escapeHtml(savedKey)}" placeholder="재발급 후 표시됩니다" readonly aria-label="${escapeHtml(author.display_name)} 작가 키">
+            <button class="button" type="button" data-action="reveal" ${savedKey ? "" : "disabled"} aria-label="${escapeHtml(author.display_name)} 작가 키 보기">보기</button>
             <button class="button" type="button" data-action="copy" ${savedKey ? "" : "disabled"}>키 복사</button>
           </div>
           <div class="author-submission-actions">
@@ -4302,11 +4332,22 @@
             <button class="button ${author.enabled ? "danger" : "primary"}" type="button" data-action="toggle">${author.enabled ? "계정 정지" : "다시 활성화"}</button>
           </div>
         `;
+        card.querySelector('[data-action="reveal"]').addEventListener("click", (event) => {
+          toggleKeyVisibility(card.querySelector("[data-key-input]"), event.currentTarget);
+        });
         card.querySelector('[data-action="copy"]').addEventListener("click", () => copyAuthorKeyFromList(author, savedKey));
         card.querySelector('[data-action="reset"]').addEventListener("click", () => resetAuthorKey(author));
         card.querySelector('[data-action="toggle"]').addEventListener("click", () => toggleAuthorAccount(author));
         els.authorAccountList.appendChild(card);
       });
+    }
+
+    function toggleKeyVisibility(input, button) {
+      if (!input || !button || !normalize(input.value)) return;
+      const reveal = input.type === "password";
+      input.type = reveal ? "text" : "password";
+      button.textContent = reveal ? "숨기기" : "보기";
+      button.setAttribute("aria-label", reveal ? "작가 키 숨기기" : "작가 키 보기");
     }
 
     async function copyAuthorKeyFromList(author, authorKey) {
@@ -4322,6 +4363,9 @@
     async function showIssuedAuthorKey(authorName, authorKey) {
       els.authorIssuedKeyTitle.textContent = `${authorName} 작가 키`;
       els.authorIssuedKeyValue.value = authorKey;
+      els.authorIssuedKeyValue.type = "password";
+      els.authorIssuedKeyVisibility.textContent = "보기";
+      els.authorIssuedKeyVisibility.setAttribute("aria-label", "작가 키 보기");
       els.authorIssuedKeyBox.hidden = false;
       els.authorIssuedKeyValue.focus();
       els.authorIssuedKeyValue.select();
@@ -4433,8 +4477,8 @@
         button.className = "admin-item";
         button.type = "button";
         button.innerHTML = `
-          <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}${reviewed ? "" : '<span class="admin-new-badge">신규 · 미노출</span>'}</span>
-          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"], reviewed ? "노출" : "미노출"].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
+          <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}${reviewed ? "" : '<span class="admin-new-badge">신규 · 비공개</span>'}</span>
+          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"], reviewed ? "노출" : "비공개"].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
         button.addEventListener("click", () => fillAdminForm(post, row));
         row.append(checkLabel, button);
@@ -5892,6 +5936,7 @@
       toggle.addEventListener("change", () => setAuthorSuggestionVisibility(toggle));
     });
     els.authorAccountForm.addEventListener("submit", createAuthorAccount);
+    els.authorIssuedKeyVisibility.addEventListener("click", () => toggleKeyVisibility(els.authorIssuedKeyValue, els.authorIssuedKeyVisibility));
     els.authorIssuedKeyCopy.addEventListener("click", copyIssuedAuthorKey);
     els.libraryClose.addEventListener("click", closeLibraryModal);
     els.libraryModal.addEventListener("click", (event) => {

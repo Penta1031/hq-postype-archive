@@ -23,7 +23,7 @@ SUPABASE_PUBLIC_VIEW: "postype_archive_public"
 
 `supabase/security-hardening.sql`을 Supabase SQL Editor에서 한 번 실행하면 공개 검색기는 검색에 필요한 열만 읽고, 내부 관리 정보는 관리자 로그인 후에만 읽습니다. 기존 데이터는 삭제되지 않습니다.
 
-이번 크롤링 복구 업데이트에서는 `supabase/restore-archive-and-crawler.sql`을 SQL Editor에서 한 번 실행합니다. Table Editor에 남아 있는 기존 글은 다시 노출하고, 앞으로 크롤링으로 추가되는 미검수 글은 공개 화면에서 숨깁니다. 행 자체가 삭제됐다면 `postype_archive_rows.csv`를 먼저 다시 가져와야 합니다.
+이번 크롤링 복구 업데이트에서는 `supabase/restore-archive-and-crawler.sql`을 SQL Editor에서 한 번 실행합니다. Table Editor에 남아 있는 기존 글은 되살리되 모두 비공개로 전환하고, 앞으로 크롤링으로 추가되는 글도 공개 화면에서 숨깁니다. 행 자체가 삭제됐다면 `postype_archive_rows.csv`를 먼저 다시 가져와야 합니다.
 
 `supabase/add-filter-config.sql`을 한 번 실행하면 관리자 화면에서 장르·키워드·공·수 필터 단어를 추가하거나 목록에서 삭제할 수 있습니다. 변경한 목록은 검색 화면에 반영됩니다.
 
@@ -44,4 +44,4 @@ SUPABASE_PUBLIC_VIEW: "postype_archive_public"
 
 GitHub Actions는 매일 KST 04:00에 실행됩니다. 포스타입 본문은 메타데이터 확인에만 사용하고 DB에 저장하지 않으며, Gemini/OpenAI 분류도 실행하지 않습니다. 광고·프로모션·포스타입 공식·바라바라 관련 글은 기존 차단 규칙으로 제외됩니다.
 
-새 글은 `admin_reviewed=false`로 저장되어 공개 검색기에 바로 나오지 않습니다. 관리자 모드에서 필터를 정리한 뒤 `노출상태`를 `노출`로 일괄 변경합니다. 실행 결과는 `DISCORD_WEBHOOK_URL`로 전송됩니다.
+새 글은 `admin_reviewed=false`인 비공개 상태로 저장되어 공개 검색기에 바로 나오지 않습니다. 관리자 모드에서 필터를 정리한 뒤 `노출상태`를 `노출`로 일괄 변경합니다. 실행 결과는 `DISCORD_WEBHOOK_URL`로 전송됩니다.

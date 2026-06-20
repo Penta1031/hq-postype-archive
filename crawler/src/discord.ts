@@ -13,7 +13,7 @@ export async function sendDiscord(summary: RunSummary) {
     `상태: ${statusLabel(summary.status)}`,
     `신규 발견: ${summary.foundCount}건`,
     `추가 성공: ${summary.insertedCount}건`,
-    `신규 미노출: ${summary.reviewPendingCount}건`,
+    `신규 비공개: ${summary.reviewPendingCount}건`,
     `실패: ${summary.failedCount}건`,
   ];
 
