@@ -1,15 +1,13 @@
-import { classificationRow, classifyPost, configureFilterTaxonomy, reviewRequired } from "./classify.js";
 import { sendDiscord } from "./discord.js";
 import { collectPostLinks, createPostypeContext, extractPost, isExcludedPost } from "./postype.js";
-import { createRun, finishRun, getEnabledSources, getExistingArchive, getFilterConfig, insertArchiveRow, markSourceChecked, unifySeriesFilters, updateArchiveRow } from "./supabase.js";
+import { createRun, finishRun, getEnabledSources, getExistingArchive, insertArchiveRow, markSourceChecked } from "./supabase.js";
 import type { RunSummary } from "./types.js";
-import { normalizePostUrl, optionalEnv, postypePostIdFromUrl, truthyEnv, uniqueBy } from "./utils.js";
+import { normalizePostUrl, optionalEnv, postypePostIdFromUrl, uniqueBy } from "./utils.js";
 
 type ProcessTarget = {
   url: string;
   postypePostId: number | null;
   sourceUrl: string;
-  existingId?: number;
 };
 
 async function main() {
@@ -18,32 +16,23 @@ async function main() {
     status: "success",
     foundCount: 0,
     insertedCount: 0,
-    aiReviewCount: 0,
+    reviewPendingCount: 0,
     failedCount: 0,
     newPosts: [],
   };
 
   const { browser, context } = await createPostypeContext();
   try {
-    configureFilterTaxonomy(await getFilterConfig());
     const manualPostUrl = optionalEnv("MANUAL_POST_URL");
     const links: ProcessTarget[] = manualPostUrl
       ? [manualPostLink(manualPostUrl)]
       : await collectConfiguredSourceLinks(context);
 
     const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
-    const retryFailedAi = truthyEnv("RETRY_FAILED_AI", true);
     const newLinks: ProcessTarget[] = [];
     for (const link of candidates) {
       const existing = await getExistingArchive(link.url, link.postypePostId);
-      if (!existing) {
-        newLinks.push(link);
-        continue;
-      }
-      const retryableAiStatus = ["failed", "review_required", "pending"];
-      if (retryFailedAi && !existing.admin_reviewed && retryableAiStatus.includes(existing.ai_status)) {
-        newLinks.push({ ...link, existingId: existing.id });
-      }
+      if (!existing) newLinks.push(link);
     }
 
     summary.foundCount = newLinks.length;
@@ -56,56 +45,33 @@ async function main() {
           continue;
         }
         if (post.crawlStatus !== "success") {
-          await insertArchiveRow(post, { ai_status: "skipped" });
+          await insertArchiveRow(post, {
+            ai_status: "skipped",
+            ai_note: "AI 분류 미사용",
+            admin_reviewed: false,
+          });
           summary.failedCount += 1;
           continue;
         }
 
-        const inserted = link.existingId
-          ? await updateArchiveRow(link.existingId, {
-            ai_status: "pending",
-            ai_note: "",
-            title: post.title,
-            author: post.author,
-            published_date: post.publishedDate,
-            category: "글",
-            is_paid: post.isPaid,
-            is_adult: post.isAdult,
-            crawl_status: post.crawlStatus,
-            crawl_error: post.crawlError,
-            crawled_at: new Date().toISOString(),
-          })
-          : await insertArchiveRow(post, { ai_status: "pending" });
-
-        if (!link.existingId) {
-          summary.insertedCount += 1;
-          summary.newPosts.push({
-            title: inserted.title || post.title,
-            author: inserted.author || post.author,
-            link: inserted.link || post.link,
-          });
-        }
-        try {
-          const classification = await classifyPost(post);
-          const row = classificationRow(classification);
-          await updateArchiveRow(inserted.id, row);
-          if (classification.isSeries && classification.seriesName.trim()) {
-            await unifySeriesFilters(classification.seriesName);
-          }
-          if (reviewRequired(classification.confidence)) summary.aiReviewCount += 1;
-        } catch (error) {
-          summary.failedCount += 1;
-          await updateArchiveRow(inserted.id, {
-            ai_status: "failed",
-            ai_note: error instanceof Error ? error.message : String(error),
-          }).catch(() => undefined);
-        }
+        const inserted = await insertArchiveRow(post, {
+          ai_status: "skipped",
+          ai_note: "AI 분류 미사용",
+          admin_reviewed: false,
+        });
+        summary.insertedCount += 1;
+        summary.reviewPendingCount += 1;
+        summary.newPosts.push({
+          title: inserted.title || post.title,
+          author: inserted.author || post.author,
+          link: inserted.link || post.link,
+        });
       } catch (error) {
         summary.failedCount += 1;
         const message = error instanceof Error ? error.message : String(error);
         await insertArchiveRow(
           { ...post, crawlStatus: "error", crawlError: message },
-          { ai_status: "failed" },
+          { ai_status: "skipped", ai_note: "AI 분류 미사용", admin_reviewed: false },
         ).catch(() => undefined);
       }
     }
@@ -115,7 +81,7 @@ async function main() {
       status: summary.status,
       found_count: summary.foundCount,
       inserted_count: summary.insertedCount,
-      ai_review_count: summary.aiReviewCount,
+      ai_review_count: summary.reviewPendingCount,
       failed_count: summary.failedCount,
     });
   } catch (error) {
@@ -125,7 +91,7 @@ async function main() {
       status: "failed",
       found_count: summary.foundCount,
       inserted_count: summary.insertedCount,
-      ai_review_count: summary.aiReviewCount,
+      ai_review_count: summary.reviewPendingCount,
       failed_count: summary.failedCount,
       error_message: summary.errorMessage,
     }).catch(() => undefined);
@@ -169,7 +135,7 @@ main().catch(async (error) => {
     status: "failed",
     foundCount: 0,
     insertedCount: 0,
-    aiReviewCount: 0,
+    reviewPendingCount: 0,
     failedCount: 1,
     errorMessage: error instanceof Error ? error.message : String(error),
     newPosts: [],

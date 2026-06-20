@@ -101,6 +101,8 @@
       cursor: pointer;
     }
 
+    .button[hidden] { display: none; }
+
     .button:hover { border-color: var(--accent); }
     .button.primary { background: var(--accent); border-color: var(--accent); color: #06111f; font-weight: 800; }
     .button.danger { color: var(--danger); }
@@ -667,8 +669,9 @@
 
     .brand {
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      gap: 10px;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 8px;
       width: 100%;
       grid-column: 1 / -1;
     }
@@ -685,7 +688,7 @@
       font-weight: 650;
       letter-spacing: 0;
       line-height: 1.15;
-      overflow-wrap: anywhere;
+      white-space: nowrap;
       text-shadow: none;
     }
 
@@ -1763,6 +1766,18 @@
       font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
     }
 
+    .author-key-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .author-key-row input {
+      min-width: 0;
+      font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    }
+
     .author-upload-intro,
     .author-verification-note,
     .author-submission-meta {
@@ -2005,6 +2020,20 @@
       white-space: normal;
       overflow-wrap: anywhere;
       word-break: break-word;
+    }
+
+    .admin-new-badge {
+      display: inline-flex;
+      align-items: center;
+      min-height: 20px;
+      margin-left: 6px;
+      padding: 1px 6px;
+      border: 1px solid #856d2e;
+      border-radius: 999px;
+      background: #211b0c;
+      color: #f0cf72;
+      font-size: 10px;
+      vertical-align: middle;
     }
 
     .admin-editor {
@@ -2791,6 +2820,22 @@
         </div>
       </div>
       <div class="crawler-admin" id="crawlerAdmin">
+        <details class="crawler-section" id="crawlerStatusAdmin" open>
+          <summary class="crawler-section-head">
+            <strong>크롤링 상태</strong>
+            <span id="crawlerStatusBadge">확인 중</span>
+          </summary>
+          <div class="crawler-status-grid">
+            <div class="crawler-stat"><span>마지막 실행</span><strong id="crawlerLastRun">-</strong></div>
+            <div class="crawler-stat"><span>상태</span><strong id="crawlerLastStatus">-</strong></div>
+            <div class="crawler-stat"><span>신규 발견</span><strong id="crawlerFoundCount">0건</strong></div>
+            <div class="crawler-stat"><span>추가 성공</span><strong id="crawlerInsertedCount">0건</strong></div>
+            <div class="crawler-stat"><span>신규 미노출</span><strong id="crawlerReviewCount">0건</strong></div>
+            <div class="crawler-stat"><span>실패</span><strong id="crawlerFailedCount">0건</strong></div>
+          </div>
+          <button class="button primary crawler-manual" id="runCrawlerButton" type="button">수동 크롤링 실행</button>
+          <p class="admin-note" id="crawlerRunMessage" role="status" aria-live="polite"></p>
+        </details>
         <details class="crawler-section" id="authorAccountsAdmin">
           <summary class="crawler-section-head">
             <strong>작가 계정·키 관리</strong>
@@ -2803,7 +2848,7 @@
           </form>
           <div class="author-issued-key" id="authorIssuedKeyBox" hidden>
             <strong id="authorIssuedKeyTitle">작가 키</strong>
-            <p class="author-submission-meta">이 키는 지금만 보입니다. 작가에게 전달한 뒤 분실하면 새로 발급해 주세요.</p>
+            <p class="author-submission-meta">발급된 키는 관리자 모드에서 계속 확인하고 복사할 수 있습니다.</p>
             <input id="authorIssuedKeyValue" type="text" readonly aria-label="발급된 작가 키">
             <button class="button" id="authorIssuedKeyCopy" type="button">키 복사</button>
           </div>
@@ -2838,7 +2883,7 @@
         <label class="admin-select-all"><input id="adminSelectAll" type="checkbox"><span id="adminSelectedCount">0개 선택</span></label>
         <select class="admin-bulk-field" id="adminBulkField" aria-label="일괄 수정할 항목">
           <option value="">수정 항목 선택</option>
-          <option>카테고리</option><option>가격</option><option>성인</option><option>장르</option><option>키워드</option><option>공</option><option>수</option><option>시리즈여부</option><option>연재상태</option><option>스포일러</option>
+          <option>노출상태</option><option>카테고리</option><option>가격</option><option>성인</option><option>장르</option><option>키워드</option><option>공</option><option>수</option><option>시리즈여부</option><option>연재상태</option><option>스포일러</option>
         </select>
         <details class="admin-multiselect admin-bulk-values is-disabled" id="adminBulkValuePicker">
           <summary><span id="adminBulkValueSummary">먼저 수정 항목을 선택하세요</span></summary>
@@ -2902,6 +2947,7 @@
             <label><span class="label">시리즈회차</span><input name="시리즈회차" placeholder="1, 2, 上, 下"></label>
             <label><span class="label">스포일러</span><input name="엔딩" placeholder="해피엔딩"></label>
             <div class="wide top-actions">
+              <a class="button" id="openPostLink" href="#" target="_blank" rel="noreferrer" hidden>글 읽으러 가기</a>
               <button class="button primary" type="submit">저장</button>
               <button class="button danger" id="deletePost" type="button">삭제</button>
             </div>
@@ -2914,14 +2960,14 @@
       <summary>이용 가이드</summary>
       <div class="guide-body">
         <ul class="guide-list">
-          <li><strong>필터링</strong>: 장르·키워드·공·수·연재상태 등을 선택해 원하는 글만 모아볼 수 있습니다.</li>
-          <li><strong>내 서재</strong>: 이 기기에서 열어본 글과 북마크한 글을 한곳에서 확인합니다.</li>
+          <li><strong>필터</strong>: 장르·키워드·공·수·연재상태 등을 선택해 원하는 글만 모아볼 수 있습니다.</li>
           <li><strong>메모</strong>: 각 글에 개인 메모를 남깁니다. 현재 기기의 해당 브라우저 저장공간에만 저장됩니다.</li>
           <li><strong>발췌</strong>: 발췌문·작품명·작가명을 넣어 이미지를 만들고 저장하거나 공유합니다. 만든 이미지는 자동 보관되지 않습니다.</li>
           <li><strong>북마크</strong>: 다시 보고 싶은 글을 내 서재에 보관합니다. 현재 기기의 해당 브라우저 저장공간에만 저장됩니다.</li>
+          <li><strong>내 서재</strong>: 이 기기에서 열어본 글과 북마크한 글을 한곳에서 확인합니다.</li>
         </ul>
         <p>서재·메모·북마크는 브라우저 데이터를 삭제하거나 다른 기기·브라우저를 사용하면 이어지지 않습니다.</p>
-        <p>오류나 문의사항은 디엠 혹은 <a href="https://curious.quizby.me/Penta_1031/m" target="_blank" rel="noreferrer">큐리어스</a>로 문의 부탁드립니다.</p>
+        <p>오류나 문의사항은 디엠 혹은 큐리어스로 문의 부탁드립니다.</p>
       </div>
     </details>
 
@@ -3224,7 +3270,7 @@
       SUPABASE_TABLE: "postype_archive",
       SUPABASE_PUBLIC_VIEW: "postype_archive_public",
       ADMIN_FUNCTION_URL: "",
-      SHOW_UNREVIEWED_POSTS: true,
+      SHOW_UNREVIEWED_POSTS: false,
       LOCAL_CSV_URL: "data/postype_archive_series_columns_limited.csv",
       ADMIN_API_URL: ""
     };
@@ -3259,6 +3305,7 @@
     const EDITABLE_FILTER_GROUPS = ["장르", "키워드", "공", "수"];
 
     const ADMIN_BULK_FIELDS = {
+      "노출상태": { options: ["노출", "미노출"], multiple: false },
       "카테고리": { options: TAG_GROUPS["카테고리"], multiple: false },
       "가격": { options: TAG_GROUPS["가격"], multiple: false },
       "성인": { options: TAG_GROUPS["성인"], multiple: false },
@@ -3325,7 +3372,8 @@
       authors: [],
       authorToken: "",
       authorProfile: null,
-      authorOwnSubmissions: []
+      authorOwnSubmissions: [],
+      crawlRun: null
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -3374,8 +3422,18 @@
       adminForm: $("#adminForm"),
       adminRefresh: $("#adminRefreshButton"),
       newPost: $("#newPostButton"),
+      crawlerStatusBadge: $("#crawlerStatusBadge"),
+      crawlerLastRun: $("#crawlerLastRun"),
+      crawlerLastStatus: $("#crawlerLastStatus"),
+      crawlerFoundCount: $("#crawlerFoundCount"),
+      crawlerInsertedCount: $("#crawlerInsertedCount"),
+      crawlerReviewCount: $("#crawlerReviewCount"),
+      crawlerFailedCount: $("#crawlerFailedCount"),
+      crawlerRun: $("#runCrawlerButton"),
+      crawlerRunMessage: $("#crawlerRunMessage"),
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
+      openPostLink: $("#openPostLink"),
       libraryToggle: $("#libraryToggle"),
       authorUploadModal: $("#authorUploadModal"),
       authorUploadClose: $("#authorUploadClose"),
@@ -3815,6 +3873,8 @@
     async function loadAuthorSubmissions() {
       if (!state.adminToken) {
         state.authors = [];
+        state.crawlRun = null;
+        renderCrawlStatus();
         return;
       }
       try {
@@ -3824,6 +3884,14 @@
         state.authors = [];
         showAdminResult(`작가 계정 목록을 불러오지 못했습니다: ${error.message}`, "error");
       }
+      try {
+        const crawlResult = await requestAdminFunction("crawl_status");
+        state.crawlRun = crawlResult.run || null;
+      } catch (error) {
+        state.crawlRun = null;
+        showAdminResult(`크롤링 상태를 불러오지 못했습니다: ${error.message}`, "error");
+      }
+      renderCrawlStatus();
     }
 
     function parseCsv(text) {
@@ -4170,6 +4238,45 @@
       });
     }
 
+    function crawlStatusLabel(status) {
+      if (status === "success") return "성공";
+      if (status === "partial_success") return "부분 성공";
+      if (status === "failed") return "실패";
+      if (status === "running") return "실행 중";
+      return "기록 없음";
+    }
+
+    function renderCrawlStatus() {
+      const run = state.crawlRun;
+      const status = crawlStatusLabel(run && run.status);
+      els.crawlerStatusBadge.textContent = status;
+      els.crawlerLastRun.textContent = run ? formatDateTime(run.finished_at || run.started_at) : "-";
+      els.crawlerLastStatus.textContent = status;
+      els.crawlerFoundCount.textContent = `${Number(run && run.found_count || 0).toLocaleString("ko-KR")}건`;
+      els.crawlerInsertedCount.textContent = `${Number(run && run.inserted_count || 0).toLocaleString("ko-KR")}건`;
+      els.crawlerReviewCount.textContent = `${Number(run && run.ai_review_count || 0).toLocaleString("ko-KR")}건`;
+      els.crawlerFailedCount.textContent = `${Number(run && run.failed_count || 0).toLocaleString("ko-KR")}건`;
+    }
+
+    async function runCrawler() {
+      if (!state.adminToken || els.crawlerRun.disabled) return;
+      els.crawlerRun.disabled = true;
+      els.crawlerRunMessage.textContent = "GitHub Actions에 크롤링 실행을 요청하는 중입니다.";
+      try {
+        const result = await requestAdminFunction("run_crawler");
+        els.crawlerRunMessage.textContent = "수동 크롤링을 요청했습니다. 완료 결과는 Discord로 전송됩니다.";
+        showAdminResult("수동 크롤링 실행 요청을 보냈습니다.");
+        if (result.actionsUrl) {
+          els.crawlerRunMessage.innerHTML = `수동 크롤링을 요청했습니다. <a href="${escapeHtml(result.actionsUrl)}" target="_blank" rel="noreferrer">GitHub Actions에서 확인</a>`;
+        }
+      } catch (error) {
+        els.crawlerRunMessage.textContent = `크롤링 실행 요청에 실패했습니다: ${error.message}`;
+        showAdminResult(`크롤링 실행 요청에 실패했습니다: ${error.message}`, "error");
+      } finally {
+        els.crawlerRun.disabled = false;
+      }
+    }
+
     function renderAuthorAccounts() {
       if (!els.authorAccountList) return;
       els.authorAccountCount.textContent = `${state.authors.length}명`;
@@ -4179,21 +4286,37 @@
         return;
       }
       state.authors.forEach((author) => {
+        const savedKey = normalize(author.key_value);
         const card = document.createElement("article");
         card.className = "author-submission-card";
         card.innerHTML = `
           <strong>${escapeHtml(author.display_name)}</strong>
           <a href="${escapeHtml(author.postype_channel_url)}" target="_blank" rel="noreferrer">${escapeHtml(author.postype_channel_url)}</a>
           <p class="author-submission-meta">${author.enabled ? "사용중" : "정지됨"} · 최근 로그인 ${escapeHtml(formatDateTime(author.last_login_at))}</p>
+          <div class="author-key-row">
+            <input type="text" value="${escapeHtml(savedKey)}" placeholder="재발급 후 표시됩니다" readonly aria-label="${escapeHtml(author.display_name)} 작가 키">
+            <button class="button" type="button" data-action="copy" ${savedKey ? "" : "disabled"}>키 복사</button>
+          </div>
           <div class="author-submission-actions">
             <button class="button" type="button" data-action="reset">키 재발급</button>
             <button class="button ${author.enabled ? "danger" : "primary"}" type="button" data-action="toggle">${author.enabled ? "계정 정지" : "다시 활성화"}</button>
           </div>
         `;
+        card.querySelector('[data-action="copy"]').addEventListener("click", () => copyAuthorKeyFromList(author, savedKey));
         card.querySelector('[data-action="reset"]').addEventListener("click", () => resetAuthorKey(author));
         card.querySelector('[data-action="toggle"]').addEventListener("click", () => toggleAuthorAccount(author));
         els.authorAccountList.appendChild(card);
       });
+    }
+
+    async function copyAuthorKeyFromList(author, authorKey) {
+      if (!authorKey) return;
+      try {
+        await navigator.clipboard.writeText(authorKey);
+        showAdminResult(`${author.display_name} 작가 키를 복사했습니다.`);
+      } catch (_) {
+        showAdminResult("브라우저에서 자동 복사를 허용하지 않았습니다. 키 입력칸을 길게 눌러 복사해 주세요.", "info");
+      }
     }
 
     async function showIssuedAuthorKey(authorName, authorKey) {
@@ -4232,8 +4355,8 @@
       try {
         const result = await requestAdminFunction("create_author", payload);
         els.authorAccountForm.reset();
-        await showIssuedAuthorKey(payload.display_name, result.authorKey);
         await loadData();
+        await showIssuedAuthorKey(payload.display_name, result.authorKey);
       } catch (error) {
         showAdminResult(`작가 계정 생성에 실패했습니다: ${error.message}`, "error");
       } finally {
@@ -4245,6 +4368,7 @@
       if (!confirm(`${author.display_name} 작가의 기존 키를 폐기하고 새 키를 발급할까요?`)) return;
       try {
         const result = await requestAdminFunction("reset_author_key", { author_id: author.id });
+        await loadData();
         await showIssuedAuthorKey(author.display_name, result.authorKey);
       } catch (error) {
         showAdminResult(`작가 키 재발급에 실패했습니다: ${error.message}`, "error");
@@ -4289,6 +4413,7 @@
         return;
       }
       posts.forEach((post) => {
+        const reviewed = postFlag(post["관리자검수"]);
         const row = document.createElement("div");
         row.className = "admin-list-row";
         const checkLabel = document.createElement("label");
@@ -4308,8 +4433,8 @@
         button.className = "admin-item";
         button.type = "button";
         button.innerHTML = `
-          <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}</span>
-          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
+          <span class="admin-item-title">${escapeHtml(normalize(post["제목"]) || "제목 없음")}${reviewed ? "" : '<span class="admin-new-badge">신규 · 미노출</span>'}</span>
+          <span class="admin-item-meta">${escapeHtml([post["날짜"], post["작가"], reviewed ? "노출" : "미노출"].map(normalize).filter(Boolean).join(" · ") || "정보 없음")}</span>
         `;
         button.addEventListener("click", () => fillAdminForm(post, row));
         row.append(checkLabel, button);
@@ -4413,6 +4538,7 @@
       const updated = { ...post };
       const first = values[0] || "";
       const joined = values.join(", ");
+      if (field === "노출상태") updated["관리자검수"] = first === "노출" ? "Y" : "";
       if (field === "카테고리") updated["카테고리"] = first;
       if (field === "가격") updated["유료"] = first === "유료" ? "O" : "X";
       if (field === "성인") updated["성인"] = first === "성인" ? "O" : "X";
@@ -5370,6 +5496,14 @@
       els.adminForm.elements["_rowNumber"].value = post._rowNumber || "";
       syncAdminMultiSelectsFromForm();
       syncStandaloneStatus();
+      syncAdminReadLink();
+    }
+
+    function syncAdminReadLink() {
+      const url = normalize(els.adminForm.elements["링크"].value);
+      const isPostype = /^https:\/\/(?:(?:[^/]+\.)?postype\.com|posty\.pe)\//i.test(url);
+      els.openPostLink.hidden = !isPostype;
+      els.openPostLink.href = isPostype ? url : "#";
     }
 
     function openNewPostForm() {
@@ -5381,12 +5515,14 @@
       els.adminForm.elements["_rowNumber"].value = "";
       syncAdminMultiSelectsFromForm();
       syncStandaloneStatus();
+      syncAdminReadLink();
       els.adminEditor.hidden = false;
     }
 
     function closeAdminEditor() {
       els.adminForm.reset();
       syncAdminMultiSelectsFromForm();
+      syncAdminReadLink();
       els.adminEditor.hidden = true;
     }
 
@@ -5713,7 +5849,9 @@
     els.newPost.addEventListener("click", openNewPostForm);
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
+    els.adminForm.elements["링크"].addEventListener("input", syncAdminReadLink);
     els.adminForm.elements["시리즈"].addEventListener("change", syncStandaloneStatus);
+    els.crawlerRun.addEventListener("click", runCrawler);
     els.adminForm.addEventListener("submit", savePost);
     els.adminEditor.addEventListener("click", (event) => {
       if (event.target === els.adminEditor) closeAdminEditor();

@@ -391,6 +391,8 @@ function archivePostForAuthor(row: Record<string, unknown>) {
 }
 
 function postToRow(payload: Record<string, unknown>, action: string) {
+  const reviewSpecified = Object.prototype.hasOwnProperty.call(payload, K.adminReviewed);
+  const reviewed = flag(payload[K.adminReviewed]);
   return {
     ...(action === "create" ? { source_row_number: sourceRowNumber(payload) } : {}),
     title: text(payload[K.title]),
@@ -409,6 +411,10 @@ function postToRow(payload: Record<string, unknown>, action: string) {
     series_name: text(payload[K.seriesName]),
     series_volume: text(payload[K.seriesVolume]),
     serialization_status: text(payload[K.serializationStatus]),
+    ...(reviewSpecified ? {
+      admin_reviewed: reviewed,
+      admin_reviewed_at: reviewed ? new Date().toISOString() : null,
+    } : {}),
     ...(action === "create" ? {
       admin_reviewed: true,
       admin_reviewed_at: new Date().toISOString(),
@@ -519,7 +525,7 @@ async function findAuthorSubmission(id: string) {
 }
 
 async function findAuthor(id: string) {
-  const rows = await rest(`postype_authors?select=id,display_name,postype_channel_url,key_hash,enabled,last_login_at,created_at,updated_at&id=eq.${encodeURIComponent(id)}&limit=1`);
+  const rows = await rest(`postype_authors?select=id,display_name,postype_channel_url,key_hash,key_value,enabled,last_login_at,created_at,updated_at&id=eq.${encodeURIComponent(id)}&limit=1`);
   return Array.isArray(rows) && rows[0] ? rows[0] as Record<string, unknown> : null;
 }
 
@@ -788,12 +794,17 @@ Deno.serve(async (request) => {
       return json({ ok: false, error: "Admin session is missing or expired." }, 401);
     }
 
-    if (!["list", "create", "update", "delete", "approve", "save_filter_options", "list_authors", "create_author", "reset_author_key", "toggle_author"].includes(action)) {
+    if (![
+      "list", "create", "update", "delete", "approve", "save_filter_options",
+      "list_authors", "create_author", "reset_author_key", "toggle_author",
+      "list_author_submissions", "approve_author_submission", "reject_author_submission",
+      "unify_all_series", "run_crawler", "crawl_status",
+    ].includes(action)) {
       return json({ ok: false, error: "Unknown action." }, 400);
     }
 
     if (action === "list_authors") {
-      const rows = await rest("postype_authors?select=id,display_name,postype_channel_url,enabled,last_login_at,created_at,updated_at&order=display_name.asc");
+      const rows = await rest("postype_authors?select=id,display_name,postype_channel_url,key_value,enabled,last_login_at,created_at,updated_at&order=display_name.asc");
       return json({ ok: true, rows });
     }
 
@@ -808,6 +819,7 @@ Deno.serve(async (request) => {
           display_name: displayName,
           postype_channel_url: channelUrl,
           key_hash: await hashAuthorKey(authorKey),
+          key_value: authorKey,
           enabled: true,
         }),
       });
@@ -820,7 +832,7 @@ Deno.serve(async (request) => {
       const authorKey = generateAuthorKey();
       await rest(`postype_authors?id=eq.${encodeURIComponent(id)}`, {
         method: "PATCH",
-        body: JSON.stringify({ key_hash: await hashAuthorKey(authorKey) }),
+        body: JSON.stringify({ key_hash: await hashAuthorKey(authorKey), key_value: authorKey }),
       });
       return json({ ok: true, authorKey });
     }
@@ -866,6 +878,11 @@ Deno.serve(async (request) => {
     if (action === "list") {
       const rows = await rest(`${encodeURIComponent(tableName)}?select=*&deleted_at=is.null&order=published_date.desc.nullslast,title.asc`);
       return json({ ok: true, rows });
+    }
+
+    if (action === "crawl_status") {
+      const rows = await rest("crawl_runs?select=id,started_at,finished_at,status,found_count,inserted_count,ai_review_count,failed_count,error_message&order=started_at.desc&limit=1");
+      return json({ ok: true, run: Array.isArray(rows) && rows[0] ? rows[0] : null });
     }
 
     if (action === "save_filter_options") {

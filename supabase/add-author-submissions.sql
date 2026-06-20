@@ -13,11 +13,15 @@ create table if not exists public.postype_authors (
   display_name text not null unique,
   postype_channel_url text not null unique,
   key_hash text not null,
+  key_value text,
   enabled boolean not null default true,
   last_login_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.postype_authors
+  add column if not exists key_value text;
 
 create table if not exists public.postype_author_submissions (
   id uuid primary key default gen_random_uuid(),

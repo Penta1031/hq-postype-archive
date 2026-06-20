@@ -50,7 +50,7 @@ export type RunSummary = {
   status: "success" | "partial_success" | "failed";
   foundCount: number;
   insertedCount: number;
-  aiReviewCount: number;
+  reviewPendingCount: number;
   failedCount: number;
   errorMessage?: string;
   newPosts: Array<{ title: string; author: string; link: string }>;

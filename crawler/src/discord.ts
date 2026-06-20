@@ -1,15 +1,9 @@
-import { optionalEnv, truthyEnv } from "./utils.js";
+import { optionalEnv } from "./utils.js";
 import type { RunSummary } from "./types.js";
 
 export async function sendDiscord(summary: RunSummary) {
   const webhookUrl = optionalEnv("DISCORD_WEBHOOK_URL");
   if (!webhookUrl) return;
-  if (
-    !summary.foundCount &&
-    !summary.failedCount &&
-    summary.status === "success" &&
-    !truthyEnv("SEND_DISCORD_WHEN_EMPTY", false)
-  ) return;
 
   const adminUrl = optionalEnv("ADMIN_PAGE_URL");
   const actionRunUrl = githubActionRunUrl();
@@ -19,7 +13,7 @@ export async function sendDiscord(summary: RunSummary) {
     `상태: ${statusLabel(summary.status)}`,
     `신규 발견: ${summary.foundCount}건`,
     `추가 성공: ${summary.insertedCount}건`,
-    `AI 검수 필요: ${summary.aiReviewCount}건`,
+    `신규 미노출: ${summary.reviewPendingCount}건`,
     `실패: ${summary.failedCount}건`,
   ];
 

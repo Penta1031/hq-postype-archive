@@ -75,7 +75,6 @@ export async function getExistingArchive(link: string, postypePostId: number | n
       .from(tableName)
       .select("id, title, author, link, ai_status, crawl_status, admin_reviewed")
       .eq("postype_post_id", postypePostId)
-      .is("deleted_at", null)
       .limit(1);
     if (error) throw error;
     if (data?.length) return data[0];
@@ -85,7 +84,6 @@ export async function getExistingArchive(link: string, postypePostId: number | n
     .from(tableName)
     .select("id, title, author, link, ai_status, crawl_status, admin_reviewed")
     .eq("link", link)
-    .is("deleted_at", null)
     .limit(1);
   if (error) throw error;
   return data?.[0] || null;

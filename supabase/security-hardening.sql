@@ -36,7 +36,8 @@ select
   serialization_status,
   admin_reviewed
 from public.postype_archive
-where deleted_at is null;
+where deleted_at is null
+  and admin_reviewed is true;
 
 create or replace view public.crawl_runs_public
 with (security_barrier = true)

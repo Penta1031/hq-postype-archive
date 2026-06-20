@@ -4,7 +4,7 @@
 
 ## 이용 안내
 
-오류나 문의사항은 디엠 혹은 [큐리어스](https://curious.quizby.me/Penta_1031/m)로 문의 부탁드립니다.
+오류나 문의사항은 디엠 혹은 큐리어스로 문의 부탁드립니다.
 
 ## 데이터 연결
 
@@ -23,6 +23,8 @@ SUPABASE_PUBLIC_VIEW: "postype_archive_public"
 
 `supabase/security-hardening.sql`을 Supabase SQL Editor에서 한 번 실행하면 공개 검색기는 검색에 필요한 열만 읽고, 내부 관리 정보는 관리자 로그인 후에만 읽습니다. 기존 데이터는 삭제되지 않습니다.
 
+이번 크롤링 복구 업데이트에서는 `supabase/restore-archive-and-crawler.sql`을 SQL Editor에서 한 번 실행합니다. Table Editor에 남아 있는 기존 글은 다시 노출하고, 앞으로 크롤링으로 추가되는 미검수 글은 공개 화면에서 숨깁니다. 행 자체가 삭제됐다면 `postype_archive_rows.csv`를 먼저 다시 가져와야 합니다.
+
 `supabase/add-filter-config.sql`을 한 번 실행하면 관리자 화면에서 장르·키워드·공·수 필터 단어를 추가하거나 목록에서 삭제할 수 있습니다. 변경한 목록은 검색 화면에 반영됩니다.
 
 작가가 시리즈 글을 등록하거나 수정하면 같은 `series_name`의 장르·키워드·공·수 값이 함께 반영됩니다.
@@ -30,10 +32,16 @@ SUPABASE_PUBLIC_VIEW: "postype_archive_public"
 관리자 로그인은 실패 횟수를 제한하며, 성공 후 발급되는 임시 로그인 표는 30분 동안만 브라우저 메모리에 보관됩니다. Vercel 배포에서는 `vercel.json`의 보안 헤더도 자동 적용됩니다.
 # 작가 업로드 채널
 
-관리자는 모바일 관리자 모드의 `작가 계정·키 관리`에서 작가별 계정을 만들고 전용 키를 발급·재발급·정지할 수 있습니다. 키 원문은 DB에 저장하지 않고 SHA-256 해시만 저장하므로, 분실한 키는 조회하지 않고 새로 발급합니다.
+관리자는 모바일 관리자 모드의 `작가 계정·키 관리`에서 작가별 계정을 만들고 전용 키를 확인·복사·재발급·정지할 수 있습니다. 로그인 검증에는 SHA-256 해시를 사용하고, 관리자 재확인을 위해 키 원문은 공개 권한이 없는 `postype_authors.key_value`에 보관합니다. 기존 키는 원문을 복구할 수 없어 한 번 재발급해야 목록에 표시됩니다.
 
 작가는 `작가 업로드`에서 작가명과 전용 키로 로그인합니다. 등록된 본인 포스타입 채널의 글만 직접 등록할 수 있고, 기존에 관리자가 등록한 같은 작가명의 글까지 한번에 조회·수정·삭제할 수 있습니다. `posty.pe` 축약 링크도 지원합니다.
 
 최초 설치 시 `supabase/add-author-submissions.sql`을 Supabase SQL Editor에서 한 번 실행하고 `postype-admin` Edge Function을 재배포합니다. 추가 Secret은 필요하지 않습니다.
 
 `postype-admin`은 자체 관리자·작가 인증을 사용하므로 `supabase/config.toml`에서 Supabase JWT 사전 검증을 끄도록 고정합니다. 수동 배포 시에는 `supabase.cmd functions deploy postype-admin --no-verify-jwt --project-ref aiuwbwtknaceghkzporx`를 사용합니다.
+
+## 자동 크롤링
+
+GitHub Actions는 매일 KST 04:00에 실행됩니다. 포스타입 본문은 메타데이터 확인에만 사용하고 DB에 저장하지 않으며, Gemini/OpenAI 분류도 실행하지 않습니다. 광고·프로모션·포스타입 공식·바라바라 관련 글은 기존 차단 규칙으로 제외됩니다.
+
+새 글은 `admin_reviewed=false`로 저장되어 공개 검색기에 바로 나오지 않습니다. 관리자 모드에서 필터를 정리한 뒤 `노출상태`를 `노출`로 일괄 변경합니다. 실행 결과는 `DISCORD_WEBHOOK_URL`로 전송됩니다.
