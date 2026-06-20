@@ -12,7 +12,8 @@ revoke all on public.postype_archive from anon, authenticated;
 revoke all on public.postype_sources from anon, authenticated;
 revoke all on public.crawl_runs from anon, authenticated;
 
-create or replace view public.postype_archive_public
+drop view if exists public.postype_archive_public;
+create view public.postype_archive_public
 with (security_barrier = true)
 as
 select

@@ -256,7 +256,8 @@ revoke all on public.postype_authors from anon, authenticated;
 revoke all on public.postype_author_submissions from anon, authenticated;
 
 -- The public site reads only these non-sensitive columns. The base table remains private.
-create or replace view public.postype_archive_public
+drop view if exists public.postype_archive_public;
+create view public.postype_archive_public
 with (security_barrier = true)
 as
 select

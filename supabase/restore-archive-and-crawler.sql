@@ -15,7 +15,9 @@ set
 where deleted_at is not null
    or admin_reviewed is distinct from true;
 
-create or replace view public.postype_archive_public
+drop view if exists public.postype_archive_public;
+
+create view public.postype_archive_public
 with (security_barrier = true)
 as
 select
