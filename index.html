@@ -49,6 +49,18 @@
       color: #fff;
     }
 
+    .swatch[data-bg="dark-purple"] {
+      border-color: #705b83;
+      background: linear-gradient(135deg, #160d21, #342044 55%, #615174);
+      color: #fff;
+    }
+
+    .swatch[data-bg="sky-blue"] {
+      border-color: #9fcbe2;
+      background: linear-gradient(135deg, #edf9ff, #cceafb 52%, #a9d3ea);
+      color: #172635;
+    }
+
     .shell {
       width: min(1280px, calc(100% - 32px));
       margin: 0 auto;
@@ -3221,7 +3233,7 @@
           <label><span class="label">발췌 텍스트</span><textarea id="excerptText" placeholder="텍스트를 복붙해 주세요."></textarea></label>
           <div class="modal-grid two">
             <label><span class="label">글꼴</span><select id="excerptFont"><option value="Pretendard, system-ui, sans-serif">기본</option><option value="'Nanum Gothic', '나눔고딕', system-ui, sans-serif">나눔고딕</option><option value="'Nanum Myeongjo', '나눔명조', serif">나눔명조</option><option value="'RIDIBatang', 'Nanum Myeongjo', serif">리디명조</option></select></label>
-            <label><span class="label">글자크기 <span id="excerptFontSizeLabel">38</span></span><input id="excerptFontSize" type="range" min="26" max="58" value="38"></label>
+            <label><span class="label">글자크기 <span id="excerptFontSizeLabel">44</span></span><input id="excerptFontSize" type="range" min="26" max="58" value="44"></label>
           </div>
           <div class="modal-grid">
             <span class="label">배경</span>
@@ -3229,6 +3241,8 @@
               <button class="swatch active" type="button" data-bg="dark">검정</button>
               <button class="swatch" type="button" data-bg="light">하양</button>
               <button class="swatch" type="button" data-bg="purple-blue">보라·파랑</button>
+              <button class="swatch" type="button" data-bg="dark-purple">어두운 보라</button>
+              <button class="swatch" type="button" data-bg="sky-blue">연한 하늘</button>
             </div>
           </div>
           <div class="modal-grid">
@@ -4861,6 +4875,14 @@
       document.querySelectorAll(".swatch[data-bg]").forEach((button) => {
         button.classList.toggle("active", button.dataset.bg === value);
       });
+      if (value === "sky-blue" && state.excerptTextColor !== "black") {
+        setExcerptTextColor("black");
+        return;
+      }
+      if (value === "dark-purple" && state.excerptTextColor !== "white") {
+        setExcerptTextColor("white");
+        return;
+      }
       drawExcerptCanvas();
     }
 
@@ -5059,13 +5081,15 @@
       const ctx = canvas.getContext("2d");
       const width = canvas.width;
       const height = canvas.height;
-      const dark = state.excerptBackground !== "light";
+      const dark = !["light", "sky-blue"].includes(state.excerptBackground);
       const purpleBlue = state.excerptBackground === "purple-blue";
+      const darkPurple = state.excerptBackground === "dark-purple";
+      const skyBlue = state.excerptBackground === "sky-blue";
       const baseBg = dark ? "#101114" : "#f7f5ef";
       const textColor = state.excerptTextColor === "black" ? "#202124" : "#f4f4f5";
       const subColor = state.excerptTextColor === "black" ? "rgba(32,33,36,.72)" : "rgba(244,244,245,.78)";
       const fontFamily = els.excerptFont.value;
-      const fontSize = Number(els.excerptFontSize.value) || 38;
+      const fontSize = Number(els.excerptFontSize.value) || 44;
 
       ctx.clearRect(0, 0, width, height);
       if (purpleBlue) {
@@ -5073,6 +5097,18 @@
         backgroundGradient.addColorStop(0, "#7c3aed");
         backgroundGradient.addColorStop(.52, "#4f46e5");
         backgroundGradient.addColorStop(1, "#0284c7");
+        ctx.fillStyle = backgroundGradient;
+      } else if (darkPurple) {
+        const backgroundGradient = ctx.createLinearGradient(0, 0, width, height);
+        backgroundGradient.addColorStop(0, "#160d21");
+        backgroundGradient.addColorStop(.55, "#342044");
+        backgroundGradient.addColorStop(1, "#615174");
+        ctx.fillStyle = backgroundGradient;
+      } else if (skyBlue) {
+        const backgroundGradient = ctx.createLinearGradient(0, 0, width, height);
+        backgroundGradient.addColorStop(0, "#edf9ff");
+        backgroundGradient.addColorStop(.52, "#cceafb");
+        backgroundGradient.addColorStop(1, "#a9d3ea");
         ctx.fillStyle = backgroundGradient;
       } else {
         ctx.fillStyle = baseBg;
@@ -5092,15 +5128,15 @@
       ctx.fillStyle = textColor;
       ctx.font = `${fontSize}px ${fontFamily}`;
       ctx.textBaseline = "top";
-      const margin = 82;
+      const margin = 68;
       const lineHeight = Math.round(fontSize * 1.65);
       let quote = normalize(els.excerptText.value) || "발췌 텍스트를 입력해 주세요.";
       const quotePairs = { '"': '"', "“": "”" };
       if (quote.length >= 2 && quotePairs[quote[0]] === quote[quote.length - 1]) {
         quote = quote.slice(1, -1).trim();
       }
-      const lines = wrapCanvasText(ctx, quote, width - margin * 2).slice(0, 9);
-      let y = 210;
+      const lines = wrapCanvasText(ctx, quote, width - margin * 2).slice(0, 8);
+      let y = 270;
       lines.forEach((line) => {
         ctx.fillText(line, margin, y);
         y += lineHeight;
@@ -5109,11 +5145,12 @@
       ctx.fillStyle = subColor;
       const title = normalize(els.excerptWorkTitle.value) || "작품 이름";
       const author = normalize(els.excerptAuthor.value) || "작가";
-      const metaY = Math.max(y + 62, 748);
-      ctx.font = `600 44px ${fontFamily}`;
+      const metaY = Math.min(Math.max(y + 52, 640), height - 190);
+      ctx.font = `400 40px ${fontFamily}`;
       ctx.fillText(title, margin, metaY);
+      ctx.fillStyle = state.excerptTextColor === "black" ? "rgba(32,33,36,.56)" : "rgba(244,244,245,.58)";
       ctx.font = `32px ${fontFamily}`;
-      ctx.fillText(author, margin, metaY + 64);
+      ctx.fillText(author, margin, metaY + 58);
 
       ctx.fillStyle = dark ? "rgba(244,244,245,.38)" : "rgba(32,33,36,.38)";
       ctx.font = `24px ${fontFamily}`;
