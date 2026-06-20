@@ -25,11 +25,14 @@ async function main() {
 
   const { browser, context } = await createPostypeContext();
   try {
-    configureFilterTaxonomy(await getFilterConfig());
+    const viewsOnly = truthyEnv("VIEWS_ONLY", false);
+    if (!viewsOnly) configureFilterTaxonomy(await getFilterConfig());
     const manualPostUrl = optionalEnv("MANUAL_POST_URL");
-    const links: ProcessTarget[] = manualPostUrl
-      ? [manualPostLink(manualPostUrl)]
-      : await collectConfiguredSourceLinks(context);
+    const links: ProcessTarget[] = viewsOnly
+      ? []
+      : manualPostUrl
+        ? [manualPostLink(manualPostUrl)]
+        : await collectConfiguredSourceLinks(context);
 
     const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
     const retryFailedAi = truthyEnv("RETRY_FAILED_AI", true);
@@ -117,7 +120,7 @@ async function main() {
       }
     }
 
-    if (!manualPostUrl && truthyEnv("UPDATE_VIEW_COUNTS", true)) {
+    if (viewsOnly || (!manualPostUrl && truthyEnv("UPDATE_VIEW_COUNTS", true))) {
       const viewResult = await refreshArchiveViewCounts(context, viewRefreshedIds);
       console.log(`View counts refreshed: ${viewResult.updated}/${viewResult.total}, unavailable: ${viewResult.unavailable}`);
     }

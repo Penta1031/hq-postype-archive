@@ -2599,7 +2599,6 @@
         <span>목록 정렬</span>
         <div class="admin-sort-pills" id="adminSortButtons">
           <button class="admin-sort-pill active" type="button" data-admin-sort="date-desc">최신순</button>
-          <button class="admin-sort-pill" type="button" data-admin-sort="title-asc">제목순</button>
         </div>
       </div>
       <div class="admin-bulkbar">
@@ -2691,7 +2690,6 @@
             <details class="guide panel">
                 <summary>이용 가이드</summary>
                 <div class="guide-body">
-                    <p>혚쾌 포타 검색기는 혚쾌 좌우상대고정 기준으로 정리하고 있습니다.</p>
                     <p>일부 분류 기능은 AI를 통해 자동화하고 있으며, 자료 정리 목적 외에는 절대 사용하지 않습니다.</p>
                     <p>혹시 목록에서 글을 내리고 싶으시다면 관리자(@Penta_1031)에게 편하게 요청해주세요.</p>
                     <p>오류나 문의사항은 디엠 혹은 에스크로 문의 부탁드립니다.</p>
@@ -2717,7 +2715,6 @@
         <div id="filterBody">
             <select id="sortSelect" hidden>
                 <option value="date-desc">최신순</option>
-                <option value="title-asc">제목순</option>
                 <option value="author-asc">작가순</option>
                 <option value="bookmarked">북마크</option>
             </select>
@@ -2730,7 +2727,6 @@
           <span id="totalCount">글 목록</span>
                 <div class="sort-pills" id="sortButtons">
                     <button class="sort-pill active" type="button" data-sort="date-desc">최신순</button>
-                    <button class="sort-pill" type="button" data-sort="title-asc">제목순</button>
                     <button class="sort-pill" type="button" data-sort="author-asc">작가순</button>
                     <button class="sort-pill" type="button" data-sort="bookmarked">북마크</button>
                 </div>
@@ -3855,7 +3851,6 @@
       const query = normalize(state.query).toLowerCase();
       const posts = state.posts.filter((post) => matchesPost(post, state.active, query));
       const sorted = posts.sort((a, b) => {
-        if (state.sort === "title-asc") return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
         if (state.sort === "author-asc") return normalize(a["작가"]).localeCompare(normalize(b["작가"]), "ko");
         if (state.sort === "bookmarked") {
           const ab = postLibraryEntry(a).bookmarked ? 1 : 0;
@@ -4021,9 +4016,6 @@
         .filter((post) => matchesPost(post, state.adminActive, query))
         .slice()
         .sort((a, b) => {
-          if (state.adminSort === "title-asc") {
-            return normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
-          }
           const dateDiff = (Date.parse(normalize(b["날짜"])) || 0) - (Date.parse(normalize(a["날짜"])) || 0);
           return dateDiff || normalize(a["제목"]).localeCompare(normalize(b["제목"]), "ko");
         });

@@ -51,6 +51,8 @@ GitHub Actions Variable:
 
 `POSTYPE_AUTH_STATE`는 Playwright `storageState` JSON 또는 base64 JSON을 넣습니다. 로그인/성인글/구매글은 해당 계정이 정상 열람 가능한 범위에서만 수집되며, 접근 불가 글은 `crawl_status`로 실패 기록만 남깁니다.
 
+현재 아카이브에 남아 있는 글의 조회수만 갱신하려면 GitHub Actions의 `Run workflow`에서 `새 글 수집 없이 현재 남은 글의 조회수만 업데이트`를 체크해 실행합니다. `deleted_at`이 비어 있는 포스타입 링크만 처리하며 새 글 수집과 AI 분류는 실행하지 않습니다.
+
 관리자 화면의 “수동 크롤링 실행” 버튼은 `config.js`의 `MANUAL_CRAWL_URL` 또는 `GITHUB_REPOSITORY`를 설정하면 GitHub Actions 수동 실행 화면으로 연결됩니다.
 
 “글 수동 추가”에서는 포스타입 링크만 붙여 넣고 “링크로 불러오기 + AI 분류”를 누를 수 있습니다. GitHub Actions가 로그인 세션으로 글을 읽고 AI 분류한 뒤 Supabase에 자동 저장하며, 완료까지 보통 1~3분 걸립니다. 포스타입 공식·바라바라·광고·프로모션·추천 채널 영역의 글은 수집 대상에서 제외합니다.
