@@ -5,6 +5,11 @@ on:
     # KST 04:00 = UTC 19:00 on the previous day.
     - cron: "0 19 * * *"
   workflow_dispatch:
+    inputs:
+      post_url:
+        description: "분류할 포스타입 글 링크 (비우면 전체 소스 확인)"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -56,3 +61,5 @@ jobs:
           RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'true' }}
           UPDATE_VIEW_COUNTS: ${{ vars.UPDATE_VIEW_COUNTS || 'true' }}
           VIEW_COUNT_CONCURRENCY: ${{ vars.VIEW_COUNT_CONCURRENCY || '2' }}
+          POSTYPE_TARGET_TERMS: ${{ vars.POSTYPE_TARGET_TERMS || '이승협,유회승,승협,회승' }}
+          MANUAL_POST_URL: ${{ inputs.post_url || '' }}

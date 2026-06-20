@@ -3,12 +3,13 @@ import { sendDiscord } from "./discord.js";
 import { collectPostLinks, createPostypeContext, extractPost, fetchViewCount, isExcludedPost } from "./postype.js";
 import { createRun, finishRun, getEnabledSources, getExistingArchive, getFilterConfig, getViewRefreshTargets, insertArchiveRow, markSourceChecked, unifySeriesFilters, updateArchiveRow, updateArchiveViewCount } from "./supabase.js";
 import type { RunSummary } from "./types.js";
-import { truthyEnv, uniqueBy } from "./utils.js";
+import { normalizePostUrl, optionalEnv, postypePostIdFromUrl, truthyEnv, uniqueBy } from "./utils.js";
 
 type ProcessTarget = {
   url: string;
   postypePostId: number | null;
   sourceUrl: string;
+  targetMatched?: boolean;
   existingId?: number;
 };
 
@@ -26,15 +27,10 @@ async function main() {
   const { browser, context } = await createPostypeContext();
   try {
     configureFilterTaxonomy(await getFilterConfig());
-    const sources = await getEnabledSources();
-    if (!sources.length) throw new Error("No enabled postype_sources or POSTYPE_SOURCE_URLS configured.");
-
-    const links = [];
-    for (const source of sources) {
-      const found = await collectPostLinks(context, source.source_url);
-      links.push(...found);
-      await markSourceChecked(source.source_url);
-    }
+    const manualPostUrl = optionalEnv("MANUAL_POST_URL");
+    const links: ProcessTarget[] = manualPostUrl
+      ? [manualPostLink(manualPostUrl)]
+      : await collectConfiguredSourceLinks(context);
 
     const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
     const retryFailedAi = truthyEnv("RETRY_FAILED_AI", true);
@@ -122,7 +118,7 @@ async function main() {
       }
     }
 
-    if (truthyEnv("UPDATE_VIEW_COUNTS", true)) {
+    if (!manualPostUrl && truthyEnv("UPDATE_VIEW_COUNTS", true)) {
       const viewResult = await refreshArchiveViewCounts(context, viewRefreshedIds);
       console.log(`View counts refreshed: ${viewResult.updated}/${viewResult.total}, unavailable: ${viewResult.unavailable}`);
     }
@@ -152,6 +148,34 @@ async function main() {
   }
 
   await sendDiscord(summary);
+}
+
+async function collectConfiguredSourceLinks(context: Awaited<ReturnType<typeof createPostypeContext>>["context"]) {
+  const sources = await getEnabledSources();
+  if (!sources.length) throw new Error("No enabled postype_sources or POSTYPE_SOURCE_URLS configured.");
+
+  const links: ProcessTarget[] = [];
+  for (const source of sources) {
+    const found = await collectPostLinks(context, source.source_url);
+    links.push(...found);
+    await markSourceChecked(source.source_url);
+  }
+  return links;
+}
+
+function manualPostLink(rawUrl: string): ProcessTarget {
+  const url = normalizePostUrl(rawUrl, "https://www.postype.com");
+  if (!url) throw new Error("MANUAL_POST_URL is not a valid URL.");
+  const parsed = new URL(url);
+  if (!(parsed.hostname === "postype.com" || parsed.hostname.endsWith(".postype.com")) || !/\/post\/\d+/.test(parsed.pathname)) {
+    throw new Error("MANUAL_POST_URL must be a Postype post URL.");
+  }
+  return {
+    url,
+    postypePostId: postypePostIdFromUrl(url),
+    sourceUrl: "manual-admin",
+    targetMatched: true,
+  };
 }
 
 async function refreshArchiveViewCounts(context: Awaited<ReturnType<typeof createPostypeContext>>["context"], skipIds: Set<number>) {

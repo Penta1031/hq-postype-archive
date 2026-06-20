@@ -3,6 +3,8 @@ import { chromium } from "playwright";
 import { compactText, normalizePostUrl, parseAuthState, postypePostIdFromUrl, todayIsoDate, uniqueBy } from "./utils.js";
 import type { ExtractedPost, PostLink } from "./types.js";
 
+const DEFAULT_TARGET_TERMS = ["이승협", "유회승", "승협", "회승"];
+
 export async function createPostypeContext() {
   const authState = process.env.POSTYPE_AUTH_STATE ? parseAuthState(process.env.POSTYPE_AUTH_STATE) : undefined;
   const browser = await chromium.launch({ headless: true });
@@ -40,7 +42,12 @@ export async function collectPostLinks(context: BrowserContext, sourceUrl: strin
     for (const candidate of candidates) {
       const url = normalizePostUrl(candidate.href, sourceUrl);
       if (!url || !/\/post\/\d+/.test(url) || isPromotionalCandidate(url, candidate.contextText)) continue;
-      postLinks.push({ url, postypePostId: postypePostIdFromUrl(url), sourceUrl });
+      postLinks.push({
+        url,
+        postypePostId: postypePostIdFromUrl(url),
+        sourceUrl,
+        targetMatched: matchesTargetText(candidate.contextText),
+      });
     }
     return uniqueBy(postLinks, (item) => item.url);
   } finally {
@@ -57,11 +64,36 @@ function isPromotionalCandidate(url: string, contextText: string) {
 }
 
 export function isExcludedPost(post: ExtractedPost) {
+  if (!isTargetPost(post)) return true;
   const pathname = new URL(post.link).pathname.toLowerCase();
   if (/\/@(?:postype|postype_official)(?:\/|$)/.test(pathname)) return true;
   const author = cleanAuthor(post.author).toLowerCase();
   if (["포스타입", "postype"].includes(author)) return true;
   return PROMOTION_MARKERS.test([post.title, post.author, post.tags.join(" ")].join("\n"));
+}
+
+export function isTargetPost(post: ExtractedPost) {
+  if (post.crawlStatus !== "success") return Boolean(post.targetMatched);
+  return matchesTargetText([
+    post.title,
+    post.author,
+    post.tags.join(" "),
+    post.bodyText,
+  ].join("\n"));
+}
+
+function matchesTargetText(value: string) {
+  const configured = (process.env.POSTYPE_TARGET_TERMS || "")
+    .split(/[,，、\n]/)
+    .map((term) => normalizeTargetText(term))
+    .filter(Boolean);
+  const terms = configured.length ? configured : DEFAULT_TARGET_TERMS.map(normalizeTargetText);
+  const searchable = normalizeTargetText(value);
+  return terms.some((term) => searchable.includes(term));
+}
+
+function normalizeTargetText(value: string) {
+  return value.normalize("NFKC").replace(/\s+/g, "").toLowerCase();
 }
 
 async function settleAndScroll(page: Page) {
@@ -120,6 +152,7 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       viewCount,
       crawlStatus: "success",
       crawlError: null,
+      targetMatched: link.targetMatched,
     };
   } catch (error) {
     return deniedPost(link, "error", error instanceof Error ? error.message : String(error));
@@ -268,6 +301,7 @@ function deniedPost(link: PostLink, status: ExtractedPost["crawlStatus"], messag
     viewCount: null,
     crawlStatus: status,
     crawlError: message,
+    targetMatched: link.targetMatched,
   };
 }
 

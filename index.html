@@ -1807,6 +1807,30 @@
       gap: 8px;
     }
 
+    .admin-ai-import {
+      display: grid;
+      gap: 7px;
+      padding: 10px;
+      border: 1px solid #27343a;
+      border-radius: 8px;
+      background: #0c1215;
+    }
+
+    .admin-ai-import .button {
+      width: 100%;
+    }
+
+    .admin-ai-import[hidden] {
+      display: none;
+    }
+
+    .admin-ai-import-note {
+      margin: 0;
+      color: #8d98a3;
+      font-size: 11px;
+      line-height: 1.5;
+    }
+
     .admin-editor-head,
     .random-result-head {
       display: flex;
@@ -2487,7 +2511,11 @@
             <input type="hidden" name="_supabaseId">
             <label><span class="label">제목</span><input name="제목" required></label>
             <label><span class="label">작가</span><input name="작가"></label>
-            <label class="wide"><span class="label">링크</span><input name="링크" type="url"></label>
+            <label class="wide"><span class="label">링크</span><input name="링크" type="url" placeholder="https://www.postype.com/@.../post/..."></label>
+            <div class="wide admin-ai-import" id="adminAiImportBox">
+              <button class="button primary" id="adminAiImportButton" type="button">링크로 불러오기 + AI 분류</button>
+              <p class="admin-ai-import-note">링크만 입력하면 제목·작가·날짜·장르·키워드·공·수·시리즈 정보를 읽어 자동 저장합니다. 승협 또는 회승 관련 글만 추가됩니다.</p>
+            </div>
             <label><span class="label">날짜</span><input name="날짜" type="date"></label>
             <label><span class="label">카테고리</span><select name="카테고리"><option>글</option><option>그림</option><option>기타</option></select></label>
             <label><span class="label">유료</span><select name="유료"><option value="X">무료</option><option value="O">유료</option></select></label>
@@ -2922,6 +2950,8 @@
       adminEditor: $("#adminEditor"),
       adminEditorTitle: $("#adminEditorTitle"),
       adminForm: $("#adminForm"),
+      adminAiImportBox: $("#adminAiImportBox"),
+      adminAiImportButton: $("#adminAiImportButton"),
       adminRefresh: $("#adminRefreshButton"),
       adminUnifySeries: $("#adminUnifySeriesButton"),
       newPost: $("#newPostButton"),
@@ -2970,6 +3000,27 @@
 
     function normalize(value) {
       return String(value ?? "").trim();
+    }
+
+    function canonicalPostUrl(value) {
+      try {
+        const url = new URL(normalize(value));
+        url.hash = "";
+        url.search = "";
+        return url.toString().replace(/\/$/, "");
+      } catch {
+        return "";
+      }
+    }
+
+    function isPostypePostUrl(value) {
+      try {
+        const url = new URL(value);
+        const isPostype = url.hostname === "postype.com" || url.hostname.endsWith(".postype.com");
+        return isPostype && /\/post\/\d+/.test(url.pathname);
+      } catch {
+        return false;
+      }
     }
 
     function normalizeSeriesKey(value) {
@@ -4634,6 +4685,7 @@
       placeAdminEditor(anchor);
       els.adminEditorTitle.textContent = "글 수정";
       els.deletePost.hidden = false;
+      els.adminAiImportBox.hidden = true;
       els.adminEditor.hidden = false;
       [...els.adminForm.elements].forEach((field) => {
         if (!field.name) return;
@@ -4650,6 +4702,7 @@
       els.adminForm.reset();
       els.adminEditorTitle.textContent = "신규 글 추가";
       els.deletePost.hidden = true;
+      els.adminAiImportBox.hidden = false;
       els.adminForm.elements["_rowNumber"].value = "";
       syncAdminMultiSelectsFromForm();
       syncStandaloneStatus();
@@ -4780,6 +4833,52 @@
         els.manualCrawlButton.disabled = false;
         els.manualCrawlButton.textContent = originalText;
       }
+    }
+
+    async function importPostWithAi() {
+      const linkField = els.adminForm.elements["링크"];
+      const link = canonicalPostUrl(linkField.value);
+      if (!link || !isPostypePostUrl(link)) {
+        alert("포스타입 글 링크를 정확히 붙여 넣어 주세요.");
+        linkField.focus();
+        return;
+      }
+
+      const existing = state.posts.find((post) => canonicalPostUrl(post["링크"]) === link);
+      if (existing && !["failed", "pending", "review_required"].includes(normalize(existing["AI상태"]))) {
+        alert("이미 목록에 저장된 글입니다. 목록에서 해당 글의 수정 버튼을 이용해 주세요.");
+        return;
+      }
+
+      els.adminAiImportButton.disabled = true;
+      const originalText = els.adminAiImportButton.textContent;
+      els.adminAiImportButton.textContent = "AI 분류 요청 중";
+      els.status.textContent = "링크를 GitHub Actions로 보내는 중입니다.";
+      try {
+        await requestAdminFunction("run_crawler", { post_url: link });
+        closeAdminEditor();
+        els.status.textContent = "AI 분류를 시작했습니다. 완료될 때까지 약 1~3분 기다려 주세요.";
+        const imported = await waitForImportedPost(link);
+        els.status.textContent = imported
+          ? `AI 분류가 끝났습니다: ${normalize(imported["제목"]) || "새 글"}`
+          : "실행은 요청했지만 아직 글이 보이지 않습니다. Actions 결과를 확인한 뒤 데이터 새로고침을 눌러 주세요.";
+      } catch (error) {
+        els.status.textContent = `링크 AI 분류 요청에 실패했습니다: ${error.message}`;
+        alert(`링크 AI 분류 요청에 실패했습니다. ${error.message}`);
+      } finally {
+        els.adminAiImportButton.disabled = false;
+        els.adminAiImportButton.textContent = originalText;
+      }
+    }
+
+    async function waitForImportedPost(link) {
+      for (let attempt = 0; attempt < 18; attempt += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 10000));
+        await loadData();
+        const post = state.posts.find((item) => canonicalPostUrl(item["링크"]) === link);
+        if (post && !["pending", ""].includes(normalize(post["AI상태"]))) return post;
+      }
+      return null;
     }
 
     async function unifyAllSeriesNow() {
@@ -5028,6 +5127,7 @@
     els.adminUnifySeries.addEventListener("click", unifyAllSeriesNow);
     els.newPost.addEventListener("click", openNewPostForm);
     els.manualCrawlButton.addEventListener("click", runCrawlerNow);
+    els.adminAiImportButton.addEventListener("click", importPostWithAi);
     els.clearForm.addEventListener("click", closeAdminEditor);
     els.deletePost.addEventListener("click", deleteCurrentPost);
     els.adminForm.elements["시리즈"].addEventListener("change", syncStandaloneStatus);

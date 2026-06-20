@@ -9,6 +9,7 @@ export type PostLink = {
   url: string;
   postypePostId: number | null;
   sourceUrl: string;
+  targetMatched?: boolean;
 };
 
 export type CrawlStatus = "success" | "access_denied" | "purchase_required" | "error";
@@ -28,6 +29,7 @@ export type ExtractedPost = {
   viewCount: number | null;
   crawlStatus: CrawlStatus;
   crawlError: string | null;
+  targetMatched?: boolean;
 };
 
 export type ViewRefreshTarget = {

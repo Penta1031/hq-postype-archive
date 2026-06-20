@@ -230,7 +230,22 @@ function archiveFilter(payload: Record<string, unknown>) {
   return `${encodeURIComponent(tableName)}?source_row_number=eq.${encodeURIComponent(rowNumber)}`;
 }
 
-async function dispatchCrawlerWorkflow() {
+function cleanPostypePostUrl(value: unknown) {
+  const raw = text(value);
+  if (!raw) return "";
+  try {
+    const url = new URL(raw);
+    const isPostype = url.hostname === "postype.com" || url.hostname.endsWith(".postype.com");
+    if (!isPostype || !/\/post\/\d+/.test(url.pathname)) return "";
+    url.hash = "";
+    url.search = "";
+    return url.toString().replace(/\/$/, "");
+  } catch {
+    return "";
+  }
+}
+
+async function dispatchCrawlerWorkflow(postUrl = "") {
   const token = Deno.env.get("GITHUB_WORKFLOW_TOKEN") || Deno.env.get("GITHUB_ACTIONS_TOKEN");
   const repository = Deno.env.get("GITHUB_REPOSITORY");
   const workflowId = Deno.env.get("GITHUB_WORKFLOW_ID") || "postype-sync.yml";
@@ -250,7 +265,10 @@ async function dispatchCrawlerWorkflow() {
       "User-Agent": "hq-postype-archive-admin",
       "X-GitHub-Api-Version": "2022-11-28",
     },
-    body: JSON.stringify({ ref }),
+    body: JSON.stringify({
+      ref,
+      ...(postUrl ? { inputs: { post_url: postUrl } } : {}),
+    }),
   });
 
   const responseText = await response.text();
@@ -411,7 +429,12 @@ Deno.serve(async (request) => {
     }
 
     if (action === "run_crawler") {
-      const result = await dispatchCrawlerWorkflow();
+      const requestedPostUrl = text(payload.post_url);
+      const postUrl = cleanPostypePostUrl(requestedPostUrl);
+      if (requestedPostUrl && !postUrl) {
+        return json({ ok: false, error: "올바른 포스타입 글 링크를 입력해 주세요." }, 400);
+      }
+      const result = await dispatchCrawlerWorkflow(postUrl);
       return json({ ok: true, ...result });
     }
 
