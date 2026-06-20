@@ -1,7 +1,7 @@
-import { classificationRow, classifyPost, reviewRequired } from "./classify.js";
+import { classificationRow, classifyPost, configureFilterTaxonomy, reviewRequired } from "./classify.js";
 import { sendDiscord } from "./discord.js";
 import { collectPostLinks, createPostypeContext, extractPost, fetchViewCount, isExcludedPost } from "./postype.js";
-import { createRun, finishRun, getEnabledSources, getExistingArchive, getViewRefreshTargets, insertArchiveRow, markSourceChecked, updateArchiveRow, updateArchiveViewCount } from "./supabase.js";
+import { createRun, finishRun, getEnabledSources, getExistingArchive, getFilterConfig, getViewRefreshTargets, insertArchiveRow, markSourceChecked, unifySeriesFilters, updateArchiveRow, updateArchiveViewCount } from "./supabase.js";
 import type { RunSummary } from "./types.js";
 import { truthyEnv, uniqueBy } from "./utils.js";
 
@@ -25,6 +25,7 @@ async function main() {
 
   const { browser, context } = await createPostypeContext();
   try {
+    configureFilterTaxonomy(await getFilterConfig());
     const sources = await getEnabledSources();
     if (!sources.length) throw new Error("No enabled postype_sources or POSTYPE_SOURCE_URLS configured.");
 
@@ -100,6 +101,9 @@ async function main() {
           const classification = await classifyPost(post);
           const row = classificationRow(classification);
           await updateArchiveRow(inserted.id, row);
+          if (classification.isSeries && classification.seriesName.trim()) {
+            await unifySeriesFilters(classification.seriesName);
+          }
           if (reviewRequired(classification.confidence)) summary.aiReviewCount += 1;
         } catch (error) {
           summary.failedCount += 1;

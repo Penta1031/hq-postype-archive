@@ -1330,6 +1330,75 @@
       gap: 5px;
     }
 
+    .admin-vocabulary {
+      margin: 0 0 12px;
+      border: 1px solid #262a31;
+      border-radius: 9px;
+      background: #101114;
+    }
+
+    .admin-vocabulary > summary {
+      cursor: pointer;
+      padding: 11px 12px;
+      color: #d7dbe1;
+      font-size: 12px;
+      font-weight: 500;
+    }
+
+    .admin-vocabulary-body {
+      display: grid;
+      gap: 9px;
+      padding: 0 10px 10px;
+    }
+
+    .admin-vocabulary-controls {
+      display: grid;
+      grid-template-columns: 108px minmax(0, 1fr) auto;
+      gap: 6px;
+    }
+
+    .admin-vocabulary-controls select,
+    .admin-vocabulary-controls input,
+    .admin-vocabulary-controls button {
+      min-height: 36px;
+    }
+
+    .admin-vocabulary-options {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 5px;
+    }
+
+    .admin-vocabulary-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 29px;
+      padding: 4px 7px 4px 9px;
+      border: 1px solid #30343c;
+      border-radius: 7px;
+      background: #15171b;
+      color: #c7ccd4;
+      font-size: 11px;
+    }
+
+    .admin-vocabulary-remove {
+      width: 20px;
+      height: 20px;
+      border: 0;
+      border-radius: 4px;
+      background: transparent;
+      color: #7d8692;
+      cursor: pointer;
+    }
+
+    .admin-vocabulary-note {
+      margin: 0;
+      color: #68717d;
+      font-size: 10px;
+      line-height: 1.5;
+    }
+
     .admin-list {
       display: grid;
       gap: 7px;
@@ -2288,6 +2357,14 @@
       .modal-grid.two {
         grid-template-columns: 1fr;
       }
+
+      .admin-vocabulary-controls {
+        grid-template-columns: minmax(0, 1fr) auto;
+      }
+
+      .admin-vocabulary-controls select {
+        grid-column: 1 / -1;
+      }
     }
 
     html,
@@ -2336,6 +2413,7 @@
         <div class="admin-secondary-actions">
           <button class="button" id="adminRefreshButton" type="button">데이터 새로고침</button>
           <button class="button" id="newPostButton" type="button">+ 글 수동 추가</button>
+          <button class="button" id="adminUnifySeriesButton" type="button" style="grid-column: 1 / -1;">시리즈 필터 전체 통일</button>
         </div>
       </div>
       <div class="crawler-admin" id="crawlerAdmin">
@@ -2363,6 +2441,20 @@
       </label>
       <button class="filter-title admin-filter-toggle" id="adminFilterToggle" type="button"><strong>관리자 필터</strong><span id="adminFilterCaret">접기</span></button>
       <div class="admin-filters" id="adminFilterMount"></div>
+      <details class="admin-vocabulary" id="adminVocabulary">
+        <summary>필터 단어 관리</summary>
+        <div class="admin-vocabulary-body">
+          <div class="admin-vocabulary-controls">
+            <select id="adminVocabularyGroup" aria-label="관리할 필터 종류">
+              <option>장르</option><option>키워드</option><option>공</option><option>수</option>
+            </select>
+            <input id="adminVocabularyInput" type="text" maxlength="40" placeholder="추가할 단어">
+            <button class="button primary" id="adminVocabularyAdd" type="button">추가</button>
+          </div>
+          <div class="admin-vocabulary-options" id="adminVocabularyOptions"></div>
+          <p class="admin-vocabulary-note">목록에서 삭제해도 기존 글에 저장된 값은 유지되며, 다음 AI 분류부터 사용하지 않습니다.</p>
+        </div>
+      </details>
       <div class="admin-list-tools">
         <span>목록 정렬</span>
         <div class="admin-sort-pills" id="adminSortButtons">
@@ -2692,8 +2784,8 @@
       "가격": ["무료", "유료"],
       "성인": ["전연령", "성인"],
       "연재상태": ["완결", "연재중", "단편"],
-      "장르": ["현대물", "학원물", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
-      "키워드": ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스"],
+      "장르": ["현대물", "학원물", "캠게", "노란장판", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
+      "키워드": ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스", "프로게이머"],
       "공": ["다정공", "헌신공", "강공", "냉혈공", "무심공", "까칠공", "츤데레공", "능글공", "초딩공", "집착공", "광공", "개아가공", "계략공", "후회공", "사랑꾼공", "순정공", "절륜공", "존댓말공", "대형견공", "연하공", "연상공", "재벌공", "능력공", "황제공", "왕자공", "귀족공", "군인공", "배우공", "아이돌공", "조폭공", "양아치공", "인외공", "상처공", "동정공", "헤테로공", "짝사랑공"],
       "수": ["다정수", "단정수", "소심수", "헌신수", "강수", "냉혈수", "무심수", "까칠수", "츤데레수", "허당수", "지랄수", "계략수", "유혹수", "적극수", "잔망수", "명랑수", "순진수", "임신수", "도망수", "굴림수", "후회수", "능글수", "능력수", "순정수", "떡대수", "평범수", "연하수", "연상수", "재벌수", "황제수", "왕자수", "귀족수", "군인수", "배우수", "아이돌수", "조폭수", "양아치수", "인외수", "상처수", "병약수", "동정수", "헤테로수", "짝사랑수"],
       "스포일러": ["해피엔딩", "새드엔딩", "오픈엔딩", "사망"]
@@ -2711,6 +2803,8 @@
       "수": TAG_GROUPS["수"],
       "스포일러": TAG_GROUPS["스포일러"]
     };
+
+    const EDITABLE_FILTER_GROUPS = ["장르", "키워드", "공", "수"];
 
     const ADMIN_BULK_FIELDS = {
       "카테고리": { options: TAG_GROUPS["카테고리"], multiple: false },
@@ -2804,6 +2898,10 @@
       adminFilterToggle: $("#adminFilterToggle"),
       adminFilterCaret: $("#adminFilterCaret"),
       adminFilterMount: $("#adminFilterMount"),
+      adminVocabularyGroup: $("#adminVocabularyGroup"),
+      adminVocabularyInput: $("#adminVocabularyInput"),
+      adminVocabularyAdd: $("#adminVocabularyAdd"),
+      adminVocabularyOptions: $("#adminVocabularyOptions"),
       adminList: $("#adminList"),
       crawlLastRun: $("#crawlLastRun"),
       crawlLastStatus: $("#crawlLastStatus"),
@@ -2825,6 +2923,7 @@
       adminEditorTitle: $("#adminEditorTitle"),
       adminForm: $("#adminForm"),
       adminRefresh: $("#adminRefreshButton"),
+      adminUnifySeries: $("#adminUnifySeriesButton"),
       newPost: $("#newPostButton"),
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
@@ -3202,6 +3301,22 @@
       return rows.map(rowToPost).filter((post) => normalize(post["제목"]) || normalize(post["링크"]));
     }
 
+    async function loadFilterConfig() {
+      if (!hasSupabaseConfig()) return;
+      try {
+        const rows = await requestSupabase("postype_filter_config?select=group_name,options", { headers: supabaseHeaders() });
+        (rows || []).forEach((row) => {
+          const group = normalize(row.group_name);
+          if (!EDITABLE_FILTER_GROUPS.includes(group) || !Array.isArray(row.options)) return;
+          let options = [...new Set(row.options.map(normalize).filter(Boolean))];
+          if (group === "장르") options = options.filter((value) => value.toUpperCase() !== "RPS");
+          TAG_GROUPS[group].splice(0, TAG_GROUPS[group].length, ...options);
+        });
+      } catch (_) {
+        // Keep the built-in list until the filter config migration is installed.
+      }
+    }
+
     async function loadCrawlStatus() {
       if (!hasSupabaseConfig()) {
         state.crawlRun = null;
@@ -3361,6 +3476,7 @@
     async function loadData() {
       els.status.textContent = "아카이브 데이터를 불러오는 중입니다.";
       try {
+            await loadFilterConfig();
             const result = await loadRemotePosts();
             state.posts = mergeSheetAndLocal(result.posts);
             updateSeriesStats();
@@ -3373,6 +3489,9 @@
       await loadCrawlStatus();
       buildFilters();
       buildAdminFilters();
+      buildAdminMultiSelects();
+      buildAdminBulkValueOptions();
+      renderAdminVocabulary();
       render();
     }
 
@@ -3459,6 +3578,71 @@
         box.append(label, chips);
         els.adminFilterMount.appendChild(box);
       });
+    }
+
+    function renderAdminVocabulary() {
+      if (!els.adminVocabularyOptions) return;
+      const group = normalize(els.adminVocabularyGroup.value) || "장르";
+      const options = TAG_GROUPS[group] || [];
+      els.adminVocabularyOptions.innerHTML = "";
+      options.forEach((option) => {
+        const item = document.createElement("span");
+        item.className = "admin-vocabulary-option";
+        const text = document.createElement("span");
+        text.textContent = option;
+        const remove = document.createElement("button");
+        remove.className = "admin-vocabulary-remove";
+        remove.type = "button";
+        remove.textContent = "×";
+        remove.title = `${option} 삭제`;
+        remove.setAttribute("aria-label", `${option} 삭제`);
+        remove.addEventListener("click", () => removeVocabularyOption(group, option));
+        item.append(text, remove);
+        els.adminVocabularyOptions.appendChild(item);
+      });
+    }
+
+    async function saveVocabularyOptions(group, options) {
+      els.adminVocabularyAdd.disabled = true;
+      els.status.textContent = `${group} 필터 단어를 저장하는 중입니다.`;
+      try {
+        await sendAdminAction("save_filter_options", { group, options });
+        TAG_GROUPS[group].splice(0, TAG_GROUPS[group].length, ...options);
+        await loadData();
+        els.status.textContent = `${group} 필터 단어를 저장했습니다.`;
+      } catch (error) {
+        els.status.textContent = `필터 단어 저장에 실패했습니다: ${error.message}`;
+        alert(`필터 단어 저장에 실패했습니다. ${error.message}`);
+      } finally {
+        els.adminVocabularyAdd.disabled = false;
+      }
+    }
+
+    async function addVocabularyOption() {
+      const group = normalize(els.adminVocabularyGroup.value);
+      const option = normalize(els.adminVocabularyInput.value);
+      if (!group || !option) return;
+      if (group === "장르" && option.toUpperCase() === "RPS") {
+        alert("RPS는 장르 필터에 추가할 수 없습니다.");
+        return;
+      }
+      const options = TAG_GROUPS[group] || [];
+      if (options.includes(option)) {
+        alert("이미 있는 단어입니다.");
+        return;
+      }
+      els.adminVocabularyInput.value = "";
+      await saveVocabularyOptions(group, [...options, option]);
+    }
+
+    async function removeVocabularyOption(group, option) {
+      const options = TAG_GROUPS[group] || [];
+      if (options.length <= 1) {
+        alert("필터 단어는 최소 1개 이상 남겨야 합니다.");
+        return;
+      }
+      if (!confirm(`'${option}'을(를) ${group} 필터 목록에서 삭제할까요? 기존 글에 저장된 값은 유지됩니다.`)) return;
+      await saveVocabularyOptions(group, options.filter((value) => value !== option));
     }
 
     function filteredPosts() {
@@ -4598,6 +4782,22 @@
       }
     }
 
+    async function unifyAllSeriesNow() {
+      if (!confirm("모든 시리즈의 장르·키워드·공·수를 같은 시리즈끼리 통일할까요? AI 비용은 들지 않습니다.")) return;
+      els.adminUnifySeries.disabled = true;
+      els.status.textContent = "시리즈 필터를 통일하는 중입니다.";
+      try {
+        const result = await requestAdminFunction("unify_all_series", {});
+        await loadData();
+        els.status.textContent = `${Number(result.seriesCount || 0)}개 시리즈, ${Number(result.updatedRows || 0)}개 글의 필터를 통일했습니다.`;
+      } catch (error) {
+        els.status.textContent = `시리즈 필터 통일에 실패했습니다: ${error.message}`;
+        alert(`시리즈 필터 통일에 실패했습니다. ${error.message}`);
+      } finally {
+        els.adminUnifySeries.disabled = false;
+      }
+    }
+
     async function savePost(event) {
       event.preventDefault();
       const data = formData();
@@ -4815,8 +5015,17 @@
     els.adminBulkField.addEventListener("change", buildAdminBulkValueOptions);
     els.adminBulkApply.addEventListener("click", bulkUpdateFilters);
     els.adminBulkDelete.addEventListener("click", bulkDeletePosts);
+    els.adminVocabularyGroup.addEventListener("change", renderAdminVocabulary);
+    els.adminVocabularyAdd.addEventListener("click", addVocabularyOption);
+    els.adminVocabularyInput.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        event.preventDefault();
+        addVocabularyOption();
+      }
+    });
     els.adminToggle.addEventListener("click", toggleAdminMode);
     els.adminRefresh.addEventListener("click", refreshAdminData);
+    els.adminUnifySeries.addEventListener("click", unifyAllSeriesNow);
     els.newPost.addEventListener("click", openNewPostForm);
     els.manualCrawlButton.addEventListener("click", runCrawlerNow);
     els.clearForm.addEventListener("click", closeAdminEditor);

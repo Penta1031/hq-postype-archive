@@ -13,6 +13,7 @@ const failedLogins = new Map<string, { count: number; resetAt: number }>();
 const loginWindowMs = 15 * 60 * 1000;
 const maxLoginFailures = 5;
 const adminSessionMs = 30 * 60 * 1000;
+const editableFilterGroups = new Set(["장르", "키워드", "공", "수"]);
 
 const K = {
   title: "\uC81C\uBAA9",
@@ -169,6 +170,13 @@ function sourceRowNumber(payload: Record<string, unknown>) {
   return `manual-${Date.now()}`;
 }
 
+function cleanFilterOptions(group: string, value: unknown) {
+  if (!editableFilterGroups.has(group) || !Array.isArray(value)) return null;
+  let options = [...new Set(value.map((item) => text(item)).filter((item) => item && item.length <= 40))].slice(0, 120);
+  if (group === "장르") options = options.filter((item) => item.toUpperCase() !== "RPS");
+  return options;
+}
+
 function postToRow(payload: Record<string, unknown>, action: string) {
   const reviewed = flag(payload[K.adminReviewed]);
   return {
@@ -278,6 +286,71 @@ async function rest(path: string, init: RequestInit = {}) {
   return responseText ? JSON.parse(responseText) : null;
 }
 
+async function syncSeriesFilters(row: Record<string, unknown>) {
+  const seriesName = text(row.series_name);
+  if (!flag(row.is_series) || !seriesName) return;
+  await rest(`${encodeURIComponent(tableName)}?series_name=eq.${encodeURIComponent(seriesName)}&deleted_at=is.null`, {
+    method: "PATCH",
+    body: JSON.stringify({
+      genres: text(row.genres),
+      keywords: text(row.keywords),
+      top_tags: text(row.top_tags),
+      bottom_tags: text(row.bottom_tags),
+      series_columns_unified: true,
+      series_columns_unified_note: "관리자 수정값 기준으로 시리즈 필터 자동 통일",
+    }),
+  });
+}
+
+function mergeSeriesField(rows: Array<Record<string, unknown>>, field: string, limit: number) {
+  const values = rows.flatMap((row) => text(row[field]).split(/[,，、\n]/));
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))].slice(0, limit).join(", ");
+}
+
+async function unifyAllSeriesFilters() {
+  const rows = await rest(`${encodeURIComponent(tableName)}?select=id,series_name,genres,keywords,top_tags,bottom_tags,admin_reviewed,updated_at&is_series=eq.true&series_name=not.is.null&deleted_at=is.null&order=updated_at.desc`);
+  const groups = new Map<string, Array<Record<string, unknown>>>();
+  (Array.isArray(rows) ? rows : []).forEach((row) => {
+    const name = text(row.series_name);
+    if (!name) return;
+    const group = groups.get(name) || [];
+    group.push(row);
+    groups.set(name, group);
+  });
+
+  let updatedRows = 0;
+  const entries = [...groups.entries()];
+  for (let index = 0; index < entries.length; index += 5) {
+    const counts = await Promise.all(entries.slice(index, index + 5).map(async ([seriesName, seriesRows]) => {
+      const reviewed = seriesRows.find((row) => flag(row.admin_reviewed));
+      const canonical = reviewed ? {
+        genres: text(reviewed.genres),
+        keywords: text(reviewed.keywords),
+        top_tags: text(reviewed.top_tags),
+        bottom_tags: text(reviewed.bottom_tags),
+      } : {
+        genres: mergeSeriesField(seriesRows, "genres", 8),
+        keywords: mergeSeriesField(seriesRows, "keywords", 12),
+        top_tags: mergeSeriesField(seriesRows, "top_tags", 8),
+        bottom_tags: mergeSeriesField(seriesRows, "bottom_tags", 8),
+      };
+      await rest(`${encodeURIComponent(tableName)}?series_name=eq.${encodeURIComponent(seriesName)}&deleted_at=is.null`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          ...canonical,
+          series_columns_unified: true,
+          series_columns_unified_note: reviewed
+            ? "관리자 검수 회차 기준으로 시리즈 필터 전체 통일"
+            : "동일 시리즈 회차의 필터를 자동 통합해 전체 통일",
+        }),
+      });
+      return seriesRows.length;
+    }));
+    updatedRows += counts.reduce((sum, count) => sum + count, 0);
+  }
+  return { seriesCount: groups.size, updatedRows };
+}
+
 Deno.serve(async (request) => {
   if (!requestOriginAllowed(request)) return json({ ok: false, error: "Origin is not allowed." }, 403);
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -311,7 +384,7 @@ Deno.serve(async (request) => {
       return json({ ok: false, error: "Admin session is missing or expired." }, 401);
     }
 
-    if (!["list", "create", "update", "delete", "approve", "run_crawler"].includes(action)) {
+    if (!["list", "create", "update", "delete", "approve", "run_crawler", "save_filter_options", "unify_all_series"].includes(action)) {
       return json({ ok: false, error: "Unknown action." }, 400);
     }
 
@@ -320,16 +393,35 @@ Deno.serve(async (request) => {
       return json({ ok: true, rows });
     }
 
+    if (action === "save_filter_options") {
+      const group = text(payload.group);
+      const options = cleanFilterOptions(group, payload.options);
+      if (!options) return json({ ok: false, error: "Invalid filter group or options." }, 400);
+      const rows = await rest("postype_filter_config?on_conflict=group_name", {
+        method: "POST",
+        headers: { Prefer: "resolution=merge-duplicates,return=representation" },
+        body: JSON.stringify({ group_name: group, options }),
+      });
+      return json({ ok: true, rows });
+    }
+
+    if (action === "unify_all_series") {
+      const result = await unifyAllSeriesFilters();
+      return json({ ok: true, ...result });
+    }
+
     if (action === "run_crawler") {
       const result = await dispatchCrawlerWorkflow();
       return json({ ok: true, ...result });
     }
 
     if (action === "create") {
+      const row = postToRow(payload, action);
       const rows = await rest(encodeURIComponent(tableName), {
         method: "POST",
-        body: JSON.stringify(postToRow(payload, action)),
+        body: JSON.stringify(row),
       });
+      await syncSeriesFilters(row);
       return json({ ok: true, rows });
     }
 
@@ -337,10 +429,12 @@ Deno.serve(async (request) => {
     if (!filter) return json({ ok: false, error: "Missing row id." }, 400);
 
     if (action === "update") {
+      const row = postToRow(payload, action);
       const rows = await rest(filter, {
         method: "PATCH",
-        body: JSON.stringify(postToRow(payload, action)),
+        body: JSON.stringify(row),
       });
+      await syncSeriesFilters(row);
       return json({ ok: true, rows });
     }
 

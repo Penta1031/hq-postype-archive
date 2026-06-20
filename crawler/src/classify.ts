@@ -9,13 +9,33 @@ const geminiModel = optionalEnv("GEMINI_MODEL", "gemini-3.5-flash");
 const reviewThreshold = Number(optionalEnv("AI_REVIEW_CONFIDENCE_THRESHOLD", "0.72"));
 const geminiMaxAttempts = Number(optionalEnv("GEMINI_MAX_ATTEMPTS", "4"));
 
-const FILTER_TAXONOMY = {
-  genres: ["현대물", "학원물", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
-  keywords: ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스"],
+const FILTER_TAXONOMY: Record<"genres" | "keywords" | "top" | "bottom" | "endings", string[]> = {
+  genres: ["현대물", "학원물", "캠게", "노란장판", "리맨물", "판타지", "오메가버스", "가이드버스", "회귀물", "빙의물", "환생물", "재회물", "첫사랑물", "친구연애물", "혐관물", "시대물", "연예계물", "스포츠물", "군부물", "조폭물", "피폐물", "일상물", "리얼물", "수인물", "종교물", "느와르", "청게"],
+  keywords: ["계약", "재회", "첫사랑", "짝사랑", "동거", "오해", "구원", "집착", "후회", "복수", "비밀연애", "신분차이", "나이차", "소꿉친구", "친구에서연인", "정략결혼", "임신", "육아", "상처", "질투", "쌍방구원", "쌍방짝사랑", "혐관", "배틀연애", "권선징악", "달달물", "코믹", "잔잔물", "피폐", "외전", "궁중물", "환생", "학원물", "사고", "일상물", "죽음", "상실", "사내연애", "원나잇", "기억상실", "좀비아포칼립스", "스폰서", "네임버스", "프로게이머"],
   top: ["다정공", "헌신공", "강공", "냉혈공", "무심공", "까칠공", "츤데레공", "능글공", "초딩공", "집착공", "광공", "개아가공", "계략공", "후회공", "사랑꾼공", "순정공", "절륜공", "존댓말공", "대형견공", "연하공", "연상공", "재벌공", "능력공", "황제공", "왕자공", "귀족공", "군인공", "배우공", "아이돌공", "조폭공", "양아치공", "인외공", "상처공", "동정공", "헤테로공", "짝사랑공"],
   bottom: ["다정수", "단정수", "소심수", "헌신수", "강수", "냉혈수", "무심수", "까칠수", "츤데레수", "허당수", "지랄수", "계략수", "유혹수", "적극수", "잔망수", "명랑수", "순진수", "임신수", "도망수", "굴림수", "후회수", "능글수", "능력수", "순정수", "떡대수", "평범수", "연하수", "연상수", "재벌수", "황제수", "왕자수", "귀족수", "군인수", "배우수", "아이돌수", "조폭수", "양아치수", "인외수", "상처수", "병약수", "동정수", "헤테로수", "짝사랑수"],
   endings: ["해피엔딩", "새드엔딩", "오픈엔딩", "사망"],
+};
+
+const FILTER_CONFIG_KEYS = {
+  "장르": "genres",
+  "키워드": "keywords",
+  "공": "top",
+  "수": "bottom",
 } as const;
+
+export function configureFilterTaxonomy(rows: Array<{ group_name: string; options: unknown }>) {
+  rows.forEach((row) => {
+    const key = FILTER_CONFIG_KEYS[row.group_name as keyof typeof FILTER_CONFIG_KEYS];
+    if (!key || !Array.isArray(row.options)) return;
+    const options = [...new Set(row.options.map((value) => String(value ?? "").trim()).filter(Boolean))];
+    if (key === "genres") {
+      FILTER_TAXONOMY[key] = options.filter((value) => value.toUpperCase() !== "RPS");
+    } else {
+      FILTER_TAXONOMY[key] = options;
+    }
+  });
+}
 
 const classificationSchema = {
   type: "object",
@@ -109,6 +129,9 @@ async function classifyWithOpenAI(inputText: string): Promise<Classification> {
           "확실하지 않은 값은 빈 배열 또는 빈 문자열로 두고 confidence를 낮춘다.",
           "제목, 작가명, 블로그명, 시리즈명은 keywords에 넣지 않는다.",
           "RPS는 어떤 경우에도 genres 또는 keywords에 넣지 않는다.",
+          "대학교, 대학생, 캠퍼스가 중심인 작품은 캠게로 분류하고 학원물로 분류하지 않는다. 학원물은 중고등학교나 입시 학원이 중심일 때만 쓴다.",
+          "가난하고 열악한 주거 환경, 생활고, 거칠고 눅진한 현실성이 핵심 정서이면 노란장판으로 분류한다.",
+          "프로 게임 선수나 e스포츠 선수가 중심 소재이면 keywords에 프로게이머를 넣는다.",
           "genres는 작품 장르/세계관 계열만 넣고, keywords는 관계성/소재/전개 키워드만 넣는다.",
           "top과 bottom은 공/수 캐릭터 속성만 넣고, 인물 이름이나 제목을 넣지 않는다.",
           "isSeries는 제목/본문에 회차, 상/중/하, 숫자 회차, part/chapter, 시리즈명이 뚜렷할 때만 true로 둔다.",
@@ -141,6 +164,9 @@ async function classifyWithGemini(inputText: string): Promise<Classification> {
     "확실하지 않은 값은 빈 배열 또는 빈 문자열로 두고 confidence를 낮춘다.",
     "제목, 작가명, 블로그명, 시리즈명은 keywords에 넣지 않는다.",
     "RPS는 어떤 경우에도 genres 또는 keywords에 넣지 않는다.",
+    "대학교, 대학생, 캠퍼스가 중심인 작품은 캠게로 분류하고 학원물로 분류하지 않는다. 학원물은 중고등학교나 입시 학원이 중심일 때만 쓴다.",
+    "가난하고 열악한 주거 환경, 생활고, 거칠고 눅진한 현실성이 핵심 정서이면 노란장판으로 분류한다.",
+    "프로 게임 선수나 e스포츠 선수가 중심 소재이면 keywords에 프로게이머를 넣는다.",
     "genres는 작품 장르/세계관 계열만 넣고, keywords는 관계성/소재/전개 키워드만 넣는다.",
     "top과 bottom은 공/수 캐릭터 속성만 넣고, 인물 이름이나 제목을 넣지 않는다.",
     "isSeries는 제목/본문에 회차, 상/중/하, 숫자 회차, part/chapter, 시리즈명이 뚜렷할 때만 true로 둔다.",

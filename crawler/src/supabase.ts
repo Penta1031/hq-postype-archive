@@ -28,6 +28,18 @@ export async function getEnabledSources() {
   }));
 }
 
+export async function getFilterConfig() {
+  const { data, error } = await supabase
+    .from("postype_filter_config")
+    .select("group_name, options")
+    .order("group_name", { ascending: true });
+  if (error) {
+    console.warn(`Filter config unavailable; using built-in options: ${error.message}`);
+    return [];
+  }
+  return (data || []) as Array<{ group_name: string; options: unknown }>;
+}
+
 export async function markSourceChecked(sourceUrl: string) {
   await supabase
     .from("postype_sources")
@@ -145,4 +157,66 @@ export async function updateArchiveRow(id: number, patch: Record<string, unknown
 
   if (error) throw error;
   return data;
+}
+
+type SeriesFilters = {
+  genres: string;
+  keywords: string;
+  top_tags: string;
+  bottom_tags: string;
+};
+
+type SeriesFilterRow = SeriesFilters & {
+  id: number;
+  admin_reviewed: boolean;
+  updated_at: string;
+};
+
+export async function unifySeriesFilters(seriesName: string) {
+  const normalizedName = seriesName.trim();
+  if (!normalizedName) return null;
+  const { data, error } = await supabase
+    .from(tableName)
+    .select("id, genres, keywords, top_tags, bottom_tags, admin_reviewed, updated_at")
+    .eq("series_name", normalizedName)
+    .is("deleted_at", null)
+    .order("admin_reviewed", { ascending: false })
+    .order("updated_at", { ascending: false });
+  if (error) throw error;
+  const rows = (data || []) as SeriesFilterRow[];
+  if (!rows.length) return null;
+
+  const reviewed = rows.find((row) => row.admin_reviewed);
+  const canonical: SeriesFilters = reviewed
+    ? {
+      genres: String(reviewed.genres || ""),
+      keywords: String(reviewed.keywords || ""),
+      top_tags: String(reviewed.top_tags || ""),
+      bottom_tags: String(reviewed.bottom_tags || ""),
+    }
+    : {
+      genres: mergeSeriesTags(rows, "genres", 8),
+      keywords: mergeSeriesTags(rows, "keywords", 12),
+      top_tags: mergeSeriesTags(rows, "top_tags", 8),
+      bottom_tags: mergeSeriesTags(rows, "bottom_tags", 8),
+    };
+
+  const { error: updateError } = await supabase
+    .from(tableName)
+    .update({
+      ...canonical,
+      series_columns_unified: true,
+      series_columns_unified_note: reviewed
+        ? "관리자 검수 회차 기준으로 시리즈 필터 자동 통일"
+        : "동일 시리즈 회차의 필터를 자동 통합해 통일",
+    })
+    .eq("series_name", normalizedName)
+    .is("deleted_at", null);
+  if (updateError) throw updateError;
+  return canonical;
+}
+
+function mergeSeriesTags(rows: SeriesFilterRow[], field: keyof SeriesFilters, limit: number) {
+  const values = rows.flatMap((row) => String(row[field] || "").split(/[,，、\n]/));
+  return [...new Set(values.map((value) => value.trim()).filter(Boolean))].slice(0, limit).join(", ");
 }
