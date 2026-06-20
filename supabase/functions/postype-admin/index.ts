@@ -197,8 +197,8 @@ function flag(value: unknown) {
 }
 
 function cleanDate(value: unknown) {
-  const valueText = text(value);
-  return valueText ? valueText.slice(0, 10) : null;
+  const date = text(value).slice(0, 10);
+  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
 }
 
 function withoutRps(value: unknown) {
@@ -239,11 +239,6 @@ function cleanSubmissionId(value: unknown) {
 function postIdFromUrl(value: string) {
   const match = value.match(/\/post\/(\d+)/);
   return match ? Number(match[1]) : null;
-}
-
-function cleanDate(value: unknown) {
-  const date = text(value);
-  return /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : null;
 }
 
 function authorSubmissionRow(payload: Record<string, unknown>, authorId: string) {
