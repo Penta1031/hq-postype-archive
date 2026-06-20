@@ -1,4 +1,7 @@
-const allowedOrigin = (Deno.env.get("ADMIN_ALLOWED_ORIGIN") || "https://hq-postype-archive.vercel.app").replace(/\/+$/, "");
+const allowedOrigin = (Deno.env.get("ADMIN_ALLOWED_ORIGIN") || "https://hq-postype-archive.vercel.app")
+  .trim()
+  .replace(/^["']+|["']+$/g, "")
+  .replace(/\/+$/, "");
 const corsHeaders = {
   "Access-Control-Allow-Origin": allowedOrigin,
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
@@ -577,8 +580,8 @@ async function unifyAllSeriesFilters() {
 }
 
 Deno.serve(async (request) => {
-  if (!requestOriginAllowed(request)) return json({ ok: false, error: "Origin is not allowed." }, 403);
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
+  if (!requestOriginAllowed(request)) return json({ ok: false, error: "Origin is not allowed." }, 403);
   if (request.method !== "POST") return json({ ok: false, error: "POST only." }, 405);
 
   try {
