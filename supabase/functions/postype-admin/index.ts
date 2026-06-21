@@ -1,9 +1,13 @@
-const allowedOrigin = (Deno.env.get("ADMIN_ALLOWED_ORIGIN") || "https://hq-postype-archive.vercel.app")
-  .trim()
-  .replace(/^["']+|["']+$/g, "")
-  .replace(/\/+$/, "");
+const allowedOrigins = new Set([
+  "https://hq-postype-archive.vercel.app",
+  "https://penta1031.github.io",
+  ...(Deno.env.get("ADMIN_ALLOWED_ORIGINS") || Deno.env.get("ADMIN_ALLOWED_ORIGIN") || "")
+    .split(",")
+    .map((origin) => origin.trim().replace(/^["']+|["']+$/g, "").replace(/\/+$/, ""))
+    .filter(Boolean),
+]);
 const corsHeaders = {
-  "Access-Control-Allow-Origin": allowedOrigin,
+  "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Cache-Control": "no-store",
@@ -69,7 +73,7 @@ function json(body: Record<string, unknown>, status = 200) {
 
 function requestOriginAllowed(request: Request) {
   const origin = (request.headers.get("origin") || "").replace(/\/+$/, "");
-  return !origin || origin === allowedOrigin;
+  return !origin || allowedOrigins.has(origin);
 }
 
 function clientKey(request: Request) {
