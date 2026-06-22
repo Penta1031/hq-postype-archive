@@ -604,18 +604,26 @@ async function approveAuthorSubmission(id: string) {
   return { archiveId };
 }
 
-async function syncSeriesFilters(row: Record<string, unknown>) {
+async function syncSeriesFilters(row: Record<string, unknown>, matchSeriesName = "") {
   const seriesName = text(row.series_name);
-  if (!flag(row.is_series) || !seriesName) return;
-  await rest(`${encodeURIComponent(tableName)}?series_name=eq.${encodeURIComponent(seriesName)}&deleted_at=is.null`, {
+  const sourceSeriesName = text(matchSeriesName) || seriesName;
+  if (!flag(row.is_series) || !seriesName || !sourceSeriesName) return;
+  await rest(`${encodeURIComponent(tableName)}?series_name=eq.${encodeURIComponent(sourceSeriesName)}&deleted_at=is.null`, {
     method: "PATCH",
     body: JSON.stringify({
+      author: text(row.author),
+      is_paid: flag(row.is_paid),
+      is_adult: flag(row.is_adult),
+      category: text(row.category),
       genres: text(row.genres),
       keywords: text(row.keywords),
       top_tags: text(row.top_tags),
       bottom_tags: text(row.bottom_tags),
+      endings: text(row.endings),
+      serialization_status: text(row.serialization_status),
+      series_name: seriesName,
       series_columns_unified: true,
-      series_columns_unified_note: "관리자 수정값 기준으로 시리즈 필터 자동 통일",
+      series_columns_unified_note: "수정값 기준으로 시리즈 공통 정보 자동 통일",
     }),
   });
 }
@@ -935,7 +943,7 @@ Deno.serve(async (request) => {
         method: "PATCH",
         body: JSON.stringify(row),
       });
-      await syncSeriesFilters(row);
+      await syncSeriesFilters(row, text(payload._originalSeriesName));
       return json({ ok: true, rows });
     }
 
