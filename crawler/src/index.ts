@@ -28,35 +28,20 @@ async function main() {
       ? [manualPostLink(manualPostUrl)]
       : await collectConfiguredSourceLinks(context);
 
-    const candidates = uniqueBy(links, candidateKey);
+    const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
     const newLinks: ProcessTarget[] = [];
-    const queuedKeys = new Set<string>();
-    let excludedCount = 0;
-
-    async function enqueueNewLink(link: ProcessTarget) {
-      const key = candidateKey(link);
-      if (!key || queuedKeys.has(key)) return false;
-      queuedKeys.add(key);
+    for (const link of candidates) {
       const existing = await getExistingArchive(link.url, link.postypePostId);
-      if (existing) return false;
-      newLinks.push(link);
-      summary.foundCount = Math.max(0, newLinks.length - excludedCount);
-      return true;
+      if (!existing) newLinks.push(link);
     }
 
-    for (const link of candidates) await enqueueNewLink(link);
+    summary.foundCount = newLinks.length;
 
-    for (let index = 0; index < newLinks.length; index += 1) {
-      const link = newLinks[index];
+    for (const link of newLinks) {
       const post = await extractPost(context, link);
-      for (const relatedLink of post.relatedLinks || []) {
-        await enqueueNewLink(relatedLink);
-      }
-
       try {
         if (isExcludedPost(post)) {
-          excludedCount += 1;
-          summary.foundCount = Math.max(0, newLinks.length - excludedCount);
+          summary.foundCount = Math.max(0, summary.foundCount - 1);
           continue;
         }
         if (post.crawlStatus !== "success") {
@@ -129,10 +114,6 @@ async function collectConfiguredSourceLinks(context: Awaited<ReturnType<typeof c
     await markSourceChecked(source.source_url);
   }
   return links;
-}
-
-function candidateKey(item: ProcessTarget) {
-  return item.postypePostId ? String(item.postypePostId) : item.url;
 }
 
 function manualPostLink(rawUrl: string): ProcessTarget {
