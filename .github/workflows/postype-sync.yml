@@ -1,6 +1,12 @@
 name: Postype Sync
 
 on:
+  push:
+    branches:
+      - main
+    paths:
+      - "crawler/**"
+      - ".github/workflows/postype-sync.yml"
   schedule:
     # GitHub cron uses UTC. 19:00 UTC is 04:00 KST the next day.
     - cron: "0 19 * * *"
