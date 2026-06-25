@@ -27,6 +27,7 @@ export type ExtractedPost = {
   isPaid: boolean;
   crawlStatus: CrawlStatus;
   crawlError: string | null;
+  relatedLinks?: PostLink[];
 };
 
 export type Classification = {

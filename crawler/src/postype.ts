@@ -18,29 +18,12 @@ export async function collectPostLinks(context: BrowserContext, sourceUrl: strin
   const page = await context.newPage();
   try {
     await page.goto(sourceUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
-    await settleAndScroll(page);
-    const candidates = await page.locator("a[href]").evaluateAll((links) =>
-      links.map((link) => {
-        const anchor = link as HTMLAnchorElement;
-        let cardText = (anchor.innerText || anchor.textContent || "").trim();
-        let parent = anchor.parentElement;
-        for (let depth = 0; depth < 5 && parent; depth += 1, parent = parent.parentElement) {
-          const text = (parent.innerText || "").trim();
-          if (text.length >= cardText.length && text.length <= 1600) cardText = text;
-          if (parent.matches("article, li")) break;
-        }
-        const sectionText = (anchor.closest("section")?.textContent || "").trim();
-        return {
-          href: anchor.href,
-          contextText: [cardText, sectionText.length <= 2500 ? sectionText : ""].filter(Boolean).join("\n"),
-        };
-      })
-    );
-    const postLinks: PostLink[] = [];
-    for (const candidate of candidates) {
-      const url = normalizePostUrl(candidate.href, sourceUrl);
-      if (!url || !/\/post\/\d+/.test(url) || isPromotionalCandidate(url, candidate.contextText)) continue;
-      postLinks.push({ url, postypePostId: postypePostIdFromUrl(url), sourceUrl });
+    const postLinks = await scrollAndCollectPostLinks(page, sourceUrl);
+    const nestedSourceUrls = await collectNestedSourceUrls(page, sourceUrl);
+    for (const nestedSourceUrl of nestedSourceUrls) {
+      if (nestedSourceUrl === sourceUrl) continue;
+      await page.goto(nestedSourceUrl, { waitUntil: "domcontentloaded", timeout: 45_000 });
+      postLinks.push(...await scrollAndCollectPostLinks(page, nestedSourceUrl));
     }
     return uniqueBy(postLinks, (item) => item.url);
   } finally {
@@ -65,11 +48,115 @@ export function isExcludedPost(post: ExtractedPost) {
   return PROMOTION_MARKERS.test([post.title, post.author, post.tags.join(" ")].join("\n"));
 }
 
-async function settleAndScroll(page: Page) {
+const maxScrollSteps = Number(process.env.POSTYPE_MAX_SCROLL_STEPS || 18);
+const stableScrollRounds = Number(process.env.POSTYPE_STABLE_SCROLL_ROUNDS || 4);
+
+async function scrollAndCollectPostLinks(page: Page, sourceUrl: string) {
+  const postLinks: PostLink[] = [];
+  let stableRounds = 0;
+  let lastSignature = "";
+
   await page.waitForTimeout(1500);
-  for (let index = 0; index < 4; index += 1) {
+  await collectVisiblePostLinks(page, sourceUrl, postLinks);
+
+  for (let index = 0; index < Math.max(1, maxScrollSteps); index += 1) {
     await page.mouse.wheel(0, 1800);
     await page.waitForTimeout(900);
+    await collectVisiblePostLinks(page, sourceUrl, postLinks);
+
+    const signature = await page.evaluate(() => {
+      const scrolling = document.scrollingElement || document.documentElement;
+      return [
+        scrolling.scrollTop,
+        scrolling.scrollHeight,
+        document.querySelectorAll("a[href*='/post/']").length,
+      ].join(":");
+    }).catch(() => "");
+
+    if (signature === lastSignature) stableRounds += 1;
+    else stableRounds = 0;
+    lastSignature = signature;
+
+    if (stableRounds >= Math.max(1, stableScrollRounds)) break;
+  }
+
+  return uniqueBy(postLinks, (item) => item.url);
+}
+
+async function collectVisiblePostLinks(page: Page, sourceUrl: string, postLinks: PostLink[]) {
+  const candidates = await page.locator("a[href]").evaluateAll((links) =>
+    links.map((link) => {
+      const anchor = link as HTMLAnchorElement;
+      let cardText = (anchor.innerText || anchor.textContent || "").trim();
+      let parent = anchor.parentElement;
+      for (let depth = 0; depth < 5 && parent; depth += 1, parent = parent.parentElement) {
+        const text = (parent.innerText || "").trim();
+        if (text.length >= cardText.length && text.length <= 1600) cardText = text;
+        if (parent.matches("article, li")) break;
+      }
+      const sectionText = (anchor.closest("section")?.textContent || "").trim();
+      return {
+        href: anchor.href,
+        contextText: [cardText, sectionText.length <= 2500 ? sectionText : ""].filter(Boolean).join("\n"),
+      };
+    })
+  );
+
+  for (const candidate of candidates) {
+    const url = normalizePostUrl(candidate.href, sourceUrl);
+    if (!url || !/\/post\/\d+/.test(url) || !belongsToSource(url, sourceUrl) || isPromotionalCandidate(url, candidate.contextText)) continue;
+    postLinks.push({ url, postypePostId: postypePostIdFromUrl(url), sourceUrl });
+  }
+}
+
+async function collectNestedSourceUrls(page: Page, sourceUrl: string) {
+  const nestedUrls = await page.locator("a[href]").evaluateAll((links) =>
+    links.map((link) => (link as HTMLAnchorElement).href)
+  ).catch(() => []);
+
+  return uniqueBy(
+    nestedUrls
+      .map((href) => normalizePostUrl(href, sourceUrl))
+      .filter(Boolean)
+      .filter((url) => /\/@[^/]+\/series\/\d+$/i.test(new URL(url).pathname))
+      .filter((url) => sameChannel(url, sourceUrl)),
+    (url) => url,
+  );
+}
+
+async function collectSameSourcePostLinks(page: Page, pageUrl: string, sourceUrl: string) {
+  const postLinks: PostLink[] = [];
+  await collectVisiblePostLinks(page, pageUrl, postLinks);
+  return uniqueBy(
+    postLinks
+      .filter((item) => item.url !== pageUrl)
+      .filter((item) => belongsToSource(item.url, sourceUrl))
+      .map((item) => ({ ...item, sourceUrl })),
+    (item) => item.url,
+  );
+}
+
+function belongsToSource(postUrl: string, sourceUrl: string) {
+  try {
+    const post = new URL(postUrl);
+    const source = new URL(sourceUrl);
+    const sourcePath = source.pathname.replace(/\/$/, "");
+    if (!/^\/@[^/]+$/i.test(sourcePath)) return true;
+    return post.hostname === source.hostname && post.pathname.startsWith(`${sourcePath}/post/`);
+  } catch {
+    return true;
+  }
+}
+
+function sameChannel(url: string, sourceUrl: string) {
+  try {
+    const target = new URL(url);
+    const source = new URL(sourceUrl);
+    const targetChannel = target.pathname.match(/^(\/@[^/]+)/i)?.[1].toLowerCase();
+    const sourceChannel = source.pathname.match(/^(\/@[^/]+)/i)?.[1].toLowerCase();
+    return Boolean(targetChannel && sourceChannel && target.hostname === source.hostname && targetChannel === sourceChannel);
+  } catch {
+    return false;
   }
 }
 
@@ -105,6 +192,8 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
         .slice(0, 30)
     ).catch(() => []);
 
+    const relatedLinks = await collectSameSourcePostLinks(page, link.url, link.sourceUrl);
+
     return {
       postypePostId: link.postypePostId,
       sourceUrl: link.sourceUrl,
@@ -119,6 +208,7 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       isPaid: /유료|구매|후원|멤버십|paid/i.test(rawText),
       crawlStatus: "success",
       crawlError: null,
+      relatedLinks,
     };
   } catch (error) {
     return deniedPost(link, "error", error instanceof Error ? error.message : String(error));
@@ -226,6 +316,7 @@ function deniedPost(link: PostLink, status: ExtractedPost["crawlStatus"], messag
     isPaid: status === "purchase_required",
     crawlStatus: status,
     crawlError: message,
+    relatedLinks: [],
   };
 }
 
