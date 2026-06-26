@@ -8,6 +8,7 @@ type ProcessTarget = {
   url: string;
   postypePostId: number | null;
   sourceUrl: string;
+  targetEvidence: string;
 };
 
 async function main() {
@@ -127,6 +128,7 @@ function manualPostLink(rawUrl: string): ProcessTarget {
     url,
     postypePostId: postypePostIdFromUrl(url),
     sourceUrl: "manual-admin",
+    targetEvidence: "",
   };
 }
 

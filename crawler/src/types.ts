@@ -9,6 +9,9 @@ export type PostLink = {
   url: string;
   postypePostId: number | null;
   sourceUrl: string;
+  // The source-page text that proves this link belongs to the target pairing.
+  // It is used only while crawling and is never persisted to Supabase.
+  targetEvidence: string;
 };
 
 export type CrawlStatus = "success" | "access_denied" | "purchase_required" | "error";
@@ -23,6 +26,7 @@ export type ExtractedPost = {
   bodyText: string;
   preview: string;
   tags: string[];
+  targetEvidence: string;
   isAdult: boolean;
   isPaid: boolean;
   crawlStatus: CrawlStatus;

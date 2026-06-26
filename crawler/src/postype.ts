@@ -40,7 +40,15 @@ export async function collectPostLinks(context: BrowserContext, sourceUrl: strin
     for (const candidate of candidates) {
       const url = normalizePostUrl(candidate.href, sourceUrl);
       if (!url || !/\/post\/\d+/.test(url) || isPromotionalCandidate(url, candidate.contextText)) continue;
-      postLinks.push({ url, postypePostId: postypePostIdFromUrl(url), sourceUrl });
+      // A source feed can include recommended or unrelated links. Only keep a
+      // link when the card/source context explicitly identifies it as 혚쾌.
+      if (!hasHyeopkwaeEvidence(candidate.contextText)) continue;
+      postLinks.push({
+        url,
+        postypePostId: postypePostIdFromUrl(url),
+        sourceUrl,
+        targetEvidence: compactText(candidate.contextText, 2_500),
+      });
     }
     return uniqueBy(postLinks, (item) => item.url);
   } finally {
@@ -48,8 +56,11 @@ export async function collectPostLinks(context: BrowserContext, sourceUrl: strin
   }
 }
 
-const PROMOTION_MARKERS = /(?:^|\s)광고(?:\s|$)|프로모션|포스타입\s*(?:공식|이벤트|프로모션|포인트)|포인트\s*충전|보너스\s*코인|세계관\s*메이커|오픈\s*채널\s*랭킹|공식\s*커뮤니티|재방문\s*많은\s*리퀘스트|좋아서\s*또\s*왔어요|바라바라/iu;
+const PROMOTION_MARKERS = /(?:^|\s)광고(?:\s|$)|프로모션|협찬|제휴|공동\s*구매|공구|굿즈\s*(?:판매|공구|예약|출시)|(?:판매|모집)\s*(?:공지|안내)|포스타입\s*(?:공식|이벤트|프로모션|포인트)|포인트\s*충전|보너스\s*코인|세계관\s*메이커|오픈\s*채널\s*랭킹|공식\s*커뮤니티|재방문\s*많은\s*리퀘스트|좋아서\s*또\s*왔어요|바라바라/iu;
 const FEED_SECTION_MARKERS = /이\s*채널(?:의)?\s*(?:글|포스트|인기글|추천)|채널\s*(?:추천|랭킹)|추천\s*(?:글|포스트|작품)|함께\s*보면\s*좋은\s*글|이런\s*글은\s*어때요|지금\s*뜨는\s*글|실시간\s*인기/iu;
+const HYEOPKWAE_MARKER = /[혚혜]\s*쾌/iu;
+const SEUNGHYUB_MARKER = /이\s*승\s*협/iu;
+const HWESEUNG_MARKER = /유\s*회\s*승/iu;
 
 function isPromotionalCandidate(url: string, contextText: string) {
   const pathname = new URL(url).pathname.toLowerCase();
@@ -57,12 +68,20 @@ function isPromotionalCandidate(url: string, contextText: string) {
   return PROMOTION_MARKERS.test(contextText) || FEED_SECTION_MARKERS.test(contextText);
 }
 
+function hasHyeopkwaeEvidence(value: string) {
+  return HYEOPKWAE_MARKER.test(value) || (SEUNGHYUB_MARKER.test(value) && HWESEUNG_MARKER.test(value));
+}
+
 export function isExcludedPost(post: ExtractedPost) {
   const pathname = new URL(post.link).pathname.toLowerCase();
   if (/\/@(?:postype|postype_official|barabara[^/]*)(?:\/|$)/.test(pathname)) return true;
   const author = cleanAuthor(post.author).toLowerCase();
   if (["포스타입", "postype"].includes(author) || author.includes("바라바라")) return true;
-  return PROMOTION_MARKERS.test([post.title, post.author, post.tags.join(" ")].join("\n"));
+  const metadata = [post.title, post.author, post.tags.join(" "), post.targetEvidence].join("\n");
+  if (PROMOTION_MARKERS.test(metadata)) return true;
+  // Re-check after opening the post. The pairing must be explicitly visible
+  // either in its own metadata/body or in the source-card evidence.
+  return !hasHyeopkwaeEvidence([metadata, post.bodyText].join("\n"));
 }
 
 async function settleAndScroll(page: Page) {
@@ -115,6 +134,7 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       bodyText,
       preview: "",
       tags: [...new Set(tags)],
+      targetEvidence: link.targetEvidence,
       isAdult: /성인|19세|19금|adult/i.test(rawText),
       isPaid: /유료|구매|후원|멤버십|paid/i.test(rawText),
       crawlStatus: "success",
@@ -222,6 +242,7 @@ function deniedPost(link: PostLink, status: ExtractedPost["crawlStatus"], messag
     bodyText: "",
     preview: "",
     tags: [],
+    targetEvidence: link.targetEvidence,
     isAdult: false,
     isPaid: status === "purchase_required",
     crawlStatus: status,
