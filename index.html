@@ -1588,6 +1588,48 @@
       font-weight: 550;
     }
 
+    .postype-stats-controls {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .postype-stats-controls .wide {
+      grid-column: 1 / -1;
+    }
+
+    .postype-stats-actions {
+      display: flex;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .postype-stats-actions .button {
+      flex: 1;
+    }
+
+    .postype-stats-list {
+      display: grid;
+      gap: 7px;
+      margin-top: 8px;
+    }
+
+    .postype-stats-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      border: 1px solid #292b30;
+      border-radius: 10px;
+      background: #151619;
+      padding: 10px;
+    }
+
+    .postype-stats-row strong,
+    .postype-stats-row span {
+      overflow-wrap: anywhere;
+    }
+
     .crawler-section {
       display: grid;
       gap: 7px;
@@ -2863,6 +2905,39 @@
           </div>
           <p class="admin-note" id="crawlerRunMessage" role="status" aria-live="polite"></p>
         </details>
+        <details class="crawler-section" id="postypeStatsAdmin" open>
+          <summary class="crawler-section-head">
+            <strong>통계</strong>
+            <span id="postypeStatsRangeLabel">최근 14일</span>
+          </summary>
+          <div class="postype-stats-controls">
+            <label>
+              <span class="label">시작일</span>
+              <input id="postypeStatsFrom" type="date">
+            </label>
+            <label>
+              <span class="label">종료일</span>
+              <input id="postypeStatsTo" type="date">
+            </label>
+            <label class="wide">
+              <span class="label">글 검색</span>
+              <input id="postypeStatsQuery" type="search" placeholder="제목 · 작가 · 링크 검색">
+            </label>
+          </div>
+          <div class="postype-stats-actions">
+            <button class="button" id="postypeStatsReset" type="button">최근 14일</button>
+            <button class="button primary" id="postypeStatsRefresh" type="button">통계 새로고침</button>
+          </div>
+          <div class="crawler-status-grid">
+            <div class="crawler-stat"><span>탭 조회</span><strong id="postypeStatsTabViews">0건</strong></div>
+            <div class="crawler-stat"><span>글 열람</span><strong id="postypeStatsContentViews">0건</strong></div>
+            <div class="crawler-stat"><span>열람한 글</span><strong id="postypeStatsContentTotal">0개</strong></div>
+            <div class="crawler-stat"><span>최근 열람</span><strong id="postypeStatsLastViewed">-</strong></div>
+          </div>
+          <div class="postype-stats-list" id="postypeStatsDaily"></div>
+          <div class="postype-stats-list" id="postypeStatsContent"></div>
+          <p class="admin-note" id="postypeStatsMessage" role="status" aria-live="polite"></p>
+        </details>
         <details class="crawler-section" id="authorAccountsAdmin">
           <summary class="crawler-section-head">
             <strong>작가 계정·키 관리</strong>
@@ -3311,6 +3386,7 @@
     };
     Object.assign(CONFIG, window.POSTYPE_CONFIG || {});
     const LIBRARY_STORAGE_KEY = "hq-postype-library-v1";
+    const ANALYTICS_SESSION_KEY = "hq-postype-view-session";
 
     const TAG_GROUPS = {
       "카테고리": ["글", "그림", "기타"],
@@ -3408,7 +3484,9 @@
       authorToken: "",
       authorProfile: null,
       authorOwnSubmissions: [],
-      crawlRun: null
+      crawlRun: null,
+      postypeStats: null,
+      postypeStatsQueryTimer: null
     };
 
     const $ = (selector) => document.querySelector(selector);
@@ -3466,6 +3544,19 @@
       crawlerFailedCount: $("#crawlerFailedCount"),
       crawlerRun: $("#runCrawlerButton"),
       crawlerRunMessage: $("#crawlerRunMessage"),
+      postypeStatsRangeLabel: $("#postypeStatsRangeLabel"),
+      postypeStatsFrom: $("#postypeStatsFrom"),
+      postypeStatsTo: $("#postypeStatsTo"),
+      postypeStatsQuery: $("#postypeStatsQuery"),
+      postypeStatsReset: $("#postypeStatsReset"),
+      postypeStatsRefresh: $("#postypeStatsRefresh"),
+      postypeStatsTabViews: $("#postypeStatsTabViews"),
+      postypeStatsContentViews: $("#postypeStatsContentViews"),
+      postypeStatsContentTotal: $("#postypeStatsContentTotal"),
+      postypeStatsLastViewed: $("#postypeStatsLastViewed"),
+      postypeStatsDaily: $("#postypeStatsDaily"),
+      postypeStatsContent: $("#postypeStatsContent"),
+      postypeStatsMessage: $("#postypeStatsMessage"),
       clearForm: $("#clearForm"),
       deletePost: $("#deletePost"),
       openPostLink: $("#openPostLink"),
@@ -3748,6 +3839,85 @@
       };
     }
 
+    function analyticsSessionId() {
+      const existing = localStorage.getItem(ANALYTICS_SESSION_KEY);
+      if (existing) return existing;
+      const generated = `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}`;
+      localStorage.setItem(ANALYTICS_SESSION_KEY, generated);
+      return generated;
+    }
+
+    function trimForStats(value, limit) {
+      return normalize(value).slice(0, limit);
+    }
+
+    function postStatValue(post, koreanKey, legacyKey) {
+      return normalize(post?.[koreanKey]) || normalize(post?.[legacyKey]);
+    }
+
+    async function trackPostypeView(post) {
+      if (!hasSupabaseConfig() || !post) return false;
+      const link = postStatValue(post, "\uB9C1\uD06C", "留곹겕");
+      const title = postStatValue(post, "\uC81C\uBAA9", "?쒕ぉ");
+      const author = postStatValue(post, "\uC791\uAC00", "?묎?");
+      const row = {
+        event_type: "content",
+        tab_key: "postype",
+        content_type: "postype",
+        content_id: trimForStats(post._postypePostId || post._supabaseId || link || post._rowNumber, 160) || null,
+        content_title: trimForStats(title || author, 500) || null,
+        content_url: trimForStats(link, 1000) || null,
+        session_id: trimForStats(analyticsSessionId(), 80) || null,
+        path: trimForStats(`${location.pathname}${location.search}`, 500) || null,
+        referrer: trimForStats(document.referrer, 500) || null,
+        user_agent: trimForStats(navigator.userAgent, 500) || null
+      };
+      try {
+        const response = await fetch(`${supabaseBaseUrl()}/rest/v1/hq_view_events`, {
+          method: "POST",
+          headers: {
+            apikey: normalize(CONFIG.SUPABASE_ANON_KEY),
+            Authorization: `Bearer ${normalize(CONFIG.SUPABASE_ANON_KEY)}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+          },
+          body: JSON.stringify(row),
+          keepalive: true
+        });
+        return response.ok;
+      } catch (_) {
+        return false;
+      }
+    }
+
+    async function trackStandalonePostypeTabView() {
+      if (!hasSupabaseConfig() || window.parent !== window) return false;
+      const row = {
+        event_type: "tab",
+        tab_key: "postype",
+        session_id: trimForStats(analyticsSessionId(), 80) || null,
+        path: trimForStats(`${location.pathname}${location.search}`, 500) || null,
+        referrer: trimForStats(document.referrer, 500) || null,
+        user_agent: trimForStats(navigator.userAgent, 500) || null
+      };
+      try {
+        const response = await fetch(`${supabaseBaseUrl()}/rest/v1/hq_view_events`, {
+          method: "POST",
+          headers: {
+            apikey: normalize(CONFIG.SUPABASE_ANON_KEY),
+            Authorization: `Bearer ${normalize(CONFIG.SUPABASE_ANON_KEY)}`,
+            "Content-Type": "application/json",
+            Prefer: "return=minimal"
+          },
+          body: JSON.stringify(row),
+          keepalive: true
+        });
+        return response.ok;
+      } catch (_) {
+        return false;
+      }
+    }
+
     async function requestSupabase(path, options = {}) {
       const response = await fetch(`${supabaseBaseUrl()}/rest/v1/${path}`, options);
       if (!response.ok) {
@@ -3910,7 +4080,9 @@
       if (!state.adminToken) {
         state.authors = [];
         state.crawlRun = null;
+        state.postypeStats = null;
         renderCrawlStatus();
+        renderPostypeStats();
         return;
       }
       try {
@@ -3931,6 +4103,7 @@
         showAdminResult(`크롤링 상태를 불러오지 못했습니다: ${detail}`, "error");
       }
       renderCrawlStatus();
+      await loadPostypeStats();
     }
 
     function parseCsv(text) {
@@ -4297,6 +4470,84 @@
       els.crawlerFailedCount.textContent = `${Number(run && run.failed_count || 0).toLocaleString("ko-KR")}건`;
     }
 
+    function kstDate(offsetDays = 0) {
+      const now = new Date();
+      const kst = new Date(now.getTime() + (9 * 60 + now.getTimezoneOffset()) * 60 * 1000);
+      kst.setDate(kst.getDate() + offsetDays);
+      return `${kst.getFullYear()}-${String(kst.getMonth() + 1).padStart(2, "0")}-${String(kst.getDate()).padStart(2, "0")}`;
+    }
+
+    function resetPostypeStatsRange() {
+      if (!els.postypeStatsFrom || !els.postypeStatsTo) return;
+      els.postypeStatsFrom.value = kstDate(-13);
+      els.postypeStatsTo.value = kstDate();
+      if (els.postypeStatsQuery) els.postypeStatsQuery.value = "";
+    }
+
+    function formatCount(value, unit = "건") {
+      return `${Number(value || 0).toLocaleString("ko-KR")}${unit}`;
+    }
+
+    function formatStatsDateTime(value) {
+      if (!value) return "-";
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return "-";
+      return date.toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+    }
+
+    async function loadPostypeStats() {
+      if (!state.adminToken || !els.postypeStatsRefresh) return;
+      els.postypeStatsRefresh.disabled = true;
+      els.postypeStatsMessage.textContent = "통계를 불러오는 중입니다.";
+      try {
+        const result = await requestAdminFunction("view_stats", {
+          dateFrom: els.postypeStatsFrom.value,
+          dateTo: els.postypeStatsTo.value,
+          query: els.postypeStatsQuery.value,
+          limit: 20
+        });
+        state.postypeStats = result;
+        renderPostypeStats();
+      } catch (error) {
+        els.postypeStatsMessage.textContent = `통계를 불러오지 못했습니다: ${error.message}`;
+        showAdminResult(`통계를 불러오지 못했습니다: ${error.message}`, "error");
+      } finally {
+        els.postypeStatsRefresh.disabled = false;
+      }
+    }
+
+    function renderPostypeStats() {
+      const stats = state.postypeStats || { totals: {}, daily: [], content: [], contentTotal: 0 };
+      const totals = stats.totals || {};
+      els.postypeStatsRangeLabel.textContent = `${stats.dateFrom || els.postypeStatsFrom.value} ~ ${stats.dateTo || els.postypeStatsTo.value}`;
+      els.postypeStatsTabViews.textContent = formatCount(totals.tabViews);
+      els.postypeStatsContentViews.textContent = formatCount(totals.contentViews);
+      els.postypeStatsContentTotal.textContent = formatCount(stats.contentTotal, "개");
+      els.postypeStatsLastViewed.textContent = formatStatsDateTime(totals.lastViewedAt);
+
+      const daily = Array.isArray(stats.daily) ? stats.daily : [];
+      els.postypeStatsDaily.innerHTML = daily.length
+        ? daily.map((row) => `
+          <div class="postype-stats-row">
+            <span>${escapeHtml(row.viewed_on)}</span>
+            <strong>${formatCount(row.views)} · 글 ${formatCount(row.content_views)}</strong>
+          </div>
+        `).join("")
+        : '<div class="empty">선택한 기간의 조회 기록이 없습니다.</div>';
+
+      const content = Array.isArray(stats.content) ? stats.content : [];
+      els.postypeStatsContent.innerHTML = content.length
+        ? content.map((row) => `
+          <div class="postype-stats-row">
+            <span><strong>${escapeHtml(row.content_title || "제목 없음")}</strong><br><small>${escapeHtml(row.content_url || row.content_id || "")}</small></span>
+            <strong>${formatCount(row.views)}</strong>
+          </div>
+        `).join("")
+        : '<div class="empty">아직 집계된 글 열람 기록이 없습니다.</div>';
+
+      els.postypeStatsMessage.textContent = "";
+    }
+
     async function runCrawler() {
       if (!state.adminToken || els.crawlerRun.disabled) return;
       els.crawlerRun.disabled = true;
@@ -4661,7 +4912,10 @@
 
       title.textContent = normalize(post["제목"]) || "제목 없음";
       title.href = normalize(post["링크"]) || "#";
-      title.addEventListener("click", () => updateLibraryEntry(post, { openedAt: new Date().toISOString() }));
+      title.addEventListener("click", () => {
+        updateLibraryEntry(post, { openedAt: new Date().toISOString() });
+        trackPostypeView(post);
+      });
       meta.textContent = [post["날짜"], post["작가"]].map(normalize).filter(Boolean).join(" · ");
 
       if (series.isSeries) {
@@ -5200,6 +5454,7 @@
       const link = normalize(post["링크"]);
       if (!link) return;
       updateLibraryEntry(post, { openedAt: new Date().toISOString() });
+      trackPostypeView(post);
       window.open(link, "_blank", "noopener");
     }
 
@@ -5869,7 +6124,7 @@
         alert("추천된 글에 링크가 없습니다. 다시 추천을 눌러 주세요.");
         return;
       }
-      window.open(link, "_blank", "noopener");
+      openPostLink(state.randomPost);
     }
 
     els.search.addEventListener("input", (event) => {
@@ -5932,6 +6187,18 @@
     els.adminForm.elements["링크"].addEventListener("input", syncAdminReadLink);
     els.adminForm.elements["시리즈"].addEventListener("change", syncStandaloneStatus);
     els.crawlerRun.addEventListener("click", runCrawler);
+    els.postypeStatsRefresh.addEventListener("click", loadPostypeStats);
+    els.postypeStatsReset.addEventListener("click", () => {
+      resetPostypeStatsRange();
+      loadPostypeStats();
+    });
+    [els.postypeStatsFrom, els.postypeStatsTo].forEach((input) => {
+      input.addEventListener("change", loadPostypeStats);
+    });
+    els.postypeStatsQuery.addEventListener("input", () => {
+      window.clearTimeout(state.postypeStatsQueryTimer);
+      state.postypeStatsQueryTimer = window.setTimeout(loadPostypeStats, 300);
+    });
     els.adminForm.addEventListener("submit", savePost);
     els.adminEditor.addEventListener("click", (event) => {
       if (event.target === els.adminEditor) closeAdminEditor();
@@ -6038,7 +6305,10 @@
 
     buildAdminMultiSelects();
     buildAdminBulkValueOptions();
+    resetPostypeStatsRange();
+    renderPostypeStats();
     resetAuthorSubmissionForm();
+    trackStandalonePostypeTabView();
     loadData();
   </script>
 </body>

@@ -677,6 +677,109 @@ async function unifyAllSeriesFilters() {
   return { seriesCount: groups.size, updatedRows };
 }
 
+function dateOnly(value: unknown) {
+  const match = text(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  return match ? `${match[1]}-${match[2]}-${match[3]}` : "";
+}
+
+function defaultStatsDate(offsetDays = 0) {
+  const date = new Date(Date.now() + offsetDays * 24 * 60 * 60 * 1000);
+  const kst = new Date(date.getTime() + 9 * 60 * 60 * 1000);
+  return kst.toISOString().slice(0, 10);
+}
+
+function numberParam(value: unknown, fallback: number, min: number, max: number) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return fallback;
+  return Math.min(max, Math.max(min, Math.trunc(numeric)));
+}
+
+async function postypeViewStats(payload: Record<string, unknown>) {
+  const dateFrom = dateOnly(payload.dateFrom) || defaultStatsDate(-13);
+  const dateTo = dateOnly(payload.dateTo) || defaultStatsDate(0);
+  const query = text(payload.query).toLowerCase();
+  const offset = numberParam(payload.offset, 0, 0, 10000);
+  const limit = numberParam(payload.limit, 20, 1, 100);
+  const params = new URLSearchParams({
+    select: "viewed_on,event_type,content_type,content_id,content_title,content_url,viewed_at",
+    tab_key: "eq.postype",
+    viewed_on: `gte.${dateFrom}`,
+    order: "viewed_at.desc",
+    limit: "10000",
+  });
+  params.append("viewed_on", `lte.${dateTo}`);
+  const rows = await rest(`hq_view_events?${params.toString()}`);
+  const events = Array.isArray(rows) ? rows as Array<Record<string, unknown>> : [];
+  const dailyMap = new Map<string, { viewed_on: string; views: number; tab_views: number; content_views: number }>();
+  const contentMap = new Map<string, {
+    content_type: string;
+    content_id: string;
+    content_title: string;
+    content_url: string;
+    views: number;
+    last_viewed_at: string;
+  }>();
+  let tabViews = 0;
+  let contentViews = 0;
+  let lastViewedAt = "";
+
+  events.forEach((event) => {
+    const viewedOn = text(event.viewed_on);
+    const eventType = text(event.event_type);
+    const viewedAt = text(event.viewed_at);
+    if (viewedAt && (!lastViewedAt || viewedAt > lastViewedAt)) lastViewedAt = viewedAt;
+    const daily = dailyMap.get(viewedOn) || { viewed_on: viewedOn, views: 0, tab_views: 0, content_views: 0 };
+    daily.views += 1;
+    if (eventType === "content") {
+      contentViews += 1;
+      daily.content_views += 1;
+      const contentId = text(event.content_id) || text(event.content_url) || "unknown";
+      const contentTitle = text(event.content_title) || "(제목 없음)";
+      const contentUrl = text(event.content_url);
+      const haystack = [contentTitle, contentUrl, contentId].join(" ").toLowerCase();
+      if (!query || haystack.includes(query)) {
+        const key = `${text(event.content_type) || "postype"}:${contentId}`;
+        const current = contentMap.get(key) || {
+          content_type: text(event.content_type) || "postype",
+          content_id: contentId,
+          content_title: contentTitle,
+          content_url: contentUrl,
+          views: 0,
+          last_viewed_at: "",
+        };
+        current.views += 1;
+        if (viewedAt && (!current.last_viewed_at || viewedAt > current.last_viewed_at)) current.last_viewed_at = viewedAt;
+        if (contentTitle && current.content_title === "(제목 없음)") current.content_title = contentTitle;
+        if (contentUrl) current.content_url = contentUrl;
+        contentMap.set(key, current);
+      }
+    } else {
+      tabViews += 1;
+      daily.tab_views += 1;
+    }
+    dailyMap.set(viewedOn, daily);
+  });
+
+  const content = [...contentMap.values()]
+    .sort((a, b) => b.views - a.views || text(b.last_viewed_at).localeCompare(text(a.last_viewed_at)))
+    .slice(offset, offset + limit);
+
+  return {
+    dateFrom,
+    dateTo,
+    totals: {
+      views: events.length,
+      tabViews,
+      contentViews,
+      lastViewedAt,
+    },
+    daily: [...dailyMap.values()].sort((a, b) => b.viewed_on.localeCompare(a.viewed_on)),
+    content,
+    contentTotal: contentMap.size,
+    hasMore: offset + limit < contentMap.size,
+  };
+}
+
 Deno.serve(async (request) => {
   if (request.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
   if (!requestOriginAllowed(request)) return json({ ok: false, error: "Origin is not allowed." }, 403);
@@ -810,9 +913,13 @@ Deno.serve(async (request) => {
       "list", "create", "update", "delete", "approve", "save_filter_options",
       "list_authors", "create_author", "reset_author_key", "toggle_author",
       "list_author_submissions", "approve_author_submission", "reject_author_submission",
-      "unify_all_series", "run_crawler", "crawl_status",
+      "unify_all_series", "run_crawler", "crawl_status", "view_stats",
     ].includes(action)) {
       return json({ ok: false, error: "Unknown action." }, 400);
+    }
+
+    if (action === "view_stats") {
+      return json({ ok: true, ...(await postypeViewStats(payload)) });
     }
 
     if (action === "list_authors") {
