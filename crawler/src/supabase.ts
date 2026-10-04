@@ -74,7 +74,7 @@ export async function getExistingArchive(link: string, postypePostId: number | n
   if (postypePostId) {
     const { data, error } = await supabase
       .from(tableName)
-      .select("id, title, author, link, ai_status, crawl_status, admin_reviewed")
+      .select("id, title, author, link, ai_status, crawl_status, admin_reviewed, deleted_at")
       .eq("postype_post_id", postypePostId)
       .limit(1);
     if (error) throw error;
@@ -83,7 +83,7 @@ export async function getExistingArchive(link: string, postypePostId: number | n
 
   const { data, error } = await supabase
     .from(tableName)
-    .select("id, title, author, link, ai_status, crawl_status, admin_reviewed")
+    .select("id, title, author, link, ai_status, crawl_status, admin_reviewed, deleted_at")
     .eq("link", link)
     .limit(1);
   if (error) throw error;
@@ -108,12 +108,13 @@ export async function insertArchiveRow(post: ExtractedPost, extra: Record<string
     crawled_at: new Date().toISOString(),
     discovered_at: new Date().toISOString(),
     admin_reviewed: false,
+    deleted_at: null,
     ...extra,
   };
 
   const { data, error } = await supabase
     .from(tableName)
-    .insert(row)
+    .upsert(row, { onConflict: "link" })
     .select("id, title, author, link, ai_status")
     .single();
 

@@ -47,7 +47,7 @@ async function main() {
     const newLinks: ProcessTarget[] = [];
     for (const link of candidates) {
       const existing = await getExistingArchive(link.url, link.postypePostId);
-      if (!existing) newLinks.push(link);
+      if (!existing || existing.deleted_at) newLinks.push(link);
     }
 
     summary.foundCount = newLinks.length;
