@@ -342,7 +342,6 @@ export function classificationRow(classification: Classification) {
     series_volume: classification.seriesVolume,
     serialization_status: classification.serializationStatus,
     status_reason: classification.statusReason,
-    is_adult: classification.isAdult,
     is_paid: classification.isPaid,
     ai_confidence: classification.confidence,
     ai_note: compactText(`${classification.note}${suggestionNote ? ` ${suggestionNote}` : ""}`, 500),

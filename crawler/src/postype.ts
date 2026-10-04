@@ -137,7 +137,7 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
       preview: "",
       tags: [...new Set(tags)],
       targetEvidence: link.targetEvidence,
-      isAdult: /성인|19세|19금|adult/i.test(rawText),
+      isAdult: await extractAdultStatus(page, resolvedPostId),
       isPaid: /유료|구매|후원|멤버십|paid/i.test(rawText),
       crawlStatus: "success",
       crawlError: null,
@@ -147,6 +147,34 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
   } finally {
     await page.close();
   }
+}
+
+async function extractAdultStatus(page: Page, postypePostId: number | null) {
+  const scripts = await page.locator("script").allTextContents().catch(() => []);
+  const structuredValue = adultStatusFromSerialized(scripts.join("\n"), postypePostId);
+  if (structuredValue !== null) return structuredValue;
+
+  // Postype renders a short, standalone "성인" badge next to the post
+  // heading when structured state is unavailable. Do not scan the whole page:
+  // navigation/footer copy and the post body can legitimately contain the word.
+  return page.locator("main, article").first().evaluate((root) =>
+    Array.from(root.querySelectorAll("span, strong, em, small, [aria-label], [title]"))
+      .some((element) => {
+        const visibleText = (element.textContent || "").trim();
+        const label = `${element.getAttribute("aria-label") || ""} ${element.getAttribute("title") || ""}`.trim();
+        return visibleText === "성인" || /^(?:성인|19세|19금|adult)$/i.test(label);
+      })
+  ).catch(() => false);
+}
+
+export function adultStatusFromSerialized(serialized: string, postypePostId: number | null) {
+  const normalized = serialized.replace(/\\"/g, '"');
+  const start = postypePostId
+    ? normalized.indexOf(`"postId":${postypePostId}`)
+    : 0;
+  if (start < 0) return null;
+  const match = normalized.slice(start, start + 20_000).match(/"adult"\s*:\s*(true|false)/i);
+  return match ? match[1].toLowerCase() === "true" : null;
 }
 
 async function extractStructuredMetadata(page: Page) {
