@@ -40,7 +40,7 @@ async function main() {
 
     const manualPostUrl = optionalEnv("MANUAL_POST_URL");
     const links: ProcessTarget[] = manualPostUrl
-      ? [manualPostLink(manualPostUrl)]
+      ? manualPostUrl.split(/[\s,]+/).map((url) => url.trim()).filter(Boolean).map(manualPostLink)
       : await collectConfiguredSourceLinks(context);
 
     const candidates = uniqueBy(links, (item) => item.postypePostId ? String(item.postypePostId) : item.url);
