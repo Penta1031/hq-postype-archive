@@ -91,7 +91,7 @@ export async function getExistingArchive(link: string, postypePostId: number | n
 }
 
 export async function insertArchiveRow(post: ExtractedPost, extra: Record<string, unknown>) {
-  const row = {
+  const row: Record<string, unknown> = {
     source_row_number: post.postypePostId ? `postype-${post.postypePostId}` : `postype-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     postype_post_id: post.postypePostId,
     title: post.title || `포스타입 글 ${post.postypePostId || post.link}`,
@@ -118,7 +118,21 @@ export async function insertArchiveRow(post: ExtractedPost, extra: Record<string
     .single();
 
   if (error) throw error;
+  if (row.serialization_status === "완결" && typeof row.series_name === "string" && row.series_name.trim()) {
+    await markSeriesComplete(row.series_name);
+  }
   return data;
+}
+
+async function markSeriesComplete(seriesName: string) {
+  const { data, error } = await supabase
+    .from(tableName)
+    .update({ serialization_status: "완결" })
+    .eq("series_name", seriesName.trim())
+    .is("deleted_at", null)
+    .select("id");
+  if (error) throw error;
+  return (data || []).length;
 }
 
 export async function updateArchiveRow(id: number, patch: Record<string, unknown>) {
@@ -150,8 +164,10 @@ export async function backfillUnreviewedTitleSeries() {
     .limit(5000);
   if (error) throw error;
 
-  const candidates = ((data || []) as UnreviewedSeriesCandidate[])
+  const inferredRows = ((data || []) as UnreviewedSeriesCandidate[])
     .map((row) => ({ row, inferred: inferSeriesFromTitle(row.title) }))
+    .filter((item) => Boolean(item.inferred));
+  const candidates = inferredRows
     .filter(({ row, inferred }) => Boolean(inferred) && (
       !row.is_series
       || (inferred?.seriesVolume === "下" && row.serialization_status !== "완결")
@@ -167,9 +183,20 @@ export async function backfillUnreviewedTitleSeries() {
     if (updateError) throw updateError;
   }
 
+  const completedSeriesNames = [...new Set(inferredRows
+    .filter(({ inferred }) => inferred?.seriesVolume === "下" && inferred.seriesName)
+    .map(({ inferred }) => inferred?.seriesName || ""))];
+  let completedRows = 0;
+  for (const seriesName of completedSeriesNames) {
+    completedRows += await markSeriesComplete(seriesName);
+  }
+
   return {
     scannedCount: (data || []).length,
     updatedCount: candidates.length,
+    completedSeriesCount: completedSeriesNames.length,
+    completedRows,
+    completedSeriesNames,
     updated: candidates.map(({ row, inferred }) => ({
       id: row.id,
       title: row.title,
