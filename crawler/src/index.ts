@@ -1,6 +1,7 @@
 import { sendDiscord } from "./discord.js";
 import { collectPostLinks, createPostypeContext, extractPost, isExcludedPost } from "./postype.js";
-import { createRun, finishRun, getEnabledSources, getExistingArchive, insertArchiveRow, markSourceChecked } from "./supabase.js";
+import { titleSeriesPatch } from "./series.js";
+import { backfillUnreviewedTitleSeries, createRun, finishRun, getEnabledSources, getExistingArchive, insertArchiveRow, markSourceChecked } from "./supabase.js";
 import type { RunSummary } from "./types.js";
 import { normalizePostUrl, optionalEnv, postypePostIdFromUrl, uniqueBy } from "./utils.js";
 
@@ -13,6 +14,8 @@ type ProcessTarget = {
 
 async function main() {
   const runId = await createRun();
+  const seriesBackfill = await backfillUnreviewedTitleSeries();
+  console.log(`TITLE_SERIES_BACKFILL ${JSON.stringify(seriesBackfill)}`);
   const summary: RunSummary = {
     status: "success",
     foundCount: 0,
@@ -50,6 +53,7 @@ async function main() {
             ai_status: "skipped",
             ai_note: "AI 분류 미사용",
             admin_reviewed: false,
+            ...titleSeriesPatch(post.title),
           });
           summary.failedCount += 1;
           continue;
@@ -59,6 +63,7 @@ async function main() {
           ai_status: "skipped",
           ai_note: "AI 분류 미사용",
           admin_reviewed: false,
+          ...titleSeriesPatch(post.title),
         });
         summary.insertedCount += 1;
         summary.reviewPendingCount += 1;
@@ -72,7 +77,7 @@ async function main() {
         const message = error instanceof Error ? error.message : String(error);
         await insertArchiveRow(
           { ...post, crawlStatus: "error", crawlError: message },
-          { ai_status: "skipped", ai_note: "AI 분류 미사용", admin_reviewed: false },
+          { ai_status: "skipped", ai_note: "AI 분류 미사용", admin_reviewed: false, ...titleSeriesPatch(post.title) },
         ).catch(() => undefined);
       }
     }

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { inferSeriesFromTitle } from "./classify.js";
+import { inferSeriesFromTitle } from "./series.js";
 
 const cases = [
   ["폭망(I Like You) 上", "폭망(I Like You)", "上", "연재중"],

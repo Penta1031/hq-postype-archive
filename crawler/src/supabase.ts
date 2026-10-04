@@ -1,4 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
+import { inferSeriesFromTitle, titleSeriesPatch } from "./series.js";
 import { optionalEnv, requiredEnv } from "./utils.js";
 import type { ExtractedPost, Source } from "./types.js";
 
@@ -130,6 +131,50 @@ export async function updateArchiveRow(id: number, patch: Record<string, unknown
 
   if (error) throw error;
   return data;
+}
+
+type UnreviewedSeriesCandidate = {
+  id: number;
+  title: string;
+  is_series: boolean | null;
+};
+
+export async function backfillUnreviewedTitleSeries() {
+  const { data, error } = await supabase
+    .from(tableName)
+    .select("id, title, is_series")
+    .eq("admin_reviewed", false)
+    .is("deleted_at", null)
+    .order("id", { ascending: true })
+    .limit(5000);
+  if (error) throw error;
+
+  const candidates = ((data || []) as UnreviewedSeriesCandidate[])
+    .filter((row) => !row.is_series)
+    .map((row) => ({ row, inferred: inferSeriesFromTitle(row.title) }))
+    .filter((item) => Boolean(item.inferred));
+
+  for (const { row } of candidates) {
+    const { error: updateError } = await supabase
+      .from(tableName)
+      .update(titleSeriesPatch(row.title))
+      .eq("id", row.id)
+      .eq("admin_reviewed", false)
+      .is("deleted_at", null);
+    if (updateError) throw updateError;
+  }
+
+  return {
+    scannedCount: (data || []).length,
+    updatedCount: candidates.length,
+    updated: candidates.map(({ row, inferred }) => ({
+      id: row.id,
+      title: row.title,
+      seriesName: inferred?.seriesName || "",
+      seriesVolume: inferred?.seriesVolume || "",
+      serializationStatus: inferred?.serializationStatus || "",
+    })),
+  };
 }
 
 type SeriesFilters = {
