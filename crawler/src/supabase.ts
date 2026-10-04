@@ -147,6 +147,26 @@ export async function updateArchiveRow(id: number, patch: Record<string, unknown
   return data;
 }
 
+export async function getUnreviewedAiCandidates(includeSkipped: boolean, limit: number) {
+  const { data, error } = await supabase
+    .from(tableName)
+    .select("id, postype_post_id, link, source_url, ai_status")
+    .eq("admin_reviewed", false)
+    .eq("crawl_status", "success")
+    .is("deleted_at", null)
+    .order("id", { ascending: true })
+    .limit(Math.max(1, Math.min(limit, 5000)));
+  if (error) throw error;
+  const retryable = includeSkipped ? new Set(["", "pending", "skipped", "failed"]) : new Set(["failed"]);
+  return (data || []).filter((row) => retryable.has(String(row.ai_status || ""))) as Array<{
+    id: number;
+    postype_post_id: number | null;
+    link: string;
+    source_url: string | null;
+    ai_status: string | null;
+  }>;
+}
+
 type UnreviewedSeriesCandidate = {
   id: number;
   title: string;

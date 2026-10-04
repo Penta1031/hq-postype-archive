@@ -10,6 +10,11 @@ on:
         description: "확인할 포스타입 글 링크 (비우면 전체 소스 확인)"
         required: false
         type: string
+      ai_backfill:
+        description: "기존 미공개 글도 AI 분류"
+        required: false
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -21,7 +26,7 @@ concurrency:
 jobs:
   crawl:
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 120
     defaults:
       run:
         working-directory: crawler
@@ -50,3 +55,15 @@ jobs:
           ADMIN_PAGE_URL: ${{ vars.ADMIN_PAGE_URL }}
           POSTYPE_SOURCE_URLS: ${{ vars.POSTYPE_SOURCE_URLS }}
           MANUAL_POST_URL: ${{ inputs.post_url || '' }}
+          AI_PROVIDER: ${{ vars.AI_PROVIDER || 'gemini' }}
+          AI_FALLBACK_PROVIDER: ${{ vars.AI_FALLBACK_PROVIDER || '' }}
+          AI_REVIEW_CONFIDENCE_THRESHOLD: ${{ vars.AI_REVIEW_CONFIDENCE_THRESHOLD || '0.72' }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          GEMINI_MODEL: ${{ vars.GEMINI_MODEL || 'gemini-3.5-flash' }}
+          GEMINI_MAX_ATTEMPTS: ${{ vars.GEMINI_MAX_ATTEMPTS || '2' }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_MODEL: ${{ vars.OPENAI_MODEL || 'gpt-4.1-mini' }}
+          AI_BACKFILL_UNREVIEWED: ${{ inputs.ai_backfill || 'false' }}
+          AI_BACKFILL_LIMIT: ${{ vars.AI_BACKFILL_LIMIT || '5000' }}
+          AI_BACKFILL_DELAY_MS: ${{ vars.AI_BACKFILL_DELAY_MS || '800' }}
+          RETRY_FAILED_AI: ${{ vars.RETRY_FAILED_AI || 'true' }}

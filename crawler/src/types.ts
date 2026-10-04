@@ -36,6 +36,8 @@ export type ExtractedPost = {
 export type Classification = {
   genres: string[];
   keywords: string[];
+  newGenres: string[];
+  newKeywords: string[];
   top: string[];
   bottom: string[];
   isSeries: boolean;

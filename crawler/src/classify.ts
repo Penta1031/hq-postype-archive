@@ -46,6 +46,8 @@ const classificationSchema = {
   properties: {
     genres: { type: "array", items: { type: "string" } },
     keywords: { type: "array", items: { type: "string" } },
+    newGenres: { type: "array", items: { type: "string" } },
+    newKeywords: { type: "array", items: { type: "string" } },
     top: { type: "array", items: { type: "string" } },
     bottom: { type: "array", items: { type: "string" } },
     isSeries: { type: "boolean" },
@@ -62,6 +64,8 @@ const classificationSchema = {
   required: [
     "genres",
     "keywords",
+    "newGenres",
+    "newKeywords",
     "top",
     "bottom",
     "isSeries",
@@ -151,6 +155,8 @@ async function classifyWithOpenAI(inputText: string): Promise<Classification> {
           "가난하고 열악한 주거 환경, 생활고, 거칠고 눅진한 현실성이 핵심 정서이면 노란장판으로 분류한다.",
           "프로 게임 선수나 e스포츠 선수가 중심 소재이면 keywords에 프로게이머를 넣는다.",
           "genres는 작품 장르/세계관 계열만 넣고, keywords는 관계성/소재/전개 키워드만 넣는다.",
+          "허용값만으로 핵심 특성을 표현하기 어려울 때만 newGenres 또는 newKeywords에 각각 최대 3개의 짧은 한국어 후보를 제안한다.",
+          "새 후보는 기존 허용값의 단순 동의어, 인물명, 작가명, 제목, 시리즈명, 너무 포괄적인 단어가 아니어야 한다.",
           "top과 bottom은 공/수 캐릭터 속성만 넣고, 인물 이름이나 제목을 넣지 않는다.",
           "isSeries는 제목/본문에 회차, 상/중/하, 숫자 회차, part/chapter, 시리즈명이 뚜렷할 때만 true로 둔다.",
           taxonomyPrompt(),
@@ -186,11 +192,13 @@ async function classifyWithGemini(inputText: string): Promise<Classification> {
     "가난하고 열악한 주거 환경, 생활고, 거칠고 눅진한 현실성이 핵심 정서이면 노란장판으로 분류한다.",
     "프로 게임 선수나 e스포츠 선수가 중심 소재이면 keywords에 프로게이머를 넣는다.",
     "genres는 작품 장르/세계관 계열만 넣고, keywords는 관계성/소재/전개 키워드만 넣는다.",
+    "허용값만으로 핵심 특성을 표현하기 어려울 때만 newGenres 또는 newKeywords에 각각 최대 3개의 짧은 한국어 후보를 제안한다.",
+    "새 후보는 기존 허용값의 단순 동의어, 인물명, 작가명, 제목, 시리즈명, 너무 포괄적인 단어가 아니어야 한다.",
     "top과 bottom은 공/수 캐릭터 속성만 넣고, 인물 이름이나 제목을 넣지 않는다.",
     "isSeries는 제목/본문에 회차, 상/중/하, 숫자 회차, part/chapter, 시리즈명이 뚜렷할 때만 true로 둔다.",
     taxonomyPrompt(),
     "반드시 JSON 객체만 출력한다. 마크다운 코드블록이나 설명문은 붙이지 않는다.",
-    "JSON 키는 genres, keywords, top, bottom, isSeries, seriesName, seriesVolume, serializationStatus, statusReason, isAdult, isPaid, endings, confidence, note만 사용한다.",
+    "JSON 키는 genres, keywords, newGenres, newKeywords, top, bottom, isSeries, seriesName, seriesVolume, serializationStatus, statusReason, isAdult, isPaid, endings, confidence, note만 사용한다.",
     "",
     inputText,
   ].join("\n");
@@ -233,11 +241,15 @@ function normalizeClassification(parsed: Classification): Classification {
   const raw = parsed as unknown as Record<string, unknown>;
   const rawGenres = asStringArray(raw.genres);
   const rawKeywords = asStringArray(raw.keywords);
+  const rawNewGenres = asStringArray(raw.newGenres);
+  const rawNewKeywords = asStringArray(raw.newKeywords);
   const rawTop = asStringArray(raw.top);
   const rawBottom = asStringArray(raw.bottom);
   const rawEndings = asStringArray(raw.endings);
   const genres = allowedOnly(rawGenres, FILTER_TAXONOMY.genres).slice(0, 8);
   const keywords = allowedOnly(rawKeywords, FILTER_TAXONOMY.keywords).slice(0, 12);
+  const newGenres = novelSuggestions(rawNewGenres, FILTER_TAXONOMY.genres).slice(0, 3);
+  const newKeywords = novelSuggestions(rawNewKeywords, FILTER_TAXONOMY.keywords).slice(0, 3);
   const top = allowedOnly(rawTop, FILTER_TAXONOMY.top).slice(0, 8);
   const bottom = allowedOnly(rawBottom, FILTER_TAXONOMY.bottom).slice(0, 8);
   const endings = allowedOnly(rawEndings, FILTER_TAXONOMY.endings).slice(0, 5);
@@ -248,6 +260,8 @@ function normalizeClassification(parsed: Classification): Classification {
     ...parsed,
     genres,
     keywords,
+    newGenres,
+    newKeywords,
     top,
     bottom,
     endings,
@@ -266,6 +280,13 @@ function normalizeClassification(parsed: Classification): Classification {
 function allowedOnly(values: string[], allowed: readonly string[]) {
   const allowedSet = new Set(allowed);
   return values.filter((value) => allowedSet.has(value));
+}
+
+function novelSuggestions(values: string[], allowed: readonly string[]) {
+  const allowedSet = new Set(allowed.map((value) => value.toLocaleLowerCase("ko-KR")));
+  return [...new Set(values
+    .map((value) => value.replace(/^#+/, "").trim())
+    .filter((value) => value.length >= 2 && value.length <= 20 && !allowedSet.has(value.toLocaleLowerCase("ko-KR"))))];
 }
 
 function taxonomyPrompt() {
@@ -301,14 +322,18 @@ function sleep(ms: number) {
 
 export function classificationRow(classification: Classification) {
   const needsReview = reviewRequired(classification.confidence);
+  const suggestionNote = [
+    classification.newGenres.length ? `신규 장르 후보: ${classification.newGenres.join(", ")}` : "",
+    classification.newKeywords.length ? `신규 키워드 후보: ${classification.newKeywords.join(", ")}` : "",
+  ].filter(Boolean).join(" / ");
   return {
     genres: joinList(classification.genres),
     keywords: joinList(classification.keywords),
     top_tags: joinList(classification.top),
     bottom_tags: joinList(classification.bottom),
     endings: joinList(classification.endings),
-    ai_suggested_genres: joinList(classification.genres),
-    ai_suggested_keywords: joinList(classification.keywords),
+    ai_suggested_genres: joinList([...classification.genres, ...classification.newGenres]),
+    ai_suggested_keywords: joinList([...classification.keywords, ...classification.newKeywords]),
     ai_suggested_top: joinList(classification.top),
     ai_suggested_bottom: joinList(classification.bottom),
     ai_suggested_endings: joinList(classification.endings),
@@ -320,7 +345,7 @@ export function classificationRow(classification: Classification) {
     is_adult: classification.isAdult,
     is_paid: classification.isPaid,
     ai_confidence: classification.confidence,
-    ai_note: classification.note,
+    ai_note: compactText(`${classification.note}${suggestionNote ? ` ${suggestionNote}` : ""}`, 500),
     ai_status: needsReview ? "review_required" : "classified",
     ai_classified_at: new Date().toISOString(),
   };

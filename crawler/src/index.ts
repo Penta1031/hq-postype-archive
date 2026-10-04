@@ -1,9 +1,10 @@
 import { sendDiscord } from "./discord.js";
+import { classificationRow, classifyPost, configureFilterTaxonomy } from "./classify.js";
 import { collectPostLinks, createPostypeContext, extractPost, isExcludedPost } from "./postype.js";
 import { titleSeriesPatch } from "./series.js";
-import { backfillUnreviewedTitleSeries, createRun, finishRun, getEnabledSources, getExistingArchive, insertArchiveRow, markSourceChecked } from "./supabase.js";
+import { backfillUnreviewedTitleSeries, createRun, finishRun, getEnabledSources, getExistingArchive, getFilterConfig, getUnreviewedAiCandidates, insertArchiveRow, markSourceChecked, updateArchiveRow } from "./supabase.js";
 import type { RunSummary } from "./types.js";
-import { normalizePostUrl, optionalEnv, postypePostIdFromUrl, uniqueBy } from "./utils.js";
+import { normalizePostUrl, optionalEnv, postypePostIdFromUrl, truthyEnv, uniqueBy } from "./utils.js";
 
 type ProcessTarget = {
   url: string;
@@ -27,6 +28,16 @@ async function main() {
 
   const { browser, context } = await createPostypeContext();
   try {
+    configureFilterTaxonomy(await getFilterConfig());
+    const runFullAiBackfill = truthyEnv("AI_BACKFILL_UNREVIEWED");
+    const retryFailedAi = truthyEnv("RETRY_FAILED_AI", true);
+    if (runFullAiBackfill || retryFailedAi) {
+      const result = await classifyExistingUnreviewed(context, runFullAiBackfill);
+      summary.reviewPendingCount += result.classifiedCount;
+      summary.failedCount += result.failedCount;
+      console.log(`AI_BACKFILL ${JSON.stringify(result)}`);
+    }
+
     const manualPostUrl = optionalEnv("MANUAL_POST_URL");
     const links: ProcessTarget[] = manualPostUrl
       ? [manualPostLink(manualPostUrl)]
@@ -51,7 +62,7 @@ async function main() {
         if (post.crawlStatus !== "success") {
           await insertArchiveRow(post, {
             ai_status: "skipped",
-            ai_note: "AI 분류 미사용",
+            ai_note: "본문 접근 불가로 AI 분류 생략",
             admin_reviewed: false,
             ...titleSeriesPatch(post.title),
           });
@@ -59,12 +70,15 @@ async function main() {
           continue;
         }
 
-        const inserted = await insertArchiveRow(post, {
-          ai_status: "skipped",
-          ai_note: "AI 분류 미사용",
-          admin_reviewed: false,
-          ...titleSeriesPatch(post.title),
-        });
+        let aiPatch: Record<string, unknown>;
+        try {
+          aiPatch = classificationRow(await classifyPost(post));
+        } catch (error) {
+          const message = error instanceof Error ? error.message : String(error);
+          aiPatch = { ai_status: "failed", ai_note: `AI 분류 실패: ${message}`.slice(0, 500) };
+          summary.failedCount += 1;
+        }
+        const inserted = await insertArchiveRow(post, { ...aiPatch, admin_reviewed: false });
         summary.insertedCount += 1;
         summary.reviewPendingCount += 1;
         summary.newPosts.push({
@@ -77,7 +91,7 @@ async function main() {
         const message = error instanceof Error ? error.message : String(error);
         await insertArchiveRow(
           { ...post, crawlStatus: "error", crawlError: message },
-          { ai_status: "skipped", ai_note: "AI 분류 미사용", admin_reviewed: false, ...titleSeriesPatch(post.title) },
+          { ai_status: "failed", ai_note: `수집 또는 AI 분류 실패: ${message}`.slice(0, 500), admin_reviewed: false, ...titleSeriesPatch(post.title) },
         ).catch(() => undefined);
       }
     }
@@ -107,6 +121,58 @@ async function main() {
   }
 
   await sendDiscord(summary);
+}
+
+async function classifyExistingUnreviewed(
+  context: Awaited<ReturnType<typeof createPostypeContext>>["context"],
+  includeSkipped: boolean,
+) {
+  const limit = Number(optionalEnv("AI_BACKFILL_LIMIT", "5000"));
+  const delayMs = Math.max(0, Number(optionalEnv("AI_BACKFILL_DELAY_MS", "800")) || 0);
+  const candidates = await getUnreviewedAiCandidates(includeSkipped, limit);
+  let classifiedCount = 0;
+  let failedCount = 0;
+
+  for (const [index, row] of candidates.entries()) {
+    const target: ProcessTarget = {
+      url: row.link,
+      postypePostId: row.postype_post_id,
+      sourceUrl: row.source_url || "ai-backfill",
+      targetEvidence: "",
+    };
+    try {
+      const post = await extractPost(context, target);
+      if (post.crawlStatus !== "success") {
+        throw new Error(post.crawlError || `본문 접근 불가: ${post.crawlStatus}`);
+      }
+      if (isExcludedPost(post)) {
+        await updateArchiveRow(row.id, { ai_status: "skipped", ai_note: "제외 대상 글로 AI 분류 생략" });
+        continue;
+      }
+      await updateArchiveRow(row.id, {
+        ...classificationRow(await classifyPost(post)),
+        crawled_at: new Date().toISOString(),
+        crawl_status: "success",
+        crawl_error: null,
+      });
+      classifiedCount += 1;
+    } catch (error) {
+      failedCount += 1;
+      const message = error instanceof Error ? error.message : String(error);
+      await updateArchiveRow(row.id, {
+        ai_status: "failed",
+        ai_note: `AI 재분류 실패: ${message}`.slice(0, 500),
+      }).catch(() => undefined);
+    }
+    console.log(`AI_BACKFILL_PROGRESS ${index + 1}/${candidates.length} classified=${classifiedCount} failed=${failedCount}`);
+    if (delayMs && index + 1 < candidates.length) await sleep(delayMs);
+  }
+
+  return { candidateCount: candidates.length, classifiedCount, failedCount };
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 async function collectConfiguredSourceLinks(context: Awaited<ReturnType<typeof createPostypeContext>>["context"]) {
