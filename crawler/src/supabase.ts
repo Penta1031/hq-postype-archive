@@ -152,13 +152,14 @@ export async function getUnreviewedAiCandidates(includeSkipped: boolean, limit: 
     .from(tableName)
     .select("id, postype_post_id, link, source_url, ai_status")
     .eq("admin_reviewed", false)
-    .eq("crawl_status", "success")
+    .or("crawl_status.eq.success,crawl_status.is.null")
+    .not("link", "is", null)
     .is("deleted_at", null)
     .order("id", { ascending: true })
     .limit(Math.max(1, Math.min(limit, 5000)));
   if (error) throw error;
   const retryable = includeSkipped ? new Set(["", "pending", "skipped", "failed"]) : new Set(["failed"]);
-  return (data || []).filter((row) => retryable.has(String(row.ai_status || ""))) as Array<{
+  return (data || []).filter((row) => String(row.link || "").trim() && retryable.has(String(row.ai_status || ""))) as Array<{
     id: number;
     postype_post_id: number | null;
     link: string;

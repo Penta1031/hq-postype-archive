@@ -146,7 +146,7 @@ async function classifyExistingUnreviewed(
         throw new Error(post.crawlError || `본문 접근 불가: ${post.crawlStatus}`);
       }
       if (isExcludedPost(post)) {
-        await updateArchiveRow(row.id, { ai_status: "skipped", ai_note: "제외 대상 글로 AI 분류 생략" });
+        await updateArchiveRow(row.id, { ai_status: "excluded", ai_note: "제외 대상 글로 AI 분류 생략" });
         continue;
       }
       await updateArchiveRow(row.id, {
