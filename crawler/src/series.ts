@@ -34,7 +34,7 @@ export function inferSeriesFromTitle(title: string): TitleSeriesInference | null
     isSeries: true,
     seriesName,
     seriesVolume: volume,
-    serializationStatus: isComplete ? "완결" : "연재중",
+    serializationStatus: isComplete || volume === "下" ? "완결" : "연재중",
     statusReason: `제목의 회차 표기(${volume})를 기준으로 자동 판정`,
   };
 }

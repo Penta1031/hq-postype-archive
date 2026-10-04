@@ -137,12 +137,13 @@ type UnreviewedSeriesCandidate = {
   id: number;
   title: string;
   is_series: boolean | null;
+  serialization_status: string | null;
 };
 
 export async function backfillUnreviewedTitleSeries() {
   const { data, error } = await supabase
     .from(tableName)
-    .select("id, title, is_series")
+    .select("id, title, is_series, serialization_status")
     .eq("admin_reviewed", false)
     .is("deleted_at", null)
     .order("id", { ascending: true })
@@ -150,9 +151,11 @@ export async function backfillUnreviewedTitleSeries() {
   if (error) throw error;
 
   const candidates = ((data || []) as UnreviewedSeriesCandidate[])
-    .filter((row) => !row.is_series)
     .map((row) => ({ row, inferred: inferSeriesFromTitle(row.title) }))
-    .filter((item) => Boolean(item.inferred));
+    .filter(({ row, inferred }) => Boolean(inferred) && (
+      !row.is_series
+      || (inferred?.seriesVolume === "下" && row.serialization_status !== "완결")
+    ));
 
   for (const { row } of candidates) {
     const { error: updateError } = await supabase

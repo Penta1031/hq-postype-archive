@@ -4,7 +4,7 @@ import { inferSeriesFromTitle } from "./series.js";
 const cases = [
   ["폭망(I Like You) 上", "폭망(I Like You)", "上", "연재중"],
   ["폭망(I Like You) 中", "폭망(I Like You)", "中", "연재중"],
-  ["[혀쾌] 4242 下", "4242", "下", "연재중"],
+  ["[혀쾌] 4242 下", "4242", "下", "완결"],
   ["이별뒤에도, 3", "이별뒤에도", "3", "연재중"],
   ["fateful [1]", "fateful", "1", "연재중"],
   ["미완3", "미완", "3", "연재중"],
