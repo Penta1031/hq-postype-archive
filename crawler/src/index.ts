@@ -192,7 +192,9 @@ function manualPostLink(rawUrl: string): ProcessTarget {
   const url = normalizePostUrl(rawUrl, "https://www.postype.com");
   if (!url) throw new Error("MANUAL_POST_URL is not a valid URL.");
   const parsed = new URL(url);
-  if (!(parsed.hostname === "postype.com" || parsed.hostname.endsWith(".postype.com")) || !/\/post\/\d+/.test(parsed.pathname)) {
+  const isShortLink = parsed.hostname === "posty.pe";
+  const isCanonicalPost = (parsed.hostname === "postype.com" || parsed.hostname.endsWith(".postype.com")) && /\/post\/\d+/.test(parsed.pathname);
+  if (!isShortLink && !isCanonicalPost) {
     throw new Error("MANUAL_POST_URL must be a Postype post URL.");
   }
   return {

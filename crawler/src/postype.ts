@@ -99,6 +99,8 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
     await page.waitForTimeout(1500);
     const status = response?.status() || 0;
     if (status >= 400) return deniedPost(link, "error", `HTTP ${status}`);
+    const resolvedLink = normalizePostUrl(page.url(), link.url) || link.url;
+    const resolvedPostId = link.postypePostId || postypePostIdFromUrl(resolvedLink);
 
     const rawText = compactText(await page.locator("body").innerText({ timeout: 10_000 }).catch(() => ""), 6000);
     const accessStatus = accessProblem(rawText);
@@ -125,10 +127,10 @@ export async function extractPost(context: BrowserContext, link: PostLink): Prom
     ).catch(() => []);
 
     return {
-      postypePostId: link.postypePostId,
+      postypePostId: resolvedPostId,
       sourceUrl: link.sourceUrl,
-      link: link.url,
-      title: cleanTitle(title) || `포스타입 글 ${link.postypePostId || ""}`.trim(),
+      link: resolvedLink,
+      title: cleanTitle(title) || `포스타입 글 ${resolvedPostId || ""}`.trim(),
       author: cleanAuthor(author),
       publishedDate: parsePostypeDate(publishedDate) || todayIsoDate(publishedDate),
       bodyText,
