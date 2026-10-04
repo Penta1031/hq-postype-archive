@@ -15,6 +15,14 @@ on:
         required: false
         default: false
         type: boolean
+      series_reference_url:
+        description: "시리즈 일괄 정리 기준 글 URL"
+        required: false
+        type: string
+      series_title_prefix:
+        description: "시리즈 제목 접두어"
+        required: false
+        type: string
 
 permissions:
   contents: read
@@ -46,7 +54,18 @@ jobs:
 
       - run: npm run check
 
+      - name: Normalize one series from a reference post
+        if: ${{ inputs.series_reference_url != '' }}
+        run: npx tsx src/normalize-series.ts
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          POSTYPE_AUTH_STATE: ${{ secrets.POSTYPE_AUTH_STATE }}
+          SERIES_REFERENCE_URL: ${{ inputs.series_reference_url }}
+          SERIES_TITLE_PREFIX: ${{ inputs.series_title_prefix }}
+
       - run: npm start
+        if: ${{ inputs.series_reference_url == '' }}
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
